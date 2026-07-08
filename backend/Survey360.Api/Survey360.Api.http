@@ -1,0 +1,6 @@
+@Survey360.Api_HostAddress = http://localhost:5246
+
+GET {{Survey360.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
