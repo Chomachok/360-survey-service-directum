@@ -52,10 +52,13 @@ var app = builder.Build();
 // 7. Включаем OpenAPI-эндпоинт (/openapi/v1.json)
 app.MapOpenApi();
 
-// 8. (Опционально) Добавляем Swagger UI – для визуального просмотра
-// Не забудьте установить Swashbuckle.AspNetCore и раскомментировать:
-// app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "My API V1"));
-
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "My API V1");
+    });
+}
 // 9. Включаем CORS
 app.UseCors("Frontend");
 
