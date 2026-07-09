@@ -1,9 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FluentValidation;
 using Survey360.Api.Data;
 using Survey360.Api.Validators;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http.Json; // для настройки JSON (опционально)
+using Microsoft.AspNetCore.Http.Json;
+using Survey360.Api.Interfaces;
+using Survey360.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +27,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 4. Регистрируем валидаторы FluentValidation (из текущей сборки)
-builder.Services.AddValidatorsFromAssemblyContaining<CreateProductCommandValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<SurveyCreateRequestValidator>();
+builder.Services.AddScoped<ISurveysService, SurveysService>();
 
 // 5. Настраиваем CORS (для фронта на Vite)
 builder.Services.AddCors(options =>
