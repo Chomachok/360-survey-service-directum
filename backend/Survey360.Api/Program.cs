@@ -5,6 +5,8 @@ using Survey360.Api.Data;
 using Survey360.Api.Validators;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http.Json;
+using Survey360.Api.Entities;
+using Survey360.Api.Enums;
 using Survey360.Api.Interfaces;
 using Survey360.Api.Services;
 
@@ -59,6 +61,25 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/openapi/v1.json", "My API V1");
     });
 }
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // Проверяем, есть ли пользователи
+    if (!db.Users.Any())
+    {
+        db.Users.Add(new User
+        {
+            Email = "test@tester.ru",
+            FullName = "tester",
+            Role = UserRole.Admin,
+            PasswordHash = "1234567890-ljhgd",
+            PasswordSalt = "2345udfghjkl"
+        });
+        await db.SaveChangesAsync();
+    }
+}
+
 // 9. Включаем CORS
 app.UseCors("Frontend");
 
