@@ -15,7 +15,8 @@
     "aspNetCoreOpenApi": "10.0.9",
     "entityFrameworkCoreSqlite": "10.0.9",
     "fluentValidation": "12.1.1",
-    "fluentValidationAspNetCore": "12.1.1"
+    "fluentValidationAspNetCore": "12.1.1",
+    "fluentValidation.DependencyInjectionExtensions": "12.1.1"
   },
   "tools": {
     "dotnet-ef": "10.0.0"
