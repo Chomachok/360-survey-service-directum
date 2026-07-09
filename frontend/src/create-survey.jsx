@@ -1,23 +1,39 @@
 import {createRoot} from "react-dom/client";
 import {useState} from "react";
 
-
-function createSurvey(){
-    const [name, setName] = useState("Tom");
+function СreateSurvey(){
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
 
     function handleNameChange(event) {    
         setName(event.target.value);  
     }
 
+    function handleDescriptionChange(event) {    
+        setDescription(event.target.value);  
+    }
+
+    // обработчик отправки формы
+    function handleSubmit(e) {
+         e.preventDefault(); // блокируем стандартную отправку формы
+        console.log("Name: ", name);
+        console.log("Description: ", description);
+    }
+    
     return (
-        <div>
-            <h3>Имя: {name}</h3>
-            <div>
-                <p>Имя: <input type="text" value={name} onChange={handleNameChange} /></p>
-            </div>
-        </div>
+        <form onSubmit={handleSubmit}>
+            <p>
+                <label>Имя:</label><br />
+                <input type="text" value={name} onChange={handleNameChange} />
+            </p>
+            <p>
+                <label>Описание:</label><br />
+                <input type="text" value={description} onChange={handleDescriptionChange} />
+            </p>
+            <input type="submit" value="Отправить" />
+        </form>
     );
 
 }
 
-createRoot(document.getElementById("name")).render(<createSurvey/>)
+createRoot(document.getElementById("nameSurvey")).render(<СreateSurvey />)
