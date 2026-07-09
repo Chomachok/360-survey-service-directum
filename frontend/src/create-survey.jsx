@@ -7,7 +7,7 @@ function СreateSurvey(){
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [templateId, setTemplateId] = useState("");
-    const [customQuestions, setTemplateId] = useState("");
+    const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:1, options:[]}]);
 
     function handleNameChange(event) {    
         setName(event.target.value);  
@@ -29,15 +29,38 @@ function СreateSurvey(){
         setTemplateId(event.target.value);  
     }
 
+    function handleTemplateId(event) {    
+        setCustomQuestions(event.target.value);  
+    }
+
     function handleSubmit(e) {
-         e.preventDefault();
+        e.preventDefault();
         console.log("Name: ", title);
         console.log("Description: ", description);
         console.log("StartDate: ", startDate);
         console.log("EndDate: ", endDate);
         console.log("TemplateId: ", templateId);
+        console.log("customQuestions: ", customQuestions);
     }
     
+    // Изменение конкретного элемента в массиве по его индексу
+    const handleCustomQuestionsChange = (index, value) => {
+        const newQuestion = [...customQuestions];
+        newQuestion[index].questionText = value;
+        setQuestion(newQuestion);
+    };
+
+    // Добавление нового пустого поля в массив
+    const addQuestionField = () => {
+        setQuestion([...customQuestions, '']);
+    };
+
+    // Удаление поля из массива
+    const removeQuestionField = (index) => {
+        const newQuestion = customQuestions.filter((_, i) => i !== index);
+        setQuestion(newQuestion);
+    };
+
     return (
         <form onSubmit={handleSubmit}>
             <p>
@@ -60,6 +83,24 @@ function СreateSurvey(){
                 <label>ID шаблона:</label><br />   
                 <input type="number" value={templateId} onChange={handleTemplateId} />
             </p>
+
+            <div>
+                <label>Вопросы:</label>
+                {customQuestions.map((questionText, index) => (
+                    <div key={index}>
+                        <input 
+                            type="text" 
+                            value={customQuestions.questionText} 
+                            placeholder={`номер вопроса ${index + 1}`}
+                            onChange={(e) => handleCustomQuestionsChange(index, e.target.value)} 
+                        />
+                        {customQuestions.length > 2 && (
+                            <button type="button" onClick={() => removeQuestionField(index)}>❌</button>
+                        )}
+                    </div>
+                ))}
+                <button type="button" onClick={addQuestionField}>+ Добавить вопрос</button>
+            </div>
             
             <input type="submit" value="Отправить" />
         </form>
