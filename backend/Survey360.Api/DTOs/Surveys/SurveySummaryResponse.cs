@@ -7,5 +7,6 @@ public record SurveySummaryResponse(
     string Title, 
     SurveyStatus Status, 
     int TotalAssignments,     // Всего назначений
-    int CompletedAssignments // Сколько из них уже выполнено
+    int CompletedAssignments, // Сколько из них уже выполнено
+    DateTime StartDate
 );

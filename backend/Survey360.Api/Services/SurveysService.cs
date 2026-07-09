@@ -23,7 +23,8 @@ public class SurveysService(AppDbContext context) : ISurveysService
                 s.Title,
                 s.Status,
                 s.Assignments.Count,
-                s.Assignments.Count(a => a.Status == AssignmentStatus.Completed)
+                s.Assignments.Count(a => a.Status == AssignmentStatus.Completed),
+                s.StartDate
             ))
             .ToListAsync();
     }

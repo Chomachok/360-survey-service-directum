@@ -8,7 +8,7 @@ namespace Survey360.Api.Controllers;
 [Route("api/[controller]")]
 public class SurveysController(ISurveysService surveysService) : ControllerBase
 {
-    [HttpPost]
+    [HttpPost("create")]
     public async Task<ActionResult<SurveyCreateRequest>> Create([FromBody] SurveyCreateRequest surveyCreateRequest)
     {
         if (!ModelState.IsValid)
@@ -18,5 +18,13 @@ public class SurveysController(ISurveysService surveysService) : ControllerBase
         var localUri = $"/api/surveys/{createdSurvey.Id}";
 
         return Created(localUri, createdSurvey);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<SurveySummaryResponse>> GetAllSurveys()
+    {
+        var surveys = await surveysService.GetAllSurveysAsync();
+        
+        return Ok(surveys);
     }
 }
