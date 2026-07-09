@@ -1,6 +1,58 @@
-@Survey360.Api_HostAddress = http://localhost:5246
+@base = http://localhost:5246
+@contentType = application/json
+@survey_id = 0
 
-GET {{Survey360.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Main page
+GET {{base}}/api/
+Accept: {{contentType}}
 
-###
+### 2. Survey page
+GET {{base}}/api/survey/{{survey_id}}
+Accept: {{contentType}}
+
+### 3. Create survey page
+POST {{base}}/api/survey/create
+Content-Type: {{contentType}}
+
+{
+    "title": "survey title",
+    "descriotion": "survey description",
+    "startDate": "2026-07-08",
+    "endDate": "2026-08-08",
+    "templateId": 0,
+    "customQuestions": [
+        {"question text", 1, "options": {
+                                "options 1",
+                                "options 2"
+                             }
+        }
+    ]
+}
+
+### 4. Delete survey page
+DELETE {{base}}/api/survey/delete/{{survey_id}}
+
+### 5. Templates list page
+GET {{base}}/api/templates
+Accept: {{contentType}}
+
+### 5. Create survey template
+POST {{base}}/api/template/create
+Content-Type: {{contentType}}
+
+{
+    "title": "template title",
+    "questionTexts": [
+        "question text 1",
+        "question text 2"
+    ] 
+}
+
+### 6. Edit template (опционально)
+
+### 7. Delete template
+DELETE {{base}}/api/template/delete
+
+### 8. Results list page
+GET {{base}}/api/results/{{survey_id}}
+Accept: {{contentType}}
