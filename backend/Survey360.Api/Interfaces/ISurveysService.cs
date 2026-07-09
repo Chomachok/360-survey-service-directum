@@ -1,21 +1,32 @@
-using Survey360.Api.DTOs;
+using Survey360.Api.DTOs.Surveys;
+using Survey360.Api.DTOs.Templates;
+using Survey360.Api.DTOs.Assignments;
+using Survey360.Api.DTOs.Answers;
+using Survey360.Api.Enums;
 
-namespace Survey360.Api.Services;
+namespace Survey360.Api.Interfaces;
 
 public interface ISurveysService
 {
-    // Опросы
-    Task<IEnumerable<SurveyDto>> GetAllSurveysAsync();
-    Task<SurveyDto?> GetSurveyByIdAsync(int id);
-    Task<SurveyDto> CreateSurveyAsync(CreateSurveyDto dto);
-    Task<bool> UpdateSurveyAsync(int id, UpdateSurveyDto dto);
+    // ========== ОПРОСЫ ==========
+    Task<IEnumerable<SurveySummaryResponse>> GetAllSurveysAsync();
+    Task<SurveyResponse?> GetSurveyByIdAsync(int id);
+    Task<SurveyResponse> CreateSurveyAsync(SurveyCreateRequest request);
+    Task<bool> ChangeSurveyStatusAsync(int id, SurveyStatus newStatus);
     Task<bool> DeleteSurveyAsync(int id);
-    Task<bool> ChangeSurveyStatusAsync(int id, string status);
 
-    // Вопросы опроса
-    Task<IEnumerable<SurveyQuestionDto>> GetSurveyQuestionsAsync(int surveyId);
-    Task<SurveyQuestionDto?> AddQuestionFromTemplateAsync(int surveyId, AddQuestionDto dto);
-    Task<bool> UpdateQuestionOrderAsync(int surveyId, int questionId, int newOrder);
-    Task<bool> UpdateQuestionRequiredAsync(int surveyId, int questionId, bool isRequired);
-    Task<bool> DeleteQuestionFromSurveyAsync(int surveyId, int questionId);
+    // ========== ВОПРОСЫ ОПРОСА ==========
+    Task<IEnumerable<TemplateQuestionDto>> GetSurveyQuestionsAsync(int surveyId);
+
+    // ========== МАТРИЦА ОПРАШИВАЕМЫХ ==========
+    Task<AssignmentResponse> CreateAssignmentAsync(AssignmentCreateRequest request);
+    Task<IEnumerable<AssignmentResponse>> GetSurveyAssignmentsAsync(int surveyId);
+    Task<bool> DeleteAssignmentAsync(int assignmentId);
+
+    // ========== ПРОХОЖДЕНИЕ ОПРОСА ==========
+    Task<AnswerResponse> SubmitAnswerAsync(AnswerSubmitRequest request);
+    Task<IEnumerable<AnswerResponse>> GetRespondentAnswersAsync(int assignmentId);
+
+    // ========== РЕЗУЛЬТАТЫ ==========
+    Task<IEnumerable<AnswerResponse>> GetSurveyResultsAsync(int surveyId, int evaluateeId);
 }
