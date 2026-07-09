@@ -1,14 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Survey360.Api.Models;
+using Survey360.Api.Entities;
 
 namespace Survey360.Api.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<User> Users => Set<User>();
     public DbSet<Template> Templates => Set<Template>();
     public DbSet<TemplateQuestion> TemplateQuestions => Set<TemplateQuestion>();
