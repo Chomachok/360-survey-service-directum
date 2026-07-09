@@ -1,41 +1,61 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Survey360.Api.Data;
+using Survey360.Api.Validators;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http.Json; // для настройки JSON (опционально)
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// 1. Регистрация контроллеров (с поддержкой атрибутов [ApiController], [Route])
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Настройка сериализации (как в System.Text.Json)
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
+
+// 2. Добавляем OpenAPI (генерация документации)
 builder.Services.AddOpenApi();
+
+// 3. Добавляем контекст БД (SQLite)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// 4. Регистрируем валидаторы FluentValidation (из текущей сборки)
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProductCommandValidator>();
+
+// 5. Настраиваем CORS (для фронта на Vite)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // порт Vite
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+// 6. (Опционально) Настройка JSON для минимизации проблем с циклическими ссылками
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// 7. Включаем OpenAPI-эндпоинт (/openapi/v1.json)
+app.MapOpenApi();
 
-app.UseHttpsRedirection();
+// 8. (Опционально) Добавляем Swagger UI – для визуального просмотра
+// Не забудьте установить Swashbuckle.AspNetCore и раскомментировать:
+// app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "My API V1"));
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+// 9. Включаем CORS
+app.UseCors("Frontend");
 
-app.MapGet("/weatherforecast", () =>
-    {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
+// 10. Маршрутизация для контроллеров
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
