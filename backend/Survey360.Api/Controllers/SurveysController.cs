@@ -36,7 +36,7 @@ public class SurveysController(ISurveysService surveysService, IValidator<Survey
     [HttpGet("{id}/status/transitions")]
     public async Task<ActionResult<SurveyStatusResponse>> GetStatusTransitions(int id)
     {
-        var response = await _service.GetAvailableStatusTransitionsAsync(id);
+        var response = await surveysService.GetAvailableStatusTransitionsAsync(id);
     
         if (response.ErrorMessage != null && !response.AvailableTransitions.Any())
         {
@@ -49,15 +49,15 @@ public class SurveysController(ISurveysService surveysService, IValidator<Survey
     /// <summary>
     /// Изменить статус опроса
     /// </summary>
-    [HttpPatch("{id}/status")]
+    [HttpPatch("{id:int}/status")]
     public async Task<ActionResult<SurveyStatusResponse>> ChangeStatus(int id, [FromBody] SurveyStatusRequest request)
     {
         try
         {
-            await _service.ChangeSurveyStatusAsync(id, request.NewStatus);
+            await surveysService.ChangeSurveyStatusAsync(id, request.NewStatus);
         
             // Возвращаем обновлённую информацию о статусах
-            var response = await _service.GetAvailableStatusTransitionsAsync(id);
+            var response = await surveysService.GetAvailableStatusTransitionsAsync(id);
             return Ok(response);
         }
         catch (KeyNotFoundException ex)
