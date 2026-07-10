@@ -1,5 +1,7 @@
 import {createRoot} from "react-dom/client";
 import {useState} from "react";
+import {handleSubmit} from "../shared/api.jsx"
+import SurveyMatrix from "../shared/create-survey-matrix.jsx"
 
 function СreateSurvey(){
     const [title, setName] = useState("");
@@ -7,7 +9,7 @@ function СreateSurvey(){
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [templateId, setTemplateId] = useState("");
-    const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:1, options:[]}]);
+    //const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:1, options:[]}]);
 
     function handleNameChange(event) {    
         setName(event.target.value);  
@@ -29,40 +31,45 @@ function СreateSurvey(){
         setTemplateId(event.target.value);  
     }
 
-    function handleTemplateId(event) {    
-        setCustomQuestions(event.target.value);  
-    }
-
-    function handleSubmit(e) {
-        e.preventDefault();
-        console.log("Name: ", title);
-        console.log("Description: ", description);
-        console.log("StartDate: ", startDate);
-        console.log("EndDate: ", endDate);
-        console.log("TemplateId: ", templateId);
-        console.log("customQuestions: ", customQuestions);
-    }
+    // function handleTemplateId(event) {    
+    //     setQuestions(event.target.value);  
+    // }
     
-    // Изменение конкретного элемента в массиве по его индексу
-    const handleCustomQuestionsChange = (index, value) => {
-        const newQuestion = [...customQuestions];
-        newQuestion[index].questionText = value;
-        setQuestion(newQuestion);
-    };
+    // // Изменение конкретного элемента в массиве по его индексу
+    // const handleCustomQuestionsChange = (index, value) => {
+    //     const newQuestion = [...customQuestions];
+    //     newQuestion[index].questionText = value;
+    //     setQuestion(newQuestion);
+    // };
 
-    // Добавление нового пустого поля в массив
-    const addQuestionField = () => {
-        setQuestion([...customQuestions, '']);
-    };
+    // // Добавление нового пустого поля в массив
+    // const addQuestionField = () => {
+    //     setQuestion([...customQuestions, '']);
+    // };
 
-    // Удаление поля из массива
-    const removeQuestionField = (index) => {
-        const newQuestion = customQuestions.filter((_, i) => i !== index);
-        setQuestion(newQuestion);
+    // // Удаление поля из массива
+    // const removeQuestionField = (index) => {
+    //     const newQuestion = customQuestions.filter((_, i) => i !== index);
+    //     setQuestion(newQuestion);
+    // };
+
+    // Отправка формы – собираем данные и вызываем функцию из API
+    const onSubmit = (e) => {
+        e.preventDefault();
+        const surveyData = {
+        title,
+        description,
+        startDate,
+        endDate,
+        templateId: templateId ? Number(templateId) : null,
+        //questions: customQuestions,
+        };
+        // Вызов импортированной функции
+        handleSubmit(surveyData);
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={onSubmit}>
             <p>
                 <label>Имя:</label><br />
                 <input type="text" value={title} onChange={handleNameChange} />
@@ -84,7 +91,7 @@ function СreateSurvey(){
                 <input type="number" value={templateId} onChange={handleTemplateId} />
             </p>
 
-            <div>
+            {/* <div>
                 <label>Вопросы:</label>
                 {customQuestions.map((questionText, index) => (
                     <div key={index}>
@@ -100,7 +107,7 @@ function СreateSurvey(){
                     </div>
                 ))}
                 <button type="button" onClick={addQuestionField}>+ Добавить вопрос</button>
-            </div>
+            </div> */}
             
             <input type="submit" value="Отправить" />
         </form>
@@ -108,4 +115,4 @@ function СreateSurvey(){
 
 }
 
-createRoot(document.getElementById("nameSurvey")).render(<СreateSurvey />)
+createRoot(document.getElementById("nameSurvey")).render(<СreateSurvey />/*<SurveyMatrix />*/);
