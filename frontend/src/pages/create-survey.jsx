@@ -1,6 +1,7 @@
 import {createRoot} from "react-dom/client";
 import {useState} from "react";
 import {handleSubmit} from "../shared/api.jsx"
+import SurveyMatrix from "../shared/create-survey-matrix.jsx"
 
 function СreateSurvey(){
     const [title, setName] = useState("");
@@ -114,4 +115,4 @@ function СreateSurvey(){
 
 }
 
-createRoot(document.getElementById("nameSurvey")).render(<СreateSurvey />)
+createRoot(document.getElementById("nameSurvey")).render(<СreateSurvey />/*<SurveyMatrix />*/);
