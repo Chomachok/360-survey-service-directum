@@ -12,7 +12,6 @@ public interface ISurveysService
     Task<IEnumerable<SurveySummaryResponse>> GetAllSurveysAsync();
     Task<SurveyResponse?> GetSurveyByIdAsync(int id);
     Task<SurveyResponse> CreateSurveyAsync(SurveyCreateRequest request);
-    Task<bool> ChangeSurveyStatusAsync(int id, SurveyStatus newStatus);
     Task<bool> DeleteSurveyAsync(int id);
 
     // ========== ВОПРОСЫ ОПРОСА ==========
@@ -31,7 +30,7 @@ public interface ISurveysService
     Task<IEnumerable<AnswerResponse>> GetSurveyResultsAsync(int surveyId, int evaluateeId);
 
     // ========== СТАТУСЫ ОПРОСА ==========
-Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId);
-Task<bool> ChangeSurveyStatusAsync(int surveyId, SurveyStatus newStatus);
+    Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId);
+    Task<bool> ChangeSurveyStatusAsync(int surveyId, SurveyStatus newStatus);
 
 }

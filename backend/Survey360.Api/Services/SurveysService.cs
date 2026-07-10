@@ -151,10 +151,10 @@ public class SurveysService(AppDbContext context) : ISurveysService
             // Проверяем, что есть хотя бы один вопрос в шаблоне
             var surveyWithTemplate = await context.Surveys
                 .Include(s => s.Template)
-                .ThenInclude(t => t!.Questions)
+                .ThenInclude(t => t.Questions)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
-            if (surveyWithTemplate?.Template?.Questions == null || 
+            if (surveyWithTemplate?.Template.Questions == null || 
                 !surveyWithTemplate.Template.Questions.Any())
             {
                 throw new InvalidOperationException("Нельзя активировать опрос без вопросов");
@@ -440,7 +440,7 @@ public class SurveysService(AppDbContext context) : ISurveysService
 
 public async Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId)
 {
-    var survey = await _context.Surveys
+    var survey = await context.Surveys
         .Include(s => s.Template)
         .ThenInclude(t => t!.Questions)
         .FirstOrDefaultAsync(s => s.Id == surveyId);
@@ -463,7 +463,7 @@ public async Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int s
         case SurveyStatus.Draft:
             // Из черновика можно перейти в Active, если есть вопросы и матрица
             var hasQuestions = survey.Template?.Questions != null && survey.Template.Questions.Any();
-            var hasAssignments = await _context.Assignments
+            var hasAssignments = await context.Assignments
                 .AnyAsync(a => a.SurveyId == surveyId);
 
             if (hasQuestions && hasAssignments)
@@ -499,40 +499,6 @@ public async Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int s
     );
 }
 
-public async Task<bool> ChangeSurveyStatusAsync(int surveyId, SurveyStatus newStatus)
-{
-    var survey = await _context.Surveys
-        .Include(s => s.Template)
-        .ThenInclude(t => t!.Questions)
-        .FirstOrDefaultAsync(s => s.Id == surveyId);
-
-    if (survey == null)
-    {
-        throw new KeyNotFoundException($"Опрос с ID {surveyId} не найден");
-    }
-
-    // Валидация переходов между статусами
-    ValidateStatusTransition(survey.Status, newStatus, survey);
-
-    survey.Status = newStatus;
-
-    // При завершении автоматически проставляем дату окончания
-    if (newStatus == SurveyStatus.Closed && survey.EndDate == null)
-    {
-        survey.EndDate = DateTime.UtcNow;
-    }
-
-    // При активации проставляем дату начала, если не задана
-    if (newStatus == SurveyStatus.Active && survey.StartDate == null)
-    {
-        survey.StartDate = DateTime.UtcNow;
-    }
-
-    await _context.SaveChangesAsync();
-
-    return true;
-}
-
 private void ValidateStatusTransition(SurveyStatus currentStatus, SurveyStatus newStatus, Survey survey)
 {
     // Нельзя перейти в тот же статус
@@ -557,7 +523,7 @@ private void ValidateStatusTransition(SurveyStatus currentStatus, SurveyStatus n
             }
 
             // Проверяем наличие матрицы
-            var hasAssignments = _context.Assignments.Any(a => a.SurveyId == survey.Id);
+            var hasAssignments = context.Assignments.Any(a => a.SurveyId == survey.Id);
             if (!hasAssignments)
             {
                 throw new InvalidOperationException("Нельзя активировать опрос без матрицы опрашиваемых");
