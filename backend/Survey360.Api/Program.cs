@@ -1,49 +1,49 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentValidation;
-using Survey360.Api.Data;
-using Survey360.Api.Validators;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http.Json;
+using Survey360.Api.Data;
 using Survey360.Api.Entities;
 using Survey360.Api.Enums;
 using Survey360.Api.Interfaces;
 using Survey360.Api.Services;
+using Survey360.Api.Validators;
 
+// Построение приложения
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Регистрация контроллеров (с поддержкой атрибутов [ApiController], [Route])
+// 1. Регистрация контроллеров
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Настройка сериализации (как в System.Text.Json)
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.WriteIndented = true;
     });
 
-// 2. Добавляем OpenAPI (генерация документации)
+// 2. OpenAPI
 builder.Services.AddOpenApi();
 
-// 3. Добавляем контекст БД (SQLite)
+// 3. DbContext (SQLite)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 4. Регистрируем валидаторы FluentValidation (из текущей сборки)
+// 4. FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<SurveyCreateRequestValidator>();
 builder.Services.AddScoped<ISurveysService, SurveysService>();
 
-// 5. Настраиваем CORS (для фронта на Vite)
+// 5. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // порт Vite
+        policy.WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
-// 6. (Опционально) Настройка JSON для минимизации проблем с циклическими ссылками
+// 6. Настройка JSON (циклические ссылки)
 builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -51,39 +51,34 @@ builder.Services.Configure<JsonOptions>(options =>
 
 var app = builder.Build();
 
-// Автоприменение миграций при запуске приложения
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
-    }
-    catch (Exception e)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(e, "An error occurred while migrating the DB.");
-    }
-}
-
-// 7. Включаем OpenAPI-эндпоинт (/openapi/v1.json)
-app.MapOpenApi();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "My API V1");
-    });
-}
-
+// 7. Создание базы данных, только если файл отсутствует
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // Проверяем, есть ли пользователи
-    if (!db.Users.Any())
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    // Извлекаем путь к файлу из строки подключения (формат "Data Source=app.db")
+    var dataSource = new System.Data.Common.DbConnectionStringBuilder 
+    { 
+        ConnectionString = connectionString 
+    }["Data Source"]?.ToString();
+
+    if (!string.IsNullOrEmpty(dataSource) && !File.Exists(dataSource))
+    {
+        await db.Database.EnsureCreatedAsync();
+        Console.WriteLine($"База данных создана: {dataSource}");
+    }
+    else
+    {
+        Console.WriteLine("База данных уже существует.");
+    }
+}
+
+// 8. Инициализация тестовым пользователем (если таблица Users пуста)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (!await db.Users.AnyAsync())
     {
         db.Users.Add(new User
         {
@@ -94,13 +89,27 @@ using (var scope = app.Services.CreateScope())
             PasswordSalt = "2345udfghjkl"
         });
         await db.SaveChangesAsync();
+        Console.WriteLine("Добавлен тестовый пользователь.");
     }
 }
 
-// 9. Включаем CORS
+// 9. Swagger UI (только для разработки)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Survey 360 Web App");
+    });
+}
+
+// 10. OpenAPI endpoint
+app.MapOpenApi();
+
+// 11. CORS
 app.UseCors("Frontend");
 
-// 10. Маршрутизация для контроллеров
+// 12. Маршруты
 app.MapControllers();
 
-app.Run();
+// 13. Запуск приложения
+await app.RunAsync();
