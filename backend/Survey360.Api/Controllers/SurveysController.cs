@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Survey360.Api.DTOs.Surveys;
 using Survey360.Api.Interfaces;
@@ -6,13 +7,14 @@ namespace Survey360.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SurveysController(ISurveysService surveysService) : ControllerBase
+public class SurveysController(ISurveysService surveysService, IValidator<SurveyCreateRequest> validator) : ControllerBase
 {
     [HttpPost("create")]
     public async Task<ActionResult<SurveyCreateRequest>> Create([FromBody] SurveyCreateRequest surveyCreateRequest)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+        var validationResult = await validator.ValidateAsync(surveyCreateRequest);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
 
         var createdSurvey = await surveysService.CreateSurveyAsync(surveyCreateRequest);
         var localUri = $"/api/surveys/{createdSurvey.Id}";
