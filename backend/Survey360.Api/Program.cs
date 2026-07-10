@@ -51,6 +51,23 @@ builder.Services.Configure<JsonOptions>(options =>
 
 var app = builder.Build();
 
+// Автоприменение миграций при запуске приложения
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+    }
+    catch (Exception e)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(e, "An error occurred while migrating the DB.");
+    }
+}
+
 // 7. Включаем OpenAPI-эндпоинт (/openapi/v1.json)
 app.MapOpenApi();
 
