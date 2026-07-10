@@ -8,7 +8,7 @@ function СreateSurvey(){
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [templateId, setTemplateId] = useState("");
-    const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:1, options:[""]}]);
+    const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:"1", options:[""]}]);
 
     function handleNameChange(event) {    
         setName(event.target.value);  
