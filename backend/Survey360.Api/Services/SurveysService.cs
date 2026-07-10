@@ -337,13 +337,19 @@ public class SurveysService(AppDbContext context) : ISurveysService
         if (assignment is null)
             throw new KeyNotFoundException($"Назначение с ID {request.AssignmentId} не найдено");
 
-        // 2. Проверка статуса опроса
         if (assignment.Survey.Status != SurveyStatus.Active)
-            throw new InvalidOperationException("Опрос не активен");
+        {
+        throw new InvalidOperationException(
+            $"Нельзя отправить ответы: опрос находится в статусе '{assignment.Survey.Status}'. " +
+            "Опросы можно проходить только в статусе 'Активен'."
+            );
+        }
 
-        // 3. Проверка статуса назначения
+    // Проверяем, что назначение не завершено
         if (assignment.Status == AssignmentStatus.Completed)
-            throw new InvalidOperationException("Эта анкета уже отправлена");
+        {
+        throw new InvalidOperationException("Эта анкета уже отправлена");
+        }
 
         // 4. Проверка существования вопроса в шаблоне
         var question = assignment.Survey.Template?.Questions
@@ -429,4 +435,147 @@ public class SurveysService(AppDbContext context) : ISurveysService
 
         return results;
     }
+
+    // ========== СТАТУСЫ ОПРОСА ==========
+
+public async Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId)
+{
+    var survey = await _context.Surveys
+        .Include(s => s.Template)
+        .ThenInclude(t => t!.Questions)
+        .FirstOrDefaultAsync(s => s.Id == surveyId);
+
+    if (survey == null)
+    {
+        return new SurveyStatusResponse(
+            surveyId,
+            SurveyStatus.Draft,
+            new List<SurveyStatus>(),
+            "Опрос не найден"
+        );
+    }
+
+    var availableTransitions = new List<SurveyStatus>();
+    string? errorMessage = null;
+
+    switch (survey.Status)
+    {
+        case SurveyStatus.Draft:
+            // Из черновика можно перейти в Active, если есть вопросы и матрица
+            var hasQuestions = survey.Template?.Questions != null && survey.Template.Questions.Any();
+            var hasAssignments = await _context.Assignments
+                .AnyAsync(a => a.SurveyId == surveyId);
+
+            if (hasQuestions && hasAssignments)
+            {
+                availableTransitions.Add(SurveyStatus.Active);
+            }
+            else
+            {
+                var missingParts = new List<string>();
+                if (!hasQuestions) missingParts.Add("вопросы");
+                if (!hasAssignments) missingParts.Add("матрица опрашиваемых");
+                
+                errorMessage = $"Нельзя активировать опрос: не заполнены {string.Join(" и ", missingParts)}";
+            }
+            break;
+
+        case SurveyStatus.Active:
+            // Из активного можно только завершить
+            availableTransitions.Add(SurveyStatus.Closed);
+            break;
+
+        case SurveyStatus.Closed:
+            // Из завершённого нельзя никуда перейти
+            errorMessage = "Опрос завершён, изменение статуса невозможно";
+            break;
+    }
+
+    return new SurveyStatusResponse(
+        surveyId,
+        survey.Status,
+        availableTransitions,
+        errorMessage
+    );
+}
+
+public async Task<bool> ChangeSurveyStatusAsync(int surveyId, SurveyStatus newStatus)
+{
+    var survey = await _context.Surveys
+        .Include(s => s.Template)
+        .ThenInclude(t => t!.Questions)
+        .FirstOrDefaultAsync(s => s.Id == surveyId);
+
+    if (survey == null)
+    {
+        throw new KeyNotFoundException($"Опрос с ID {surveyId} не найден");
+    }
+
+    // Валидация переходов между статусами
+    ValidateStatusTransition(survey.Status, newStatus, survey);
+
+    survey.Status = newStatus;
+
+    // При завершении автоматически проставляем дату окончания
+    if (newStatus == SurveyStatus.Closed && survey.EndDate == null)
+    {
+        survey.EndDate = DateTime.UtcNow;
+    }
+
+    // При активации проставляем дату начала, если не задана
+    if (newStatus == SurveyStatus.Active && survey.StartDate == null)
+    {
+        survey.StartDate = DateTime.UtcNow;
+    }
+
+    await _context.SaveChangesAsync();
+
+    return true;
+}
+
+private void ValidateStatusTransition(SurveyStatus currentStatus, SurveyStatus newStatus, Survey survey)
+{
+    // Нельзя перейти в тот же статус
+    if (currentStatus == newStatus)
+    {
+        throw new InvalidOperationException($"Опрос уже имеет статус '{currentStatus}'");
+    }
+
+    switch (currentStatus)
+    {
+        case SurveyStatus.Draft:
+            // Из черновика можно только в Active
+            if (newStatus != SurveyStatus.Active)
+            {
+                throw new InvalidOperationException("Из черновика можно перейти только в статус 'Активен'");
+            }
+
+            // Проверяем наличие вопросов
+            if (survey.Template?.Questions == null || !survey.Template.Questions.Any())
+            {
+                throw new InvalidOperationException("Нельзя активировать опрос без вопросов");
+            }
+
+            // Проверяем наличие матрицы
+            var hasAssignments = _context.Assignments.Any(a => a.SurveyId == survey.Id);
+            if (!hasAssignments)
+            {
+                throw new InvalidOperationException("Нельзя активировать опрос без матрицы опрашиваемых");
+            }
+
+            break;
+
+        case SurveyStatus.Active:
+            // Из активного можно только в Closed
+            if (newStatus != SurveyStatus.Closed)
+            {
+                throw new InvalidOperationException("Из активного статуса можно перейти только в 'Завершён'");
+            }
+            break;
+
+        case SurveyStatus.Closed:
+            // Из завершённого нельзя никуда перейти
+            throw new InvalidOperationException("Нельзя изменить статус завершённого опроса");
+    }
+}
 }

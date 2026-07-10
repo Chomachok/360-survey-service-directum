@@ -29,4 +29,44 @@ public class SurveysController(ISurveysService surveysService, IValidator<Survey
         
         return Ok(surveys);
     }
+
+    /// <summary>
+    /// Получить доступные переходы статусов для опроса
+    /// </summary>
+    [HttpGet("{id}/status/transitions")]
+    public async Task<ActionResult<SurveyStatusResponse>> GetStatusTransitions(int id)
+    {
+        var response = await _service.GetAvailableStatusTransitionsAsync(id);
+    
+        if (response.ErrorMessage != null && !response.AvailableTransitions.Any())
+        {
+            return BadRequest(response);
+        }
+
+    return Ok(response);
+    }
+
+    /// <summary>
+    /// Изменить статус опроса
+    /// </summary>
+    [HttpPatch("{id}/status")]
+    public async Task<ActionResult<SurveyStatusResponse>> ChangeStatus(int id, [FromBody] SurveyStatusRequest request)
+    {
+        try
+        {
+            await _service.ChangeSurveyStatusAsync(id, request.NewStatus);
+        
+            // Возвращаем обновлённую информацию о статусах
+            var response = await _service.GetAvailableStatusTransitionsAsync(id);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
