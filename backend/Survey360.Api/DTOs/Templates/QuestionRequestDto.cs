@@ -1,9 +1,9 @@
 using Survey360.Api.Enums;
 
-namespace Survey360.Api.DTOs.Surveys;
+namespace Survey360.Api.DTOs.Templates;
 
 public record QuestionRequestDto(
-    int Id,
     string Text,
     QuestionType Type,
-    List<string>? Options);
+    List<string>? Options
+);

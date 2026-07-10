@@ -12,7 +12,7 @@ namespace Survey360.Api.Services;
 
 public class SurveysService(AppDbContext context) : ISurveysService
 {
-    // ========== ОПРОСЫ ==========
+    // ===== ОПРОСЫ =====
 
     public async Task<IEnumerable<SurveySummaryResponse>> GetAllSurveysAsync()
     {
@@ -31,12 +31,15 @@ public class SurveysService(AppDbContext context) : ISurveysService
 
     public async Task<SurveyResponse?> GetSurveyByIdAsync(int id)
     {
-        var survey = await context.Surveys.FindAsync(id);
+        var survey = await context.Surveys
+            .Include(s => s.Template)
+                .ThenInclude(t => t.Questions)
+                    .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(s => s.Id == id);
 
-        if (survey == null)
-        {
-            return null;
-        }
+        if (survey == null) return null;
+
+        var questionDtos = MapQuestions(survey.Template);
 
         return new SurveyResponse(
             survey.Id,
@@ -44,23 +47,22 @@ public class SurveysService(AppDbContext context) : ISurveysService
             survey.Status,
             survey.StartDate,
             survey.EndDate,
-            survey.TemplateId
+            survey.TemplateId,
+            questionDtos
         );
     }
 
     public async Task<SurveyResponse> CreateSurveyAsync(SurveyCreateRequest request)
     {
-        // Вариант 1: Создание из готового шаблона
+        Survey survey;
+
         if (request.TemplateId.HasValue)
         {
             var template = await context.Templates.FindAsync(request.TemplateId.Value);
-
             if (template == null)
-            {
                 throw new KeyNotFoundException($"Шаблон с ID {request.TemplateId} не найден");
-            }
 
-            var survey = new Survey
+            survey = new Survey
             {
                 Title = request.Title,
                 TemplateId = template.Id,
@@ -71,39 +73,25 @@ public class SurveysService(AppDbContext context) : ISurveysService
 
             context.Surveys.Add(survey);
             await context.SaveChangesAsync();
-
-            return new SurveyResponse(
-                survey.Id,
-                survey.Title,
-                survey.Status,
-                survey.StartDate,
-                survey.EndDate,
-                survey.TemplateId
-            );
         }
-
-        // Вариант 2: Создание с кастомными вопросами (создаём временный шаблон)
-        if (request.CustomQuestions != null && request.CustomQuestions.Any())
+        else if (request.CustomQuestions != null && request.CustomQuestions.Any())
         {
             var template = new Template
             {
-                Title = $"Template for: {request.Title}",
-                CreatorId = 1, // TODO: получить из контекста авторизации
+                Title = $"Шаблон для опроса: {request.Title}",
+                CreatorId = 1,
                 Questions = request.CustomQuestions.Select(q => new TemplateQuestion
                 {
                     Text = q.Text,
                     Type = q.Type,
-                    Options = q.Options?.Select(opt => new QuestionOption
-                    {
-                        Text = opt
-                    }).ToList() ?? new List<QuestionOption>()
+                    Options = q.Options?.Select(opt => new QuestionOption { Text = opt }).ToList() ?? new List<QuestionOption>()
                 }).ToList()
             };
 
             context.Templates.Add(template);
             await context.SaveChangesAsync();
 
-            var survey = new Survey
+            survey = new Survey
             {
                 Title = request.Title,
                 TemplateId = template.Id,
@@ -114,69 +102,59 @@ public class SurveysService(AppDbContext context) : ISurveysService
 
             context.Surveys.Add(survey);
             await context.SaveChangesAsync();
-
-            return new SurveyResponse(
-                survey.Id,
-                survey.Title,
-                survey.Status,
-                survey.StartDate,
-                survey.EndDate,
-                survey.TemplateId
-            );
+        }
+        else
+        {
+            throw new ArgumentException("Необходимо указать либо TemplateId, либо CustomQuestions");
         }
 
-        throw new ArgumentException("Необходимо указать либо TemplateId, либо CustomQuestions");
+        var createdSurvey = await context.Surveys
+            .Include(s => s.Template)
+                .ThenInclude(t => t.Questions)
+                    .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(s => s.Id == survey.Id);
+
+        var questionDtos = MapQuestions(createdSurvey?.Template);
+
+        return new SurveyResponse(
+            createdSurvey!.Id,
+            createdSurvey.Title,
+            createdSurvey.Status,
+            createdSurvey.StartDate,
+            createdSurvey.EndDate,
+            createdSurvey.TemplateId,
+            questionDtos
+        );
     }
 
     public async Task<bool> ChangeSurveyStatusAsync(int id, SurveyStatus newStatus)
     {
         var survey = await context.Surveys.FindAsync(id);
+        if (survey == null) return false;
 
-        if (survey == null)
-        {
-            return false;
-        }
-
-        // Валидация: нельзя активировать опрос без назначений (раздел 5.2 ТЗ)
         if (newStatus == SurveyStatus.Active)
         {
-            var hasAssignments = await context.Assignments
-                .AnyAsync(a => a.SurveyId == id);
-
+            var hasAssignments = await context.Assignments.AnyAsync(a => a.SurveyId == id);
             if (!hasAssignments)
-            {
                 throw new InvalidOperationException("Нельзя активировать опрос без назначений респондентов");
-            }
 
-            // Проверяем, что есть хотя бы один вопрос в шаблоне
             var surveyWithTemplate = await context.Surveys
                 .Include(s => s.Template)
                 .ThenInclude(t => t.Questions)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
-            if (surveyWithTemplate?.Template.Questions == null || 
-                !surveyWithTemplate.Template.Questions.Any())
-            {
+            if (surveyWithTemplate?.Template?.Questions == null || !surveyWithTemplate.Template.Questions.Any())
                 throw new InvalidOperationException("Нельзя активировать опрос без вопросов");
-            }
         }
 
-        // Валидация: нельзя редактировать завершённый опрос
         if (survey.Status == SurveyStatus.Closed)
-        {
             throw new InvalidOperationException("Нельзя изменить статус завершённого опроса");
-        }
 
         survey.Status = newStatus;
-
-        // При завершении автоматически проставляем дату окончания
         if (newStatus == SurveyStatus.Closed && survey.EndDate == null)
-        {
             survey.EndDate = DateTime.UtcNow;
-        }
 
         await context.SaveChangesAsync();
-
         return true;
     }
 
@@ -184,83 +162,62 @@ public class SurveysService(AppDbContext context) : ISurveysService
     {
         var survey = await context.Surveys
             .Include(s => s.Assignments)
-            .ThenInclude(a => a.Answers)
+                .ThenInclude(a => a.Answers)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-        if (survey == null)
-        {
-            return false;
-        }
+        if (survey == null) return false;
 
-        // Нельзя удалить активный опрос
         if (survey.Status == SurveyStatus.Active)
-        {
             throw new InvalidOperationException("Нельзя удалить активный опрос");
-        }
 
         context.Surveys.Remove(survey);
         await context.SaveChangesAsync();
-
         return true;
     }
 
-    // ========== ВОПРОСЫ ОПРОСА ==========
+    // ===== ВОПРОСЫ =====
 
     public async Task<IEnumerable<TemplateQuestionDto>> GetSurveyQuestionsAsync(int surveyId)
     {
         var survey = await context.Surveys
             .Include(s => s.Template)
-            .ThenInclude(t => t!.Questions)
+                .ThenInclude(t => t!.Questions)
             .FirstOrDefaultAsync(s => s.Id == surveyId);
 
         if (survey?.Template == null)
-        {
             return Enumerable.Empty<TemplateQuestionDto>();
-        }
 
         return survey.Template.Questions
             .Select(q => new TemplateQuestionDto(q.Id, q.Text))
             .ToList();
     }
 
-    // ========== МАТРИЦА ОПРАШИВАЕМЫХ (раздел 5.2 ТЗ) ==========
+    // ===== МАТРИЦА =====
 
     public async Task<AssignmentResponse> CreateAssignmentAsync(AssignmentCreateRequest request)
     {
         var survey = await context.Surveys.FindAsync(request.SurveyId);
         if (survey == null)
-        {
             throw new KeyNotFoundException($"Опрос с ID {request.SurveyId} не найден");
-        }
 
-        // Нельзя редактировать матрицу активного/завершённого опроса
         if (survey.Status != SurveyStatus.Draft)
-        {
             throw new InvalidOperationException("Нельзя редактировать матрицу после запуска опроса");
-        }
 
         var evaluator = await context.Users.FindAsync(request.EvaluatorId);
         if (evaluator == null)
-        {
             throw new KeyNotFoundException($"Респондент с ID {request.EvaluatorId} не найден");
-        }
 
         var evaluatee = await context.Users.FindAsync(request.EvaluateeId);
         if (evaluatee == null)
-        {
             throw new KeyNotFoundException($"Оцениваемый с ID {request.EvaluateeId} не найден");
-        }
 
-        // Проверяем, что такое назначение уже не существует
         var existing = await context.Assignments
             .AnyAsync(a => a.SurveyId == request.SurveyId
                         && a.EvaluatorId == request.EvaluatorId
                         && a.EvaluateeId == request.EvaluateeId);
 
         if (existing)
-        {
             throw new InvalidOperationException("Такое назначение уже существует");
-        }
 
         var assignment = new Assignment
         {
@@ -304,30 +261,21 @@ public class SurveysService(AppDbContext context) : ISurveysService
     public async Task<bool> DeleteAssignmentAsync(int assignmentId)
     {
         var assignment = await context.Assignments.FindAsync(assignmentId);
+        if (assignment == null) return false;
 
-        if (assignment == null)
-        {
-            return false;
-        }
-
-        // Нельзя удалить назначение активного опроса
         var survey = await context.Surveys.FindAsync(assignment.SurveyId);
         if (survey?.Status != SurveyStatus.Draft)
-        {
             throw new InvalidOperationException("Нельзя удалить назначение после запуска опроса");
-        }
 
         context.Assignments.Remove(assignment);
         await context.SaveChangesAsync();
-
         return true;
     }
 
-    // ========== ПРОХОЖДЕНИЕ ОПРОСА (раздел 5.4 ТЗ) ==========
+    // ===== ОТВЕТЫ =====
 
     public async Task<AnswerResponse> SubmitAnswerAsync(AnswerSubmitRequest request)
     {
-        // 1. Загружаем назначение с опросом, шаблоном и вопросами
         var assignment = await context.Assignments
             .Include(a => a.Survey)
                 .ThenInclude(s => s.Template)
@@ -338,44 +286,30 @@ public class SurveysService(AppDbContext context) : ISurveysService
             throw new KeyNotFoundException($"Назначение с ID {request.AssignmentId} не найдено");
 
         if (assignment.Survey.Status != SurveyStatus.Active)
-        {
-        throw new InvalidOperationException(
-            $"Нельзя отправить ответы: опрос находится в статусе '{assignment.Survey.Status}'. " +
-            "Опросы можно проходить только в статусе 'Активен'."
-            );
-        }
+            throw new InvalidOperationException($"Опрос не активен (текущий статус: {assignment.Survey.Status})");
 
-    // Проверяем, что назначение не завершено
         if (assignment.Status == AssignmentStatus.Completed)
-        {
-        throw new InvalidOperationException("Эта анкета уже отправлена");
-        }
+            throw new InvalidOperationException("Эта анкета уже отправлена");
 
-        // 4. Проверка существования вопроса в шаблоне
         var question = assignment.Survey.Template?.Questions
             .FirstOrDefault(q => q.Id == request.QuestionId);
 
         if (question is null)
             throw new KeyNotFoundException($"Вопрос с ID {request.QuestionId} не найден в этом опросе");
 
-        // 5. Базовая валидация текста (можно вынести во FluentValidation)
         if (string.IsNullOrWhiteSpace(request.Text))
             throw new ArgumentException("Ответ не может быть пустым");
 
-        // 6. Проверка, не отвечал ли уже пользователь на этот вопрос
         var existingAnswer = await context.Answers
             .FirstOrDefaultAsync(a => a.AssignmentId == request.AssignmentId
                                    && a.QuestionId == request.QuestionId);
 
         if (existingAnswer is not null)
         {
-            // Обновляем существующий ответ
             existingAnswer.Text = request.Text;
         }
         else
         {
-            // Создаём новый ответ (обратите внимание: AssignmentId задаётся, а навигация не требуется,
-            // если она не помечена как required)
             var answer = new Answer
             {
                 AssignmentId = request.AssignmentId,
@@ -386,7 +320,6 @@ public class SurveysService(AppDbContext context) : ISurveysService
         }
 
         await context.SaveChangesAsync();
-
         return new AnswerResponse(question.Text, request.Text);
     }
 
@@ -397,20 +330,16 @@ public class SurveysService(AppDbContext context) : ISurveysService
             .ToListAsync();
 
         var result = new List<AnswerResponse>();
-
         foreach (var answer in answers)
         {
             var question = await context.Set<TemplateQuestion>().FindAsync(answer.QuestionId);
             if (question != null)
-            {
                 result.Add(new AnswerResponse(question.Text, answer.Text));
-            }
         }
-
         return result;
     }
 
-    // ========== РЕЗУЛЬТАТЫ (раздел 5.5 ТЗ) ==========
+    // ===== РЕЗУЛЬТАТЫ =====
 
     public async Task<IEnumerable<AnswerResponse>> GetSurveyResultsAsync(int surveyId, int evaluateeId)
     {
@@ -420,128 +349,88 @@ public class SurveysService(AppDbContext context) : ISurveysService
             .ToListAsync();
 
         var results = new List<AnswerResponse>();
-
         foreach (var assignment in assignments)
         {
             foreach (var answer in assignment.Answers)
             {
                 var question = await context.Set<TemplateQuestion>().FindAsync(answer.QuestionId);
                 if (question != null)
-                {
                     results.Add(new AnswerResponse(question.Text, answer.Text));
-                }
             }
         }
-
         return results;
     }
 
-    // ========== СТАТУСЫ ОПРОСА ==========
+    // ===== СТАТУСЫ =====
 
-public async Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId)
-{
-    var survey = await context.Surveys
-        .Include(s => s.Template)
-        .ThenInclude(t => t!.Questions)
-        .FirstOrDefaultAsync(s => s.Id == surveyId);
-
-    if (survey == null)
+    public async Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId)
     {
+        var survey = await context.Surveys
+            .Include(s => s.Template)
+                .ThenInclude(t => t!.Questions)
+            .FirstOrDefaultAsync(s => s.Id == surveyId);
+
+        if (survey == null)
+        {
+            return new SurveyStatusResponse(
+                surveyId,
+                SurveyStatus.Draft,
+                new List<SurveyStatus>(),
+                "Опрос не найден"
+            );
+        }
+
+        var availableTransitions = new List<SurveyStatus>();
+        string? errorMessage = null;
+
+        switch (survey.Status)
+        {
+            case SurveyStatus.Draft:
+                var hasQuestions = survey.Template?.Questions != null && survey.Template.Questions.Any();
+                var hasAssignments = await context.Assignments.AnyAsync(a => a.SurveyId == surveyId);
+
+                if (hasQuestions && hasAssignments)
+                    availableTransitions.Add(SurveyStatus.Active);
+                else
+                {
+                    var missingParts = new List<string>();
+                    if (!hasQuestions) missingParts.Add("вопросы");
+                    if (!hasAssignments) missingParts.Add("матрица опрашиваемых");
+                    errorMessage = $"Нельзя активировать опрос: не заполнены {string.Join(" и ", missingParts)}";
+                }
+                break;
+
+            case SurveyStatus.Active:
+                availableTransitions.Add(SurveyStatus.Closed);
+                break;
+
+            case SurveyStatus.Closed:
+                errorMessage = "Опрос завершён, изменение статуса невозможно";
+                break;
+        }
+
         return new SurveyStatusResponse(
             surveyId,
-            SurveyStatus.Draft,
-            new List<SurveyStatus>(),
-            "Опрос не найден"
+            survey.Status,
+            availableTransitions,
+            errorMessage
         );
     }
 
-    var availableTransitions = new List<SurveyStatus>();
-    string? errorMessage = null;
+    // ===== ВСПОМОГАТЕЛЬНЫЙ МЕТОД =====
 
-    switch (survey.Status)
+    private static List<QuestionDto> MapQuestions(Template? template)
     {
-        case SurveyStatus.Draft:
-            // Из черновика можно перейти в Active, если есть вопросы и матрица
-            var hasQuestions = survey.Template?.Questions != null && survey.Template.Questions.Any();
-            var hasAssignments = await context.Assignments
-                .AnyAsync(a => a.SurveyId == surveyId);
+        if (template?.Questions == null)
+            return new List<QuestionDto>();
 
-            if (hasQuestions && hasAssignments)
-            {
-                availableTransitions.Add(SurveyStatus.Active);
-            }
-            else
-            {
-                var missingParts = new List<string>();
-                if (!hasQuestions) missingParts.Add("вопросы");
-                if (!hasAssignments) missingParts.Add("матрица опрашиваемых");
-                
-                errorMessage = $"Нельзя активировать опрос: не заполнены {string.Join(" и ", missingParts)}";
-            }
-            break;
-
-        case SurveyStatus.Active:
-            // Из активного можно только завершить
-            availableTransitions.Add(SurveyStatus.Closed);
-            break;
-
-        case SurveyStatus.Closed:
-            // Из завершённого нельзя никуда перейти
-            errorMessage = "Опрос завершён, изменение статуса невозможно";
-            break;
+        return template.Questions
+            .Select(q => new QuestionDto(
+                q.Id,
+                q.Text,
+                q.Type,
+                q.Options?.Select(o => o.Text).ToList() ?? new List<string>()
+            ))
+            .ToList();
     }
-
-    return new SurveyStatusResponse(
-        surveyId,
-        survey.Status,
-        availableTransitions,
-        errorMessage
-    );
-}
-
-private void ValidateStatusTransition(SurveyStatus currentStatus, SurveyStatus newStatus, Survey survey)
-{
-    // Нельзя перейти в тот же статус
-    if (currentStatus == newStatus)
-    {
-        throw new InvalidOperationException($"Опрос уже имеет статус '{currentStatus}'");
-    }
-
-    switch (currentStatus)
-    {
-        case SurveyStatus.Draft:
-            // Из черновика можно только в Active
-            if (newStatus != SurveyStatus.Active)
-            {
-                throw new InvalidOperationException("Из черновика можно перейти только в статус 'Активен'");
-            }
-
-            // Проверяем наличие вопросов
-            if (survey.Template?.Questions == null || !survey.Template.Questions.Any())
-            {
-                throw new InvalidOperationException("Нельзя активировать опрос без вопросов");
-            }
-
-            // Проверяем наличие матрицы
-            var hasAssignments = context.Assignments.Any(a => a.SurveyId == survey.Id);
-            if (!hasAssignments)
-            {
-                throw new InvalidOperationException("Нельзя активировать опрос без матрицы опрашиваемых");
-            }
-
-            break;
-
-        case SurveyStatus.Active:
-            // Из активного можно только в Closed
-            if (newStatus != SurveyStatus.Closed)
-            {
-                throw new InvalidOperationException("Из активного статуса можно перейти только в 'Завершён'");
-            }
-            break;
-
-        case SurveyStatus.Closed:
-            // Из завершённого нельзя никуда перейти
-            throw new InvalidOperationException("Нельзя изменить статус завершённого опроса");
-    }
-}
 }
