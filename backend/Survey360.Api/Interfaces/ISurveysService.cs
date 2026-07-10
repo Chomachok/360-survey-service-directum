@@ -29,4 +29,9 @@ public interface ISurveysService
 
     // ========== РЕЗУЛЬТАТЫ ==========
     Task<IEnumerable<AnswerResponse>> GetSurveyResultsAsync(int surveyId, int evaluateeId);
+
+    // ========== СТАТУСЫ ОПРОСА ==========
+Task<SurveyStatusResponse> GetAvailableStatusTransitionsAsync(int surveyId);
+Task<bool> ChangeSurveyStatusAsync(int surveyId, SurveyStatus newStatus);
+
 }
