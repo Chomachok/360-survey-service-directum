@@ -5,10 +5,11 @@ namespace Survey360.Api.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Template> Templates => Set<Template>();
-    public DbSet<TemplateQuestion> TemplateQuestions => Set<TemplateQuestion>();
-    public DbSet<Survey> Surveys => Set<Survey>();
-    public DbSet<Assignment> Assignments => Set<Assignment>();
-    public DbSet<Answer> Answers => Set<Answer>();
+    public DbSet<User> Users { get; set; }
+    public DbSet<Survey> Surveys { get; set; }
+    public DbSet<Template> Templates { get; set; }
+    public DbSet<TemplateQuestion> TemplateQuestions { get; set; }
+    public DbSet<QuestionOption> QuestionOptions { get; set; }
+    public DbSet<Assignment> Assignments { get; set; }
+    public DbSet<Answer> Answers { get; set; }
 }

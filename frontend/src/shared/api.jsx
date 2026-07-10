@@ -1,11 +1,11 @@
-export const handleSubmit = async (e, formData, setFormData) => {
-  // Проверяем, что e - это событие
-  if (e && typeof e.preventDefault === 'function') {
-    e.preventDefault();
-  }
+export const handleSubmit = async (formData, setFormData) => {
+  // Если setFormData не передан, создаём пустую функцию
+  const clearForm = setFormData || (() => {});
   
   try {
-    const response = await fetch('/api/survey/create', {
+    console.log('Отправляемые данные:', formData);
+    
+    const response = await fetch('/api/Surveys/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -13,19 +13,24 @@ export const handleSubmit = async (e, formData, setFormData) => {
       body: JSON.stringify(formData),
     });
     
-    if (!response.ok) throw new Error('Ошибка при создании');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Детали ошибки:', errorData);
+      throw new Error(`Ошибка ${response.status}: ${response.statusText}`);
+    }
     
     const result = await response.json();
     console.log('Опрос создан:', result);
     
-    // Очищаем форму
-    setFormData({
+    // Очищаем форму, если передана функция очистки
+    clearForm({
       title: '',
       description: '',
       startDate: '',
       endDate: '',
       templateId: '',
     });
+    
   } catch (error) {
     console.error('Ошибка:', error);
   }
