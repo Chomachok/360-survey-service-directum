@@ -8,7 +8,7 @@ function СreateSurvey(){
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [templateId, setTemplateId] = useState("");
-    const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:1, options:[]}]);
+    const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:1, options:[""]}]);
 
     function handleNameChange(event) {    
         setName(event.target.value);  
@@ -46,13 +46,32 @@ function СreateSurvey(){
 
     // Добавление нового пустого поля в массив
     const addQuestionField = () => {
-        setQuestion([...customQuestions, {questionText:"" , typeQuestion:1, options:[]}]);
+        setQuestion([...customQuestions, {questionText:"" , typeQuestion:1, options:[""]}]);
     };
 
     // Удаление поля из массива
     const removeQuestionField = (index) => {
         const newQuestion = customQuestions.filter((_, i) => i !== index);
         setQuestion(newQuestion);
+    };
+
+    // Изменение конкретного элемента в массиве по его индексу
+    const handleOptionChange = (i, j, value) => {
+        const newQuestion = [...customQuestions];
+        newQuestion[i].options[j] = value;
+        setQuestion(newQuestion);
+    };
+
+    const addOptionField = (i) => {
+        const newQuestion = [...customQuestions];
+        newQuestion[i].options = [...customQuestions[i].options, ""];
+        setQuestion(newQuestion);
+    };
+
+    const removeOptionField = (index, j) => {
+        const updatedQuestions = [...customQuestions];
+        updatedQuestions[index].options = updatedQuestions[index].options.filter((_, i) => i !== j);
+        setQuestion(updatedQuestions);
     };
 
     const onSubmit = (e) => {
@@ -107,15 +126,23 @@ function СreateSurvey(){
                             placeholder={`номер вопроса ${index + 1}`}
                             onChange={(e) => handleTypeQuestionChange(index, e.target.value)} 
                         />
-                        {/* {
+                        {
                             quest.options.map((option, idoption) => (
                                 <div  key={idoption}>
                                     <input
-                                        type=""
+                                        type="text"
+                                        value={option}
+                                        onChange={(e) => handleOptionChange(index, idoption, e.target.value)}
                                     />
+
+                                    {customQuestions[index].options.length > 1 && (
+                                        <button type="button" onClick={() => removeOptionField(index, idoption)}>❌</button>
+                                    )}
                                 </div>
                             ))
-                        } */}
+                        }
+                        <button type="button" onClick={() => addOptionField(index)}>+ Добавить вариант ответа</button>
+
                         {customQuestions.length > 1 && (
                             <button type="button" onClick={() => removeQuestionField(index)}>❌</button>
                         )}
