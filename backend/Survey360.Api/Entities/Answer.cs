@@ -7,5 +7,5 @@ public sealed class Answer
     public int QuestionId { get; set; } // ID вопроса из шаблона
     public string Text { get; set; } = string.Empty;
 
-    public required Assignment Assignment { get; set; }
+    public Assignment Assignment { get; set; }
 }
