@@ -9,4 +9,6 @@ public interface IQuestionService
     Task RemoveQuestionAsync(int questionId);
     Task<IEnumerable<QuestionTemplateDto>> GetTemplatesAsync();
     Task<QuestionTemplateDto> CreateTemplateAsync(CreateQuestionTemplateDto dto);
+    Task<QuestionTemplateDto> UpdateTemplateAsync(int id, UpdateQuestionTemplateDto dto);
+    Task DeleteTemplateAsync(int id);
 }

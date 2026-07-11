@@ -1,5 +1,5 @@
 import api from './client'
-import { Question, QuestionTemplate, CreateQuestionDto, CreateQuestionTemplateDto } from '../types'
+import { Question, QuestionTemplate, CreateQuestionDto, CreateQuestionTemplateDto, UpdateQuestionTemplateDto } from '../types'
 
 export const getSurveyQuestions = (surveyId: number) =>
   api.get<Question[]>(`/questions/surveys/${surveyId}`).then(res => res.data)
@@ -15,3 +15,9 @@ export const getTemplates = () =>
 
 export const createTemplate = (dto: CreateQuestionTemplateDto) =>
   api.post<QuestionTemplate>('/questions/templates', dto).then(res => res.data)
+
+export const updateTemplate = (id: number, dto: UpdateQuestionTemplateDto) => 
+  api.put<QuestionTemplate>(`/questions/templates/${id}`, dto).then(res => res.data)
+
+export const deleteTemplate = (id: number) => 
+  api.delete(`/questions/templates/${id}`)
