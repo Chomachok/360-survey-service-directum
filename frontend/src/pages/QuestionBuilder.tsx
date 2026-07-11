@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates } from '../api/questions'
 import { useState } from 'react'
 import { QuestionType, CreateQuestionDto } from '../types'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, X } from 'lucide-react'
 
 export default function QuestionBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -26,6 +26,13 @@ export default function QuestionBuilder() {
   const [options, setOptions] = useState<string[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<number | ''>('')
 
+  // Состояние ошибок
+  const [errors, setErrors] = useState<{
+    text?: string
+    options?: string
+    general?: string
+  }>({})
+
   const addMutation = useMutation({
     mutationFn: (dto: CreateQuestionDto) => addQuestion(surveyId, dto),
     onSuccess: () => {
@@ -33,6 +40,16 @@ export default function QuestionBuilder() {
       setText('')
       setOptions([])
       setSelectedTemplate('')
+      setErrors({}) // сбросить ошибки при успехе
+    },
+    onError: (error: any) => {
+      console.error('Ошибка добавления вопроса:', error)
+      const message =
+        error.response?.data?.title ||
+        error.response?.data?.message ||
+        error.message ||
+        'Не удалось добавить вопрос'
+      setErrors((prev) => ({ ...prev, general: message }))
     },
   })
 
@@ -41,14 +58,43 @@ export default function QuestionBuilder() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['questions', surveyId] }),
   })
 
+  // Валидация
+  const validate = (): boolean => {
+    const newErrors: { text?: string; options?: string } = {}
+
+    if (!text.trim()) {
+      newErrors.text = 'Введите текст вопроса'
+    }
+
+    if (type === QuestionType.SingleChoice) {
+      const validOptions = options.filter((o) => o.trim() !== '')
+      if (validOptions.length < 2) {
+        newErrors.options = 'Добавьте как минимум 2 варианта ответа'
+      }
+      // Проверка на пустые строки (если есть пустые, но общее количество >=2, это ок, но лучше подсветить)
+      if (options.some((o) => o.trim() === '')) {
+        // не блокируем, но можно показать предупреждение
+        // сделаем мягкую проверку: если есть пустые, но есть и заполненные, пропускаем
+        // строгая проверка: все должны быть заполнены
+        if (options.some((o) => o.trim() === '')) {
+          newErrors.options = 'Все варианты должны быть заполнены'
+        }
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleAdd = () => {
-    if (!text.trim()) return
+    if (!validate()) return
+
     addMutation.mutate({
       text,
-      type,
+      type: type as unknown as number,
       required,
       order: (questions?.length || 0) + 1,
-      options: type === QuestionType.SingleChoice ? options : undefined,
+      options: type === QuestionType.SingleChoice && options.length > 0 ? options : undefined,
     })
   }
 
@@ -60,7 +106,37 @@ export default function QuestionBuilder() {
       setText(tmpl.text)
       setType(tmpl.type)
       setOptions(tmpl.options || [])
+      setErrors({}) // сброс ошибок при выборе шаблона
     }
+  }
+
+  // Функции для работы с вариантами
+  const addOption = () => {
+    setOptions([...options, ''])
+    setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
+  }
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index))
+    setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
+  }
+
+  const updateOption = (index: number, value: string) => {
+    const newOptions = [...options]
+    newOptions[index] = value
+    setOptions(newOptions)
+    setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
+  }
+
+  // Обработчики изменения полей сброс ошибок
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setText(e.target.value)
+    setErrors((prev) => ({ ...prev, text: undefined, general: undefined }))
+  }
+
+  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setType(Number(e.target.value) as QuestionType)
+    setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
   }
 
   if (qLoading) {
@@ -86,6 +162,13 @@ export default function QuestionBuilder() {
           <div className="card animate-fadeInUp">
             <h2 className="text-xl font-semibold text-directum-dark mb-4">Добавить вопрос</h2>
 
+            {/* Общая ошибка сервера */}
+            {errors.general && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {errors.general}
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="animate-fadeInUp-delay">
                 <label className="label-field">Использовать шаблон</label>
@@ -108,17 +191,18 @@ export default function QuestionBuilder() {
                 <input
                   type="text"
                   value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="input-field"
+                  onChange={handleTextChange}
+                  className={`input-field ${errors.text ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Введите текст вопроса"
                 />
+                {errors.text && <p className="text-red-500 text-sm mt-1">{errors.text}</p>}
               </div>
 
               <div className="animate-fadeInUp-delay-2">
                 <label className="label-field">Тип вопроса</label>
                 <select
                   value={type}
-                  onChange={(e) => setType(e.target.value as QuestionType)}
+                  onChange={handleTypeChange}
                   className="input-field"
                 >
                   <option value={QuestionType.Text}>Текстовый ответ</option>
@@ -127,17 +211,38 @@ export default function QuestionBuilder() {
               </div>
 
               {type === QuestionType.SingleChoice && (
-                <div className="animate-fadeInUp-delay-3">
-                  <label className="label-field">Варианты ответов</label>
-                  <input
-                    type="text"
-                    value={options.join(', ')}
-                    onChange={(e) =>
-                      setOptions(e.target.value.split(',').map((s) => s.trim()).filter(Boolean))
-                    }
-                    className="input-field"
-                    placeholder="Вариант 1, Вариант 2, Вариант 3"
-                  />
+                <div className="animate-fadeInUp-delay-3 space-y-2">
+                  <label className="label-field">Варианты ответов *</label>
+                  <div className="space-y-2">
+                    {options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => updateOption(index, e.target.value)}
+                          className={`input-field flex-1 ${errors.options ? 'border-red-500 focus:ring-red-500' : ''}`}
+                          placeholder={`Вариант ${index + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOption(index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Удалить вариант"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {errors.options && <p className="text-red-500 text-sm mt-1">{errors.options}</p>}
+                  <button
+                    type="button"
+                    onClick={addOption}
+                    className="text-sm text-directum-orange hover:underline flex items-center gap-1 mt-1"
+                  >
+                    <Plus size={16} />
+                    Добавить вариант
+                  </button>
                 </div>
               )}
 
@@ -157,7 +262,7 @@ export default function QuestionBuilder() {
               <button
                 onClick={handleAdd}
                 className="btn-primary w-full flex items-center justify-center space-x-2 animate-fadeInUp"
-                disabled={addMutation.isPending || !text.trim()}
+                disabled={addMutation.isPending}
               >
                 <Plus size={18} />
                 <span>{addMutation.isPending ? 'Добавление...' : 'Добавить вопрос'}</span>
