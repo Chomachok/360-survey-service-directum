@@ -53,4 +53,32 @@ public class SurveysController : ControllerBase
         await _surveyService.DeleteSurveyAsync(id);
         return NoContent();
     }
+    
+    [HttpPost("{id}/publish")]
+    public async Task<IActionResult> Publish(int id)
+    {
+        try
+        {
+            var survey = await _surveyService.PublishSurveyAsync(id);
+            return Ok(survey);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+    
+    [HttpPost("{id}/complete")]
+    public async Task<IActionResult> Complete(int id)
+    {
+        try
+        {
+            var survey = await _surveyService.CompleteSurveyAsync(id);
+            return Ok(survey);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
