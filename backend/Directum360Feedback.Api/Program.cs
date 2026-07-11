@@ -1,13 +1,14 @@
 using Directum360Feedback.Application;
 using Directum360Feedback.Infrastructure;
 using Directum360Feedback.Infrastructure.Data;
-using FluentValidation;
 using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Directum360Feedback.Application.Validators.CreateSurveyDtoValidator>());
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<
+            Directum360Feedback.Application.Validators.CreateSurveyDtoValidator>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates } from '../api/questions'
 import { useState } from 'react'
 import { QuestionType, CreateQuestionDto } from '../types'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, X } from 'lucide-react'
 
 export default function QuestionBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -34,6 +34,10 @@ export default function QuestionBuilder() {
       setOptions([])
       setSelectedTemplate('')
     },
+    onError: (error: any) => {
+      console.error('Ошибка добавления вопроса:', error)
+      alert('Не удалось добавить вопрос: ' + (error.response?.data || error.message))
+    },
   })
 
   const deleteMutation = useMutation({
@@ -45,10 +49,10 @@ export default function QuestionBuilder() {
     if (!text.trim()) return
     addMutation.mutate({
       text,
-      type,
+      type: type as unknown as number, // принудительно как число (уже исправлено)
       required,
       order: (questions?.length || 0) + 1,
-      options: type === QuestionType.SingleChoice ? options : undefined,
+      options: type === QuestionType.SingleChoice && options.length > 0 ? options : undefined,
     })
   }
 
@@ -61,6 +65,21 @@ export default function QuestionBuilder() {
       setType(tmpl.type)
       setOptions(tmpl.options || [])
     }
+  }
+
+  // Функции для работы с вариантами
+  const addOption = () => {
+    setOptions([...options, ''])
+  }
+
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index))
+  }
+
+  const updateOption = (index: number, value: string) => {
+    const newOptions = [...options]
+    newOptions[index] = value
+    setOptions(newOptions)
   }
 
   if (qLoading) {
@@ -118,7 +137,7 @@ export default function QuestionBuilder() {
                 <label className="label-field">Тип вопроса</label>
                 <select
                   value={type}
-                  onChange={(e) => setType(e.target.value as QuestionType)}
+                  onChange={(e) => setType(Number(e.target.value) as QuestionType)}
                   className="input-field"
                 >
                   <option value={QuestionType.Text}>Текстовый ответ</option>
@@ -127,17 +146,37 @@ export default function QuestionBuilder() {
               </div>
 
               {type === QuestionType.SingleChoice && (
-                <div className="animate-fadeInUp-delay-3">
+                <div className="animate-fadeInUp-delay-3 space-y-2">
                   <label className="label-field">Варианты ответов</label>
-                  <input
-                    type="text"
-                    value={options.join(', ')}
-                    onChange={(e) =>
-                      setOptions(e.target.value.split(',').map((s) => s.trim()).filter(Boolean))
-                    }
-                    className="input-field"
-                    placeholder="Вариант 1, Вариант 2, Вариант 3"
-                  />
+                  <div className="space-y-2">
+                    {options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => updateOption(index, e.target.value)}
+                          className="input-field flex-1"
+                          placeholder={`Вариант ${index + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOption(index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Удалить вариант"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addOption}
+                    className="text-sm text-directum-orange hover:underline flex items-center gap-1 mt-1"
+                  >
+                    <Plus size={16} />
+                    Добавить вариант
+                  </button>
                 </div>
               )}
 

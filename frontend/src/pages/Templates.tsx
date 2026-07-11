@@ -32,9 +32,9 @@ export default function Templates() {
     mutation.mutate({
       name,
       text,
-      type,
+      type, // число
       options: type === QuestionType.SingleChoice ? options : undefined,
-    })
+    });
   }
 
   if (isLoading) {
@@ -81,7 +81,7 @@ export default function Templates() {
                 <label className="label-field">Тип вопроса</label>
                 <select
                   value={type}
-                  onChange={(e) => setType(e.target.value as QuestionType)}
+                  onChange={(e) => setType(Number(e.target.value) as QuestionType)}
                   className="input-field"
                 >
                   <option value={QuestionType.Text}>Текстовый ответ</option>
