@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Survey360.Api.DTOs.Surveys;
 using Survey360.Api.DTOs.Assignments;
@@ -9,11 +10,17 @@ namespace Survey360.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SurveysController(ISurveysService surveysService) : ControllerBase
+public class SurveysController(ISurveysService surveysService,
+    IValidator<SurveyCreateRequest> createValidator,
+    IValidator<UpdateSurveyStatusRequest> statusValidator,
+    IValidator<AssignmentCreateRequest> assignmentValidator) : ControllerBase
 {
     [HttpPost("create")]
     public async Task<ActionResult<SurveyResponse>> Create([FromBody] SurveyCreateRequest request)
     {
+        var validationResult = await createValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
         try
         {
             var result = await surveysService.CreateSurveyAsync(request);
@@ -54,7 +61,11 @@ public class SurveysController(ISurveysService surveysService) : ControllerBase
     {
         if (id != request.SurveyId)
             return BadRequest("ID не совпадают");
-
+        
+        var validationResult = await statusValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+        
         if (!Enum.TryParse<SurveyStatus>(request.Status, true, out var newStatus))
             return BadRequest("Некорректный статус");
 
@@ -94,6 +105,10 @@ public class SurveysController(ISurveysService surveysService) : ControllerBase
     {
         if (surveyId != request.SurveyId)
             return BadRequest("ID не совпадают");
+        
+        var validationResult = await assignmentValidator.ValidateAsync(request);    
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
 
         try
         {
