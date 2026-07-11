@@ -41,11 +41,27 @@ function СreateSurvey(){
         setQuestion(newQuestion);
     };
 
-    // Изменение конкретного элемента в массиве по его индексу
     const handleTypeQuestionChange = (index, value) => {
+        const num = Number(value);
+        if (isNaN(num) || num < 0 || num > 2) return;
+
         const newQuestion = [...customQuestions];
-        newQuestion[index].typeQuestion = value;
-        setQuestion(newQuestion);
+        const currentQuestion = newQuestion[index];
+
+        if (value === '0') {
+            // Удаляем поле options (создаём новый объект без него)
+            const { options, ...rest } = currentQuestion;
+            newQuestion[index] = { ...rest, typeQuestion: value };
+        } else {
+            // Для типа 1 или 2 — добавляем options, если его нет
+            newQuestion[index] = {
+            ...currentQuestion,
+            typeQuestion: value,
+            options: currentQuestion.options || [""], // если options отсутствует, создаём с одной пустой строкой
+        };
+    }
+
+    setQuestion(newQuestion);
     };
 
     // Добавление нового пустого поля в массив
@@ -59,9 +75,9 @@ function СreateSurvey(){
         setQuestion(newQuestion);
     };
 
-    // Изменение конкретного элемента в массиве по его индексу
     const handleOptionChange = (i, j, value) => {
         const newQuestion = [...customQuestions];
+        if (value.length > 500) return;
         newQuestion[i].options[j] = value;
         setQuestion(newQuestion);
     };
@@ -130,23 +146,25 @@ function СreateSurvey(){
                             placeholder={`номер вопроса ${index + 1}`}
                             onChange={(e) => handleTypeQuestionChange(index, e.target.value)} 
                         />
-                        {
-                            quest.options.map((option, idoption) => (
-                                <div  key={idoption}>
-                                    <input
-                                        type="text"
-                                        value={option}
-                                        onChange={(e) => handleOptionChange(index, idoption, e.target.value)}
-                                    />
-
-                                    {customQuestions[index].options.length > 1 && (
-                                        <button type="button" onClick={() => removeOptionField(index, idoption)}>❌</button>
-                                    )}
-                                </div>
-                            ))
-                        }
-                        <button type="button" onClick={() => addOptionField(index)}>+ Добавить вариант ответа</button>
-
+                        {quest.options && quest.options.length > 0 && (
+                            <>
+                                {quest.options.map((option, idoption) => (
+                                    <div key={idoption}>
+                                        <input
+                                            type="text"
+                                            value={option}
+                                            onChange={(e) => handleOptionChange(index, idoption, e.target.value)}
+                                        />
+                                        {quest.options.length > 2 && (
+                                            <button type="button" onClick={() => removeOptionField(index, idoption)}>❌</button>
+                                        )}
+                                    </div>
+                                ))}
+                                {(quest.typeQuestion === '1' || quest.typeQuestion === '2') && (
+                                    <button type="button" onClick={() => addOptionField(index)}>+ Добавить вариант ответа</button>
+                                )}
+                            </>
+                        )}
                         {customQuestions.length > 1 && (
                             <button type="button" onClick={() => removeQuestionField(index)}>❌</button>
                         )}
