@@ -1,15 +1,17 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates } from '../api/questions'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { QuestionType, CreateQuestionDto } from '../types'
 import { ArrowLeft, Plus, Trash2, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function QuestionBuilder() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const surveyId = parseInt(id!)
   const queryClient = useQueryClient()
+  const textInputRef = useRef<HTMLInputElement>(null)
 
   const { data: questions, isLoading: qLoading } = useQuery({
     queryKey: ['questions', surveyId],
@@ -26,12 +28,18 @@ export default function QuestionBuilder() {
   const [options, setOptions] = useState<string[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<number | ''>('')
 
-  // Состояние ошибок
   const [errors, setErrors] = useState<{
     text?: string
     options?: string
     general?: string
   }>({})
+
+  // Фокус на первое ошибочное поле
+  useEffect(() => {
+    if (errors.text && textInputRef.current) {
+      textInputRef.current.focus()
+    }
+  }, [errors])
 
   const addMutation = useMutation({
     mutationFn: (dto: CreateQuestionDto) => addQuestion(surveyId, dto),
@@ -40,45 +48,45 @@ export default function QuestionBuilder() {
       setText('')
       setOptions([])
       setSelectedTemplate('')
-      setErrors({}) // сбросить ошибки при успехе
+      setErrors({})
+      toast.success('Вопрос добавлен')
     },
     onError: (error: any) => {
-      console.error('Ошибка добавления вопроса:', error)
       const message =
         error.response?.data?.title ||
         error.response?.data?.message ||
         error.message ||
         'Не удалось добавить вопрос'
       setErrors((prev) => ({ ...prev, general: message }))
+      toast.error(message)
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (qId: number) => deleteQuestion(qId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['questions', surveyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questions', surveyId] })
+      toast.success('Вопрос удалён')
+    },
+    onError: () => {
+      toast.error('Не удалось удалить вопрос')
+    },
   })
 
-  // Валидация
+  // Валидация – ошибки только в форме, тост не показываем
   const validate = (): boolean => {
     const newErrors: { text?: string; options?: string } = {}
 
     if (!text.trim()) {
-      newErrors.text = 'Введите текст вопроса'
+      newErrors.text = 'Пожалуйста, введите текст вопроса'
     }
 
     if (type === QuestionType.SingleChoice) {
       const validOptions = options.filter((o) => o.trim() !== '')
       if (validOptions.length < 2) {
         newErrors.options = 'Добавьте как минимум 2 варианта ответа'
-      }
-      // Проверка на пустые строки (если есть пустые, но общее количество >=2, это ок, но лучше подсветить)
-      if (options.some((o) => o.trim() === '')) {
-        // не блокируем, но можно показать предупреждение
-        // сделаем мягкую проверку: если есть пустые, но есть и заполненные, пропускаем
-        // строгая проверка: все должны быть заполнены
-        if (options.some((o) => o.trim() === '')) {
-          newErrors.options = 'Все варианты должны быть заполнены'
-        }
+      } else if (options.some((o) => o.trim() === '')) {
+        newErrors.options = 'Все варианты должны быть заполнены'
       }
     }
 
@@ -91,7 +99,7 @@ export default function QuestionBuilder() {
 
     addMutation.mutate({
       text,
-      type: type as unknown as number,
+      type,
       required,
       order: (questions?.length || 0) + 1,
       options: type === QuestionType.SingleChoice && options.length > 0 ? options : undefined,
@@ -106,11 +114,10 @@ export default function QuestionBuilder() {
       setText(tmpl.text)
       setType(tmpl.type)
       setOptions(tmpl.options || [])
-      setErrors({}) // сброс ошибок при выборе шаблона
+      setErrors({})
     }
   }
 
-  // Функции для работы с вариантами
   const addOption = () => {
     setOptions([...options, ''])
     setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
@@ -128,14 +135,13 @@ export default function QuestionBuilder() {
     setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
   }
 
-  // Обработчики изменения полей сброс ошибок
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value)
     setErrors((prev) => ({ ...prev, text: undefined, general: undefined }))
   }
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setType(Number(e.target.value) as QuestionType)
+    setType(e.target.value as QuestionType)
     setErrors((prev) => ({ ...prev, options: undefined, general: undefined }))
   }
 
@@ -162,9 +168,8 @@ export default function QuestionBuilder() {
           <div className="card animate-fadeInUp">
             <h2 className="text-xl font-semibold text-directum-dark mb-4">Добавить вопрос</h2>
 
-            {/* Общая ошибка сервера */}
             {errors.general && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm animate-fadeIn">
                 {errors.general}
               </div>
             )}
@@ -189,6 +194,7 @@ export default function QuestionBuilder() {
               <div className="animate-fadeInUp-delay-2">
                 <label className="label-field">Текст вопроса *</label>
                 <input
+                  ref={textInputRef}
                   type="text"
                   value={text}
                   onChange={handleTextChange}
@@ -316,6 +322,7 @@ export default function QuestionBuilder() {
                         onClick={() => deleteMutation.mutate(q.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
                         title="Удалить вопрос"
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={18} />
                       </button>
