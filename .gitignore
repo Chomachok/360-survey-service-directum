@@ -1,0 +1,111 @@
+# ==============================================================================
+# .NET / ASP.NET Core / Entity Framework Core
+# ==============================================================================
+# Артефакты компиляции и сборки
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+
+# Результаты публикации
+publish/
+Artifacts/
+
+# Локальные настройки и секреты разработчика
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+
+# Локальные базы данных (SQL Server Express / SQLite)
+*.mdf
+*.ldf
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
+# Логи .NET
+*.log
+.dotnet/
+
+# ==============================================================================
+# Frontend (React / Node.js)
+# ==============================================================================
+# Зависимости и сборка
+node_modules/
+/build
+/dist
+/out
+.next/
+.parcel-cache/
+
+# Секреты и переменные окружения
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Логи npm/yarn/pnpm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Кэш инструментов тестирования и линтеров
+.eslintcache
+.stylelintcache
+.jest/
+.cache/
+
+# ==============================================================================
+# IDE и редакторы (Visual Studio, VS Code, JetBrains Rider)
+# ==============================================================================
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+
+# JetBrains Rider / IntelliJ IDEA
+.idea/
+*.sln.iml
+_ReSharper.Caches/
+*.DotSettings.user
+
+# ==============================================================================
+# Операционные системы и общие файлы
+# ==============================================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.trash/

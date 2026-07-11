@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-directum-dark;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-directum-orange text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply bg-directum-dark text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-300 transform hover:scale-105;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-300 hover:shadow-md hover:-translate-y-1;
+  }
+
+  .input-field {
+    @apply w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-directum-orange focus:border-transparent transition-all duration-200;
+  }
+
+  .label-field {
+    @apply block text-sm font-medium text-directum-dark mb-1;
+  }
+
+  /* Анимация для страниц */
+  .page-enter {
+    @apply animate-fadeInUp;
+  }
+
+  .card-enter {
+    @apply animate-fadeInUp;
+  }
+}

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Directum360Feedback.Api/Directum360Feedback.Api.csproj" />
+  <Project Path="Directum360Feedback.Application/Directum360Feedback.Application.csproj" />
+  <Project Path="Directum360Feedback.Domain/Directum360Feedback.Domain.csproj" />
+  <Project Path="Directum360Feedback.Infrastructure/Directum360Feedback.Infrastructure.csproj" />
+</Solution>
