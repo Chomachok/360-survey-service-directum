@@ -63,4 +63,18 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
         await questionService.DeleteTemplateAsync(templateId);
         return NoContent();
     }
+    
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateQuestion(int id, [FromBody] UpdateQuestionDto dto)
+    {
+        try
+        {
+            var updated = await questionService.UpdateQuestionAsync(id, dto);
+            return Ok(updated);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
