@@ -6,24 +6,44 @@ namespace Directum360Feedback.Api.Controllers;
 
 [ApiController]
 [Route("api/surveys/{surveyId}/[controller]")]
-public class MatrixController(IMatrixService matrixService) : ControllerBase
+public class MatrixController : ControllerBase
 {
-    [HttpGet]
-    public async Task<IActionResult> GetMatrix(int surveyId) => Ok(await matrixService.GetMatrixForSurveyAsync(surveyId));
+    private readonly IMatrixService _matrixService;
 
-    [HttpPost]
-    public async Task<IActionResult> AddMatrixItem(int surveyId, CreateMatrixItemDto dto)
+    public MatrixController(IMatrixService matrixService)
     {
-        var item = await matrixService.AddMatrixItemAsync(surveyId, dto);
-        return Ok(item);
+        _matrixService = matrixService;
     }
 
-    [HttpDelete("{assignmentId}")]
+    // GET /api/surveys/{surveyId}/matrix
+    [HttpGet]
+    public async Task<IActionResult> GetMatrix(int surveyId)
+    {
+        var items = await _matrixService.GetMatrixForSurveyAsync(surveyId);
+        return Ok(items);
+    }
+
+    // POST /api/surveys/{surveyId}/matrix
+    [HttpPost]
+    public async Task<IActionResult> AddMatrixItem(int surveyId, [FromBody] CreateMatrixItemDto dto)
+    {
+        try
+        {
+            var item = await _matrixService.AddMatrixItemAsync(surveyId, dto);
+            return Ok(item);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("~/api/matrix/{assignmentId}")]
     public async Task<IActionResult> DeleteMatrixItem(int assignmentId)
     {
         try
         {
-            await matrixService.RemoveMatrixItemAsync(assignmentId);
+            await _matrixService.RemoveMatrixItemAsync(assignmentId);
             return NoContent();
         }
         catch (Exception ex)
