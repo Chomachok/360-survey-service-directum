@@ -7,3 +7,4 @@ export const updateSurvey = (id: number, data: Partial<CreateSurveyDto>) => api.
 export const deleteSurvey = (id: number) => api.delete(`/surveys/${id}`)
 export const publishSurvey = (id: number) => api.post<Survey>(`/surveys/${id}/publish`).then(res => res.data)
 export const completeSurvey = (id: number) => api.post<Survey>(`/surveys/${id}/complete`).then(res => res.data)
+export const getSurvey = (id: number) => api.get<Survey>(`/surveys/${id}`).then(res => res.data)

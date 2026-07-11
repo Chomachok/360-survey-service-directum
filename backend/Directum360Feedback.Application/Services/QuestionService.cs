@@ -4,6 +4,7 @@ using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Infrastructure.Repositories;
 using System.Text.Json;
+using Directum360Feedback.Domain.Enums;
 
 namespace Directum360Feedback.Application.Services;
 
@@ -124,5 +125,36 @@ public class QuestionService(
             templateRepo.Delete(template);
             await templateRepo.SaveChangesAsync();
         }
+    }
+    
+    public async Task<QuestionDto> UpdateQuestionAsync(int id, UpdateQuestionDto dto)
+    {
+        var question = await questionRepo.GetByIdAsync(id);
+        if (question == null)
+            throw new Exception("Question not found");
+
+        // Проверяем, что опрос в статусе Draft
+        var survey = await surveyRepo.GetByIdAsync(question.SurveyId);
+        if (survey == null)
+            throw new Exception("Survey not found");
+        if (survey.Status != SurveyStatus.Draft)
+            throw new Exception("Cannot edit question because survey is not in Draft status");
+
+        question.Text = dto.Text;
+        question.Type = dto.Type;
+        question.Required = dto.Required;
+
+        if (dto.Options != null && dto.Options.Any())
+            question.Options = JsonSerializer.Serialize(dto.Options);
+        else
+            question.Options = null;
+
+        questionRepo.Update(question);
+        await questionRepo.SaveChangesAsync();
+
+        var result = mapper.Map<QuestionDto>(question);
+        if (!string.IsNullOrEmpty(question.Options))
+            result.Options = JsonSerializer.Deserialize<List<string>>(question.Options);
+        return result;
     }
 }

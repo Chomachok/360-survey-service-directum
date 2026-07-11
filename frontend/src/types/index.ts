@@ -106,3 +106,10 @@ export interface AnswerSubmit {
   textAnswer?: string
   selectedOption?: string
 }
+
+export interface UpdateQuestionDto {
+  text: string
+  type: QuestionType
+  required: boolean
+  options?: string[]
+}

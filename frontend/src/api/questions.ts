@@ -21,3 +21,6 @@ export const updateTemplate = (id: number, dto: UpdateQuestionTemplateDto) =>
 
 export const deleteTemplate = (id: number) => 
   api.delete(`/questions/templates/${id}`)
+
+export const updateQuestion = (id: number, dto: any) => 
+  api.put<Question>(`/questions/${id}`, dto).then(res => res.data)
