@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveys, deleteSurvey } from '../api/surveys'
 import { Link } from 'react-router-dom'
 import { Plus, FileText, CheckCircle, Clock, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { useConfirm } from '../components/ConfirmDialog'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
@@ -9,19 +11,30 @@ export default function Dashboard() {
     queryKey: ['surveys'],
     queryFn: getSurveys,
   })
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteSurvey(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      toast.success('Опрос успешно удалён')
     },
     onError: (error: any) => {
-      alert('Не удалось удалить опрос: ' + (error.response?.data || error.message))
+      const message = error.response?.data || error.message || 'Не удалось удалить опрос'
+      toast.error(message)
     },
   })
 
-  const handleDelete = (id: number, title: string) => {
-    if (window.confirm(`Вы уверены, что хотите удалить опрос "${title}"? Это действие нельзя отменить.`)) {
+  const handleDelete = async (id: number, title: string) => {
+    const confirmed = await confirm(
+      `Вы уверены, что хотите удалить опрос "${title}"? Это действие нельзя отменить.`,
+      {
+        title: 'Удаление опроса',
+        confirmText: 'Да, удалить',
+        cancelText: 'Отмена',
+      }
+    )
+    if (confirmed) {
       deleteMutation.mutate(id)
     }
   }
@@ -170,6 +183,7 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+      <ConfirmDialog />
     </div>
   )
 }
