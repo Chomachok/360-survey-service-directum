@@ -4,7 +4,8 @@ import { getMatrix, addMatrixItem, deleteMatrixItem } from '../api/matrix'
 import { getEmployees } from '../api/employees'
 import { useState } from 'react'
 import { AssessmentRole } from '../types'
-import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Link, CheckCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -31,22 +32,56 @@ export default function Matrix() {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setEvaluatorId('')
       setTargetId('')
+      toast.success('Связь добавлена в матрицу')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message || 'Не удалось добавить связь'
+      toast.error(message)
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (assignmentId: number) => deleteMatrixItem(assignmentId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
+      toast.success('Связь удалена')
+    },
+    onError: (error: any) => {
+      toast.error('Не удалось удалить связь')
+    },
   })
 
   const handleAdd = () => {
-    if (evaluatorId && targetId) {
-      addMutation.mutate({
-        evaluatorId: Number(evaluatorId),
-        targetId: Number(targetId),
-        role,
-      })
+    if (!evaluatorId || !targetId) {
+      toast.error('Выберите оценивающего и оцениваемого сотрудника')
+      return
     }
+
+    if (evaluatorId === targetId && role !== AssessmentRole.SelfAssessment) {
+      toast.error('Для самооценки выберите роль "Самооценка"')
+      return
+    }
+
+    addMutation.mutate({
+      evaluatorId: Number(evaluatorId),
+      targetId: Number(targetId),
+      role,
+    })
+  }
+
+  const handleCopyLink = (token: string) => {
+    const url = `${window.location.origin}/survey/${token}`
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        toast.success('Ссылка скопирована в буфер обмена!', {
+          icon: '📋',
+          duration: 3000,
+        })
+      })
+      .catch(() => {
+        toast.error('Не удалось скопировать ссылку. Скопируйте её вручную.')
+      })
   }
 
   const roleLabels = {
@@ -177,14 +212,11 @@ export default function Matrix() {
                     </td>
                     <td className="py-3 px-4">
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/survey/${item.token}`)
-                          alert('Ссылка скопирована в буфер обмена!')
-                        }}
-                        className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105"
+                        onClick={() => handleCopyLink(item.token)}
+                        className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
                       >
-                        <Link size={14} />
-                        <span>Копировать</span>
+                        <Link size={14} className="group-hover:animate-pulse" />
+                        <span>Копировать ссылку</span>
                       </button>
                     </td>
                     <td className="py-3 px-4">
@@ -201,6 +233,7 @@ export default function Matrix() {
                         onClick={() => deleteMutation.mutate(item.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
                         title="Удалить"
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={18} />
                       </button>

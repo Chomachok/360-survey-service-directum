@@ -15,20 +15,40 @@ public class MatrixController : ControllerBase
         _matrixService = matrixService;
     }
 
+    // GET /api/surveys/{surveyId}/matrix
     [HttpGet]
-    public async Task<IActionResult> GetMatrix(int surveyId) => Ok(await _matrixService.GetMatrixForSurveyAsync(surveyId));
-
-    [HttpPost]
-    public async Task<IActionResult> AddMatrixItem(int surveyId, CreateMatrixItemDto dto)
+    public async Task<IActionResult> GetMatrix(int surveyId)
     {
-        var item = await _matrixService.AddMatrixItemAsync(surveyId, dto);
-        return Ok(item);
+        var items = await _matrixService.GetMatrixForSurveyAsync(surveyId);
+        return Ok(items);
     }
 
-    [HttpDelete("{assignmentId}")]
+    // POST /api/surveys/{surveyId}/matrix
+    [HttpPost]
+    public async Task<IActionResult> AddMatrixItem(int surveyId, [FromBody] CreateMatrixItemDto dto)
+    {
+        try
+        {
+            var item = await _matrixService.AddMatrixItemAsync(surveyId, dto);
+            return Ok(item);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("~/api/matrix/{assignmentId}")]
     public async Task<IActionResult> DeleteMatrixItem(int assignmentId)
     {
-        await _matrixService.RemoveMatrixItemAsync(assignmentId);
-        return NoContent();
+        try
+        {
+            await _matrixService.RemoveMatrixItemAsync(assignmentId);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 }
