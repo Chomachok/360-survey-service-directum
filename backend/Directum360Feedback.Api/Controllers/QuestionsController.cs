@@ -32,8 +32,6 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
     [HttpPost("surveys/{surveyId}")]
     public async Task<IActionResult> AddQuestion(int surveyId, CreateQuestionDto dto)
     {
-        Console.WriteLine($"✅ AddQuestion called with surveyId={surveyId}");
-        Console.WriteLine($"📦 DTO: Text={dto.Text}, Type={dto.Type}, Required={dto.Required}, Order={dto.Order}, Options={dto.Options?.Count ?? 0}");
         var result = await questionService.AddQuestionToSurveyAsync(surveyId, dto);
         return Ok(result);
     }
@@ -42,6 +40,27 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
     public async Task<IActionResult> DeleteQuestion(int questionId)
     {
         await questionService.RemoveQuestionAsync(questionId);
+        return NoContent();
+    }
+
+    [HttpPut("templates/{templateId}")]
+    public async Task<IActionResult> UpdateTemplate(int templateId, UpdateQuestionTemplateDto dto)
+    {
+        try
+        {
+            var updated = questionService.UpdateTemplateAsync(templateId, dto);
+            return Ok(updated);
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("templates/{templateId}")]
+    public async Task<IActionResult> DeleteTemplate(int templateId)
+    {
+        await questionService.DeleteTemplateAsync(templateId);
         return NoContent();
     }
 }

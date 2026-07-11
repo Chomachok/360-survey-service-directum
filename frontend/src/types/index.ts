@@ -98,3 +98,10 @@ export interface AnswerSubmit {
   textAnswer?: string
   selectedOption?: string
 }
+
+export interface UpdateQuestionTemplateDto {
+  name: string
+  text: string
+  type: QuestionType
+  options?: string[]
+}
