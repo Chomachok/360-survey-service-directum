@@ -1,13 +1,30 @@
-import { useQuery } from '@tanstack/react-query'
-import { getSurveys } from '../api/surveys'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getSurveys, deleteSurvey } from '../api/surveys'
 import { Link } from 'react-router-dom'
-import { Plus, FileText, CheckCircle, Clock } from 'lucide-react'
+import { Plus, FileText, CheckCircle, Clock, Trash2 } from 'lucide-react'
 
 export default function Dashboard() {
+  const queryClient = useQueryClient()
   const { data: surveys, isLoading, error } = useQuery({
     queryKey: ['surveys'],
     queryFn: getSurveys,
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteSurvey(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['surveys'] })
+    },
+    onError: (error: any) => {
+      alert('Не удалось удалить опрос: ' + (error.response?.data || error.message))
+    },
+  })
+
+  const handleDelete = (id: number, title: string) => {
+    if (window.confirm(`Вы уверены, что хотите удалить опрос "${title}"? Это действие нельзя отменить.`)) {
+      deleteMutation.mutate(id)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -120,7 +137,7 @@ export default function Dashboard() {
                     <span>👤 {survey.authorName}</span>
                   </div>
                 </div>
-                <div className="flex space-x-2 mt-3 md:mt-0">
+                <div className="flex items-center space-x-2 mt-3 md:mt-0">
                   <Link
                     to={`/survey/${survey.id}/questions`}
                     className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
@@ -139,6 +156,14 @@ export default function Dashboard() {
                   >
                     Результаты
                   </Link>
+                  <button
+                    onClick={() => handleDelete(survey.id, survey.title)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                    title="Удалить опрос"
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
             </div>
