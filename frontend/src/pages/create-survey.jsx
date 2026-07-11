@@ -3,6 +3,7 @@ import {useState} from "react";
 import {handleSubmit} from "../shared/api.jsx"
 import SurveyMatrix from "../shared/create-survey-matrix.jsx"
 import {SaveTemplate} from "../features/save-template.jsx"
+import {validationCreateSurvey} from "../features/validation-create-survey.jsx"
 
 function СreateSurvey(){
     const [title, setName] = useState("");
@@ -11,6 +12,7 @@ function СreateSurvey(){
     const [endDate, setEndDate] = useState("");
     const [templateId, setTemplateId] = useState("");
     const [customQuestions, setQuestion] = useState([{questionText:"" , typeQuestion:"1", options:[""]}]);
+    const [errors, setErrors] = useState([]);
 
     function handleNameChange(event) {    
         setName(event.target.value);  
@@ -155,6 +157,7 @@ function СreateSurvey(){
             
             <input type="submit" value="Отправить" />
             <button type="button" onClick={() => SaveTemplate(title, customQuestions)}>сохранить как шаблон</button>
+            {errors.length > 0 && validationCreateSurvey(errors)}
         </form>
     );
 
