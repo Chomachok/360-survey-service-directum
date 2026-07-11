@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSurveys, deleteSurvey } from '../api/surveys'
+import { getSurveys, deleteSurvey, publishSurvey, completeSurvey } from '../api/surveys'
 import { Link } from 'react-router-dom'
-import { Plus, FileText, CheckCircle, Clock, Trash2 } from 'lucide-react'
+import { Plus, FileText, CheckCircle, Clock, Trash2, Rocket } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useConfirm } from '../components/ConfirmDialog'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { useState } from 'react'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
@@ -11,32 +12,77 @@ export default function Dashboard() {
     queryKey: ['surveys'],
     queryFn: getSurveys,
   })
-  const { confirm, ConfirmDialog } = useConfirm()
+
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    id?: number
+    title?: string
+  }>({ isOpen: false })
+
+  const [publishModal, setPublishModal] = useState<{
+    isOpen: boolean
+    id?: number
+    title?: string
+  }>({ isOpen: false })
+
+  const [completeModal, setCompleteModal] = useState<{
+    isOpen: boolean
+    id?: number
+    title?: string
+  }>({ isOpen: false })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteSurvey(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['surveys'] })
       toast.success('Опрос успешно удалён')
+      setDeleteModal({ isOpen: false })
     },
     onError: (error: any) => {
       const message = error.response?.data || error.message || 'Не удалось удалить опрос'
       toast.error(message)
+      setDeleteModal({ isOpen: false })
     },
   })
 
-  const handleDelete = async (id: number, title: string) => {
-    const confirmed = await confirm(
-      `Вы уверены, что хотите удалить опрос "${title}"? Это действие нельзя отменить.`,
-      {
-        title: 'Удаление опроса',
-        confirmText: 'Да, удалить',
-        cancelText: 'Отмена',
-      }
-    )
-    if (confirmed) {
-      deleteMutation.mutate(id)
-    }
+  const publishMutation = useMutation({
+    mutationFn: (id: number) => publishSurvey(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      toast.success('Опрос успешно опубликован! Теперь он доступен для респондентов.')
+      setPublishModal({ isOpen: false })
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message || 'Не удалось опубликовать опрос'
+      toast.error(message)
+      setPublishModal({ isOpen: false })
+    },
+  })
+
+  const completeMutation = useMutation({
+    mutationFn: (id: number) => completeSurvey(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      toast.success('Опрос успешно завершён!')
+      setCompleteModal({ isOpen: false })
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message || 'Не удалось завершить опрос'
+      toast.error(message)
+      setCompleteModal({ isOpen: false })
+    },
+  })
+
+  const handleDelete = (id: number, title: string) => {
+    setDeleteModal({ isOpen: true, id, title })
+  }
+
+  const handlePublish = (id: number, title: string) => {
+    setPublishModal({ isOpen: true, id, title })
+  }
+
+  const handleComplete = (id: number, title: string) => {
+    setCompleteModal({ isOpen: true, id, title })
   }
 
   if (isLoading) {
@@ -58,9 +104,9 @@ export default function Dashboard() {
     )
   }
 
-  const activeSurveys = surveys?.filter(s => s.status === 'Active').length || 0
-  const completedSurveys = surveys?.filter(s => s.status === 'Completed').length || 0
-  const draftSurveys = surveys?.filter(s => s.status === 'Draft').length || 0
+  const activeSurveys = surveys?.filter(s => s.status === 'Active' || s.status === 1).length || 0
+  const completedSurveys = surveys?.filter(s => s.status === 'Completed' || s.status === 2).length || 0
+  const draftSurveys = surveys?.filter(s => s.status === 'Draft' || s.status === 0).length || 0
 
   return (
     <div>
@@ -122,68 +168,131 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {surveys?.map((survey, index) => (
-            <div
-              key={survey.id}
-              className="card hover:shadow-md transition-shadow animate-fadeInUp"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      survey.status === 'Active'
-                        ? 'bg-green-100 text-green-700'
-                        : survey.status === 'Completed'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {survey.status === 'Active' ? 'Активен' : survey.status === 'Completed' ? 'Завершён' : 'Черновик'}
-                    </span>
+          {surveys?.map((survey, index) => {
+            const isDraft = survey.status === 'Draft' || survey.status === 0
+            const isActive = survey.status === 'Active' || survey.status === 1
+            const isCompleted = survey.status === 'Completed' || survey.status === 2
+
+            return (
+              <div
+                key={survey.id}
+                className="card hover:shadow-md transition-shadow animate-fadeInUp"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        isActive
+                          ? 'bg-green-100 text-green-700'
+                          : isCompleted
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {isActive ? 'Активен' : isCompleted ? 'Завершён' : 'Черновик'}
+                      </span>
+                    </div>
+                    {survey.description && (
+                      <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
+                      <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
+                      <span>👤 {survey.authorName}</span>
+                    </div>
                   </div>
-                  {survey.description && (
-                    <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
-                  )}
-                  <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                    <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
-                    <span>👤 {survey.authorName}</span>
+                  <div className="flex items-center space-x-2 mt-3 md:mt-0">
+                    <Link
+                      to={`/survey/${survey.id}/questions`}
+                      className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                    >
+                      Вопросы
+                    </Link>
+                    <Link
+                      to={`/survey/${survey.id}/matrix`}
+                      className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                    >
+                      Матрица
+                    </Link>
+                    <Link
+                      to={`/survey/${survey.id}/results`}
+                      className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                    >
+                      Результаты
+                    </Link>
+
+                    {/* Кнопка публикации (только для черновиков) */}
+                    {isDraft && (
+                      <button
+                        onClick={() => handlePublish(survey.id, survey.title)}
+                        className="text-green-600 hover:text-green-700 transition-colors p-1 hover:scale-110 transform"
+                        title="Опубликовать опрос"
+                        disabled={publishMutation.isPending}
+                      >
+                        <Rocket size={18} />
+                      </button>
+                    )}
+
+                    {/* Кнопка завершения (только для активных) */}
+                    {isActive && (
+                      <button
+                        onClick={() => handleComplete(survey.id, survey.title)}
+                        className="text-blue-600 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
+                        title="Досрочно завершить опрос"
+                        disabled={completeMutation.isPending}
+                      >
+                        <CheckCircle size={18} />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleDelete(survey.id, survey.title)}
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                      title="Удалить опрос"
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2 mt-3 md:mt-0">
-                  <Link
-                    to={`/survey/${survey.id}/questions`}
-                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
-                  >
-                    Вопросы
-                  </Link>
-                  <Link
-                    to={`/survey/${survey.id}/matrix`}
-                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
-                  >
-                    Матрица
-                  </Link>
-                  <Link
-                    to={`/survey/${survey.id}/results`}
-                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
-                  >
-                    Результаты
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(survey.id, survey.title)}
-                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                    title="Удалить опрос"
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 size={18} />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
-      <ConfirmDialog />
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false })}
+        onConfirm={() => deleteModal.id && deleteMutation.mutate(deleteModal.id)}
+        title="Удаление опроса"
+        message={`Вы уверены, что хотите удалить опрос "${deleteModal.title}"? Это действие нельзя отменить.`}
+        confirmText="Удалить"
+        type="danger"
+        isLoading={deleteMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={publishModal.isOpen}
+        onClose={() => setPublishModal({ isOpen: false })}
+        onConfirm={() => publishModal.id && publishMutation.mutate(publishModal.id)}
+        title="Публикация опроса"
+        message={`Вы уверены, что хотите опубликовать опрос "${publishModal.title}"? После публикации он станет доступен для респондентов.`}
+        confirmText="Опубликовать"
+        type="warning"
+        isLoading={publishMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={completeModal.isOpen}
+        onClose={() => setCompleteModal({ isOpen: false })}
+        onConfirm={() => completeModal.id && completeMutation.mutate(completeModal.id)}
+        title="Завершение опроса"
+        message={`Вы уверены, что хотите досрочно завершить опрос "${completeModal.title}"? После завершения респонденты не смогут оставлять ответы.`}
+        confirmText="Завершить"
+        type="warning"
+        isLoading={completeMutation.isPending}
+      />
     </div>
   )
 }

@@ -6,27 +6,17 @@ using Directum360Feedback.Infrastructure.Repositories;
 
 namespace Directum360Feedback.Application.Services;
 
-public class SurveyService : ISurveyService
+public class SurveyService(IRepository<Survey> surveyRepo, IRepository<Employee> employeeRepo, IMapper mapper)
+    : ISurveyService
 {
-    private readonly IRepository<Survey> _surveyRepo;
-    private readonly IRepository<Employee> _employeeRepo;
-    private readonly IMapper _mapper;
-
-    public SurveyService(IRepository<Survey> surveyRepo, IRepository<Employee> employeeRepo, IMapper mapper)
-    {
-        _surveyRepo = surveyRepo;
-        _employeeRepo = employeeRepo;
-        _mapper = mapper;
-    }
-
     public async Task<IEnumerable<SurveyDto>> GetAllSurveysAsync()
     {
-        var surveys = await _surveyRepo.GetAllAsync();
+        var surveys = await surveyRepo.GetAllAsync();
         var list = new List<SurveyDto>();
         foreach (var s in surveys)
         {
-            var dto = _mapper.Map<SurveyDto>(s);
-            var author = await _employeeRepo.GetByIdAsync(s.AuthorId);
+            var dto = mapper.Map<SurveyDto>(s);
+            var author = await employeeRepo.GetByIdAsync(s.AuthorId);
             dto.AuthorName = author?.FullName ?? "Unknown";
             list.Add(dto);
         }
@@ -35,40 +25,78 @@ public class SurveyService : ISurveyService
 
     public async Task<SurveyDto?> GetSurveyByIdAsync(int id)
     {
-        var survey = await _surveyRepo.GetByIdAsync(id);
+        var survey = await surveyRepo.GetByIdAsync(id);
         if (survey == null) return null;
-        var dto = _mapper.Map<SurveyDto>(survey);
-        var author = await _employeeRepo.GetByIdAsync(survey.AuthorId);
+        var dto = mapper.Map<SurveyDto>(survey);
+        var author = await employeeRepo.GetByIdAsync(survey.AuthorId);
         dto.AuthorName = author?.FullName ?? "Unknown";
         return dto;
     }
 
     public async Task<SurveyDto> CreateSurveyAsync(CreateSurveyDto dto)
     {
-        var survey = _mapper.Map<Survey>(dto);
+        var survey = mapper.Map<Survey>(dto);
         survey.Status = Domain.Enums.SurveyStatus.Draft;
-        await _surveyRepo.AddAsync(survey);
-        await _surveyRepo.SaveChangesAsync();
-        return _mapper.Map<SurveyDto>(survey);
+        await surveyRepo.AddAsync(survey);
+        await surveyRepo.SaveChangesAsync();
+        return mapper.Map<SurveyDto>(survey);
     }
 
     public async Task<SurveyDto> UpdateSurveyAsync(int id, UpdateSurveyDto dto)
     {
-        var survey = await _surveyRepo.GetByIdAsync(id);
+        var survey = await surveyRepo.GetByIdAsync(id);
         if (survey == null) throw new Exception("Survey not found");
-        _mapper.Map(dto, survey);
-        _surveyRepo.Update(survey);
-        await _surveyRepo.SaveChangesAsync();
-        return _mapper.Map<SurveyDto>(survey);
+        mapper.Map(dto, survey);
+        surveyRepo.Update(survey);
+        await surveyRepo.SaveChangesAsync();
+        return mapper.Map<SurveyDto>(survey);
     }
 
     public async Task DeleteSurveyAsync(int id)
     {
-        var survey = await _surveyRepo.GetByIdAsync(id);
+        var survey = await surveyRepo.GetByIdAsync(id);
         if (survey != null)
         {
-            _surveyRepo.Delete(survey);
-            await _surveyRepo.SaveChangesAsync();
+            surveyRepo.Delete(survey);
+            await surveyRepo.SaveChangesAsync();
         }
+    }
+    
+    public async Task<SurveyDto> PublishSurveyAsync(int id)
+    {
+        var survey = await surveyRepo.GetByIdAsync(id);
+        if (survey == null)
+            throw new Exception("Survey not found");
+
+        if (survey.Status != Domain.Enums.SurveyStatus.Draft)
+            throw new Exception("Only drafts can be published");
+
+        survey.Status = Domain.Enums.SurveyStatus.Active;
+        surveyRepo.Update(survey);
+        await surveyRepo.SaveChangesAsync();
+
+        var dto = mapper.Map<SurveyDto>(survey);
+        var author = await employeeRepo.GetByIdAsync(survey.AuthorId);
+        dto.AuthorName = author?.FullName ?? "Unknown";
+        return dto;
+    }
+    
+    public async Task<SurveyDto> CompleteSurveyAsync(int id)
+    {
+        var survey = await surveyRepo.GetByIdAsync(id);
+        if (survey == null)
+            throw new Exception("Survey not found");
+
+        if (survey.Status != Domain.Enums.SurveyStatus.Active)
+            throw new Exception("Only active surveys can be completed");
+
+        survey.Status = Domain.Enums.SurveyStatus.Completed;
+        surveyRepo.Update(survey);
+        await surveyRepo.SaveChangesAsync();
+
+        var dto = mapper.Map<SurveyDto>(survey);
+        var author = await employeeRepo.GetByIdAsync(survey.AuthorId);
+        dto.AuthorName = author?.FullName ?? "Unknown";
+        return dto;
     }
 }
