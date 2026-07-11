@@ -13,10 +13,3 @@ public class MatrixItemDto
     public string Token { get; set; } = string.Empty;
     public bool Completed { get; set; }
 }
-
-public class CreateMatrixItemDto
-{
-    public int EvaluatorId { get; set; }
-    public int TargetId { get; set; }
-    public AssessmentRole Role { get; set; }
-}

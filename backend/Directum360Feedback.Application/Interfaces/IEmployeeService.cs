@@ -6,4 +6,5 @@ public interface IEmployeeService
 {
     Task<IEnumerable<EmployeeDto>> GetAllEmployeesAsync();
     Task ImportEmployeesFromCsvAsync(Stream fileStream);
+    Task<EmployeeDto> CreateEmployeeAsync(CreateEmployeeDto dto);
 }

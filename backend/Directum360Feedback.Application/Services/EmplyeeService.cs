@@ -10,21 +10,12 @@ using System.IO;
 
 namespace Directum360Feedback.Application.Services;
 
-public class EmployeeService : IEmployeeService
+public class EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper) : IEmployeeService
 {
-    private readonly IRepository<Employee> _employeeRepo;
-    private readonly IMapper _mapper;
-
-    public EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper)
-    {
-        _employeeRepo = employeeRepo;
-        _mapper = mapper;
-    }
-
     public async Task<IEnumerable<EmployeeDto>> GetAllEmployeesAsync()
     {
-        var employees = await _employeeRepo.GetAllAsync();
-        return _mapper.Map<IEnumerable<EmployeeDto>>(employees);
+        var employees = await employeeRepo.GetAllAsync();
+        return mapper.Map<IEnumerable<EmployeeDto>>(employees);
     }
 
     public async Task ImportEmployeesFromCsvAsync(Stream fileStream)
@@ -39,14 +30,27 @@ public class EmployeeService : IEmployeeService
                 FullName = rec.FullName,
                 Email = rec.Email
             };
-            await _employeeRepo.AddAsync(employee);
+            await employeeRepo.AddAsync(employee);
         }
-        await _employeeRepo.SaveChangesAsync();
+        await employeeRepo.SaveChangesAsync();
     }
 
     private class EmployeeImportDto
     {
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+    }
+
+    public async Task<EmployeeDto> CreateEmployeeAsync(CreateEmployeeDto dto)
+    {
+        var employee = new Employee
+        {
+            FullName = dto.FullName,
+            Email = dto.Email
+        };
+
+        await employeeRepo.AddAsync(employee);
+        await employeeRepo.SaveChangesAsync();
+        return mapper.Map<EmployeeDto>(employee);
     }
 }

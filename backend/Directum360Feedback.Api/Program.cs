@@ -1,14 +1,20 @@
+using System.Text.Json.Serialization;
 using Directum360Feedback.Application;
+using Directum360Feedback.Application.Validators;
 using Directum360Feedback.Infrastructure;
 using Directum360Feedback.Infrastructure.Data;
 using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Добавляем конвертер для enum
 builder.Services.AddControllers()
-    .AddFluentValidation(fv =>
-        fv.RegisterValidatorsFromAssemblyContaining<
-            Directum360Feedback.Application.Validators.CreateSurveyDtoValidator>());
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CreateSurveyDtoValidator>());
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -20,8 +26,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
