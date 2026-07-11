@@ -1,13 +1,43 @@
-import { useQuery } from '@tanstack/react-query'
-import { getSurveys } from '../api/surveys'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getSurveys, deleteSurvey } from '../api/surveys'
 import { Link } from 'react-router-dom'
-import { Plus, FileText, CheckCircle, Clock } from 'lucide-react'
+import { Plus, FileText, CheckCircle, Clock, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { useConfirm } from '../components/ConfirmDialog'
 
 export default function Dashboard() {
+  const queryClient = useQueryClient()
   const { data: surveys, isLoading, error } = useQuery({
     queryKey: ['surveys'],
     queryFn: getSurveys,
   })
+  const { confirm, ConfirmDialog } = useConfirm()
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteSurvey(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      toast.success('Опрос успешно удалён')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data || error.message || 'Не удалось удалить опрос'
+      toast.error(message)
+    },
+  })
+
+  const handleDelete = async (id: number, title: string) => {
+    const confirmed = await confirm(
+      `Вы уверены, что хотите удалить опрос "${title}"? Это действие нельзя отменить.`,
+      {
+        title: 'Удаление опроса',
+        confirmText: 'Да, удалить',
+        cancelText: 'Отмена',
+      }
+    )
+    if (confirmed) {
+      deleteMutation.mutate(id)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -120,7 +150,7 @@ export default function Dashboard() {
                     <span>👤 {survey.authorName}</span>
                   </div>
                 </div>
-                <div className="flex space-x-2 mt-3 md:mt-0">
+                <div className="flex items-center space-x-2 mt-3 md:mt-0">
                   <Link
                     to={`/survey/${survey.id}/questions`}
                     className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
@@ -139,12 +169,21 @@ export default function Dashboard() {
                   >
                     Результаты
                   </Link>
+                  <button
+                    onClick={() => handleDelete(survey.id, survey.title)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                    title="Удалить опрос"
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+      <ConfirmDialog />
     </div>
   )
 }
