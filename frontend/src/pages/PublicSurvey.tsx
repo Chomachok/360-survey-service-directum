@@ -14,7 +14,7 @@ export default function PublicSurvey() {
     enabled: !!token,
     retry: false,
   })
-
+  
   const [answers, setAnswers] = useState<{ [key: number]: string }>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)

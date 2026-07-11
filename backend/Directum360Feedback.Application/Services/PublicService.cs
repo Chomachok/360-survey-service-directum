@@ -4,6 +4,7 @@ using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Infrastructure.Repositories;
 using System.Text.Json;
+using Directum360Feedback.Domain.Enums;
 
 namespace Directum360Feedback.Application.Services;
 
@@ -24,9 +25,12 @@ public class PublicService(
         );
         var assignment = assignments.FirstOrDefault();
         if (assignment == null) return null;
-        if (assignment.Completed) throw new Exception("Survey already completed");
+        if (assignment.Completed) throw new Exception("Опрос уже пройден");
 
         var survey = assignment.Survey;
+        if (survey.Status != SurveyStatus.Active)
+            throw new Exception("Опрос не активен");
+
         var target = assignment.Target;
         var questions = await questionRepo.FindAsync(q => q.SurveyId == survey.Id);
 
@@ -42,7 +46,9 @@ public class PublicService(
                 Text = q.Text,
                 Type = q.Type,
                 Required = q.Required,
-                Options = string.IsNullOrEmpty(q.Options) ? null : JsonSerializer.Deserialize<List<string>>(q.Options)
+                Options = !string.IsNullOrEmpty(q.Options) && q.Options != "null" && q.Options != "[]"
+                    ? JsonSerializer.Deserialize<List<string>>(q.Options)
+                    : new List<string>() // Пустой список, если нет вариантов
             }).ToList()
         };
         return dto;

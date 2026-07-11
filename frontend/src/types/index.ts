@@ -5,8 +5,8 @@ export enum SurveyStatus {
 }
 
 export enum QuestionType {
-  Text = 0,
-  SingleChoice = 1,
+  Text = 'Text',
+  SingleChoice = 'SingleChoice'
 }
 
 export enum AssessmentRole {
@@ -15,6 +15,7 @@ export enum AssessmentRole {
   Colleague = 'Colleague'
 }
 
+// Остальные интерфейсы без изменений
 export interface Survey {
   id: number
   title: string
@@ -55,11 +56,18 @@ export interface QuestionTemplate {
   id: number
   name: string
   text: string
-  type: QuestionType  // теперь числовой enum
+  type: QuestionType
   options?: string[]
 }
 
 export interface CreateQuestionTemplateDto {
+  name: string
+  text: string
+  type: QuestionType
+  options?: string[]
+}
+
+export interface UpdateQuestionTemplateDto {
   name: string
   text: string
   type: QuestionType
@@ -97,11 +105,4 @@ export interface AnswerSubmit {
   questionId: number
   textAnswer?: string
   selectedOption?: string
-}
-
-export interface UpdateQuestionTemplateDto {
-  name: string
-  text: string
-  type: QuestionType
-  options?: string[]
 }
