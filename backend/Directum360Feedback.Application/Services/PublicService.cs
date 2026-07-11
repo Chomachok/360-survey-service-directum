@@ -7,38 +7,28 @@ using System.Text.Json;
 
 namespace Directum360Feedback.Application.Services;
 
-public class PublicService : IPublicService
+public class PublicService(
+    IRepository<SurveyAssignment> assignmentRepo,
+    IRepository<SurveyQuestion> questionRepo,
+    IRepository<Answer> answerRepo,
+    IRepository<Employee> employeeRepo,
+    IMapper mapper)
+    : IPublicService
 {
-    private readonly IRepository<SurveyAssignment> _assignmentRepo;
-    private readonly IRepository<SurveyQuestion> _questionRepo;
-    private readonly IRepository<Answer> _answerRepo;
-    private readonly IRepository<Employee> _employeeRepo;
-    private readonly IMapper _mapper;
-
-    public PublicService(IRepository<SurveyAssignment> assignmentRepo, IRepository<SurveyQuestion> questionRepo,
-        IRepository<Answer> answerRepo, IRepository<Employee> employeeRepo, IMapper mapper)
-    {
-        _assignmentRepo = assignmentRepo;
-        _questionRepo = questionRepo;
-        _answerRepo = answerRepo;
-        _employeeRepo = employeeRepo;
-        _mapper = mapper;
-    }
-
     public async Task<PublicSurveyDto?> GetSurveyByTokenAsync(string token)
     {
-        var assignment = (await _assignmentRepo.FindAsync(
+        var assignments = await assignmentRepo.FindAsync(
             a => a.Token == token,
             a => a.Survey,
             a => a.Target
-        )).FirstOrDefault();
-
+        );
+        var assignment = assignments.FirstOrDefault();
         if (assignment == null) return null;
         if (assignment.Completed) throw new Exception("Survey already completed");
 
         var survey = assignment.Survey;
         var target = assignment.Target;
-        var questions = await _questionRepo.FindAsync(q => q.SurveyId == survey.Id);
+        var questions = await questionRepo.FindAsync(q => q.SurveyId == survey.Id);
 
         var dto = new PublicSurveyDto
         {
@@ -60,13 +50,13 @@ public class PublicService : IPublicService
 
     public async Task SubmitAnswersAsync(string token, SubmitAnswersDto dto)
     {
-        var assignment = (await _assignmentRepo.FindAsync(a => a.Token == token)).FirstOrDefault();
+        var assignment = (await assignmentRepo.FindAsync(a => a.Token == token)).FirstOrDefault();
         if (assignment == null) throw new Exception("Invalid token");
         if (assignment.Completed) throw new Exception("Already submitted");
 
         foreach (var ansDto in dto.Answers)
         {
-            var question = await _questionRepo.GetByIdAsync(ansDto.QuestionId);
+            var question = await questionRepo.GetByIdAsync(ansDto.QuestionId);
             if (question == null) throw new Exception("Question not found");
             if (question.Required && string.IsNullOrEmpty(ansDto.TextAnswer) && string.IsNullOrEmpty(ansDto.SelectedOption))
                 throw new Exception($"Question {question.Id} is required");
@@ -78,12 +68,12 @@ public class PublicService : IPublicService
                 TextAnswer = ansDto.TextAnswer,
                 SelectedOption = ansDto.SelectedOption
             };
-            await _answerRepo.AddAsync(answer);
+            await answerRepo.AddAsync(answer);
         }
 
         assignment.Completed = true;
         assignment.CompletedAt = DateTime.UtcNow;
-        _assignmentRepo.Update(assignment);
-        await _assignmentRepo.SaveChangesAsync();
+        assignmentRepo.Update(assignment);
+        await assignmentRepo.SaveChangesAsync();
     }
 }
