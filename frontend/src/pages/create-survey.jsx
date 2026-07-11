@@ -2,6 +2,7 @@ import {createRoot} from "react-dom/client";
 import {useState} from "react";
 import {handleSubmit} from "../shared/api.jsx"
 import SurveyMatrix from "../shared/create-survey-matrix.jsx"
+import {SaveTemplate} from "../features/save-template.jsx"
 
 function СreateSurvey(){
     const [title, setName] = useState("");
@@ -153,6 +154,7 @@ function СreateSurvey(){
             </div>
             
             <input type="submit" value="Отправить" />
+            <button type="button" onClick={() => SaveTemplate(title, customQuestions)}>сохранить как шаблон</button>
         </form>
     );
 
