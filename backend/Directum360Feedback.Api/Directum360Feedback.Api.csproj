@@ -18,4 +18,9 @@
     <ProjectReference Include="..\Directum360Feedback.Application\Directum360Feedback.Application.csproj" />
     <ProjectReference Include="..\Directum360Feedback.Infrastructure\Directum360Feedback.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="Templates\InviteEmail.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
