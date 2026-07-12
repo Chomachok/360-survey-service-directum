@@ -1,26 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '../api/questions'
 import { useState } from 'react'
-import { QuestionType, UpdateQuestionTemplateDto } from '../types'
-import { Plus, Copy, Edit2, Trash2, X } from 'lucide-react'
+import { QuestionType, CreateQuestionTemplateDto, UpdateQuestionTemplateDto } from '../types'
+import { Plus, Copy, Edit, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 
 export default function Templates() {
   const queryClient = useQueryClient()
+
+  // --- Список шаблонов ---
   const { data: templates, isLoading } = useQuery({
     queryKey: ['templates'],
     queryFn: getTemplates,
   })
 
-  // Состояние для формы создания
-  const [showForm, setShowForm] = useState(false)
+  // --- Состояния для создания ---
   const [name, setName] = useState('')
   const [text, setText] = useState('')
   const [type, setType] = useState<QuestionType>(QuestionType.Text)
   const [options, setOptions] = useState<string[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [createErrors, setCreateErrors] = useState<{
+    name?: string
+    text?: string
+    options?: string
+  }>({})
 
-  // Состояние для редактирования
+  // --- Состояния для редактирования ---
   const [editingTemplate, setEditingTemplate] = useState<{
     id: number
     name: string
@@ -28,90 +35,118 @@ export default function Templates() {
     type: QuestionType
     options: string[]
   } | null>(null)
+  const [editErrors, setEditErrors] = useState<{
+    name?: string
+    text?: string
+    options?: string
+  }>({})
 
-  // Состояние для удаления
+  // --- Состояния для удаления ---
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     id?: number
     name?: string
   }>({ isOpen: false })
 
-  // Мутация создания
+  // --- Мутации ---
+
   const createMutation = useMutation({
-    mutationFn: createTemplate,
+    mutationFn: (dto: CreateQuestionTemplateDto) => createTemplate(dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] })
-      toast.success('Шаблон создан')
       setName('')
       setText('')
       setOptions([])
       setShowForm(false)
+      setCreateErrors({})
+      toast.success('Шаблон успешно создан!')
     },
     onError: (error: any) => {
-      const message = error.response?.data || error.message || 'Не удалось создать шаблон'
+      const message = error.response?.data?.message || error.message || 'Не удалось создать шаблон'
       toast.error(message)
+      // не сохраняем general в createErrors
     },
   })
 
-  // Мутация обновления
   const updateMutation = useMutation({
     mutationFn: ({ id, dto }: { id: number; dto: UpdateQuestionTemplateDto }) =>
       updateTemplate(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] })
-      toast.success('Шаблон обновлён')
       setEditingTemplate(null)
+      setEditErrors({})
+      toast.success('Шаблон успешно обновлён!')
     },
     onError: (error: any) => {
-      const message = error.response?.data || error.message || 'Не удалось обновить шаблон'
+      const message = error.response?.data?.message || error.message || 'Не удалось обновить шаблон'
       toast.error(message)
+      // не сохраняем general в editErrors
     },
   })
 
-  // Мутация удаления
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteTemplate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates'] })
-      toast.success('Шаблон удалён')
       setDeleteModal({ isOpen: false })
+      toast.success('Шаблон успешно удалён')
     },
     onError: (error: any) => {
-      const message = error.response?.data || error.message || 'Не удалось удалить шаблон'
+      const message = error.response?.data?.message || error.message || 'Не удалось удалить шаблон'
       toast.error(message)
       setDeleteModal({ isOpen: false })
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // --- Валидация создания ---
+  const validateCreate = (): boolean => {
+    const errors: { name?: string; text?: string; options?: string } = {}
+    if (!name.trim()) errors.name = 'Введите название шаблона'
+    if (!text.trim()) errors.text = 'Введите текст вопроса'
+    if (type === QuestionType.SingleChoice) {
+      const validOptions = options.filter(o => o.trim() !== '')
+      if (validOptions.length < 2) {
+        errors.options = 'Добавьте как минимум 2 варианта ответа'
+      } else if (options.some(o => o.trim() === '')) {
+        errors.options = 'Все варианты должны быть заполнены'
+      }
+    }
+    setCreateErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // --- Валидация редактирования ---
+  const validateEdit = (): boolean => {
+    if (!editingTemplate) return false
+    const errors: { name?: string; text?: string; options?: string } = {}
+    if (!editingTemplate.name.trim()) errors.name = 'Введите название шаблона'
+    if (!editingTemplate.text.trim()) errors.text = 'Введите текст вопроса'
+    if (editingTemplate.type === QuestionType.SingleChoice) {
+      const validOptions = editingTemplate.options.filter(o => o.trim() !== '')
+      if (validOptions.length < 2) {
+        errors.options = 'Добавьте как минимум 2 варианта ответа'
+      } else if (editingTemplate.options.some(o => o.trim() === '')) {
+        errors.options = 'Все варианты должны быть заполнены'
+      }
+    }
+    setEditErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // --- Обработчики ---
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateCreate()) return
     createMutation.mutate({
       name,
       text,
       type,
-      options: type === QuestionType.SingleChoice ? options : undefined,
+      options: type === QuestionType.SingleChoice && options.length > 0 ? options : undefined,
     })
   }
 
-  const handleUpdate = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingTemplate) return
-    updateMutation.mutate({
-      id: editingTemplate!.id,
-      dto: {
-        name: editingTemplate.name,
-        text: editingTemplate.text,
-        type: editingTemplate.type,
-        options: editingTemplate.type === QuestionType.SingleChoice ? editingTemplate.options : undefined,
-      },
-    })
-  }
-
-  const handleDelete = (id: number, name: string) => {
-    setDeleteModal({ isOpen: true, id, name })
-  }
-
-  const openEditModal = (template: any) => {
+  const handleEditClick = (template: any) => {
     setEditingTemplate({
       id: template.id,
       name: template.name,
@@ -119,24 +154,58 @@ export default function Templates() {
       type: template.type,
       options: template.options || [],
     })
+    setEditErrors({})
   }
 
-  // Функции для работы с вариантами в форме создания
-  const addOption = () => setOptions([...options, ''])
-  const removeOption = (index: number) => setOptions(options.filter((_, i) => i !== index))
+  const handleEditCancel = () => {
+    setEditingTemplate(null)
+    setEditErrors({})
+  }
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateEdit()) return
+    updateMutation.mutate({
+      id: editingTemplate!.id,
+      dto: {
+        name: editingTemplate!.name,
+        text: editingTemplate!.text,
+        type: editingTemplate!.type,
+        options: editingTemplate!.type === QuestionType.SingleChoice && editingTemplate!.options.length > 0
+          ? editingTemplate!.options
+          : undefined,
+      },
+    })
+  }
+
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteModal({ isOpen: true, id, name })
+  }
+
+  // --- Вспомогательные функции для вариантов (создание) ---
+  const addOption = () => {
+    setOptions([...options, ''])
+    setCreateErrors(prev => ({ ...prev, options: undefined }))
+  }
+  const removeOption = (index: number) => {
+    setOptions(options.filter((_, i) => i !== index))
+    setCreateErrors(prev => ({ ...prev, options: undefined }))
+  }
   const updateOption = (index: number, value: string) => {
     const newOptions = [...options]
     newOptions[index] = value
     setOptions(newOptions)
+    setCreateErrors(prev => ({ ...prev, options: undefined }))
   }
 
-  // Функции для работы с вариантами в редактировании
+  // --- Вспомогательные функции для вариантов (редактирование) ---
   const addEditOption = () => {
     if (!editingTemplate) return
     setEditingTemplate({
       ...editingTemplate,
       options: [...editingTemplate.options, ''],
     })
+    setEditErrors(prev => ({ ...prev, options: undefined }))
   }
   const removeEditOption = (index: number) => {
     if (!editingTemplate) return
@@ -144,12 +213,14 @@ export default function Templates() {
       ...editingTemplate,
       options: editingTemplate.options.filter((_, i) => i !== index),
     })
+    setEditErrors(prev => ({ ...prev, options: undefined }))
   }
   const updateEditOption = (index: number, value: string) => {
     if (!editingTemplate) return
     const newOptions = [...editingTemplate.options]
     newOptions[index] = value
     setEditingTemplate({ ...editingTemplate, options: newOptions })
+    setEditErrors(prev => ({ ...prev, options: undefined }))
   }
 
   if (isLoading) {
@@ -165,10 +236,19 @@ export default function Templates() {
       <div className="flex justify-between items-center mb-6 animate-fadeInUp">
         <div>
           <h1 className="text-3xl font-bold text-directum-dark">Шаблоны вопросов</h1>
-          <p className="text-gray-500 mt-1">Создавайте, редактируйте и удаляйте шаблоны для быстрого добавления вопросов</p>
+          <p className="text-gray-500 mt-1">Создавайте и управляйте шаблонами для быстрого добавления вопросов</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            setShowForm(!showForm)
+            setCreateErrors({})
+            if (!showForm) {
+              setName('')
+              setText('')
+              setOptions([])
+              setType(QuestionType.Text)
+            }
+          }}
           className="btn-primary flex items-center space-x-2"
         >
           <Plus size={20} />
@@ -180,24 +260,30 @@ export default function Templates() {
       {showForm && (
         <div className="card mb-6 animate-fadeInUp">
           <h2 className="text-xl font-semibold text-directum-dark mb-4">Новый шаблон</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleCreateSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label-field">Название шаблона *</label>
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="input-field"
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setCreateErrors(prev => ({ ...prev, name: undefined }))
+                  }}
+                  className={`input-field ${createErrors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Например: Оценка компетенций"
-                  required
                 />
+                {createErrors.name && <p className="text-red-500 text-sm mt-1">{createErrors.name}</p>}
               </div>
               <div>
                 <label className="label-field">Тип вопроса</label>
                 <select
                   value={type}
-                  onChange={(e) => setType(Number(e.target.value) as QuestionType)}
+                  onChange={(e) => {
+                    setType(e.target.value as QuestionType)
+                    setCreateErrors(prev => ({ ...prev, options: undefined }))
+                  }}
                   className="input-field"
                 >
                   <option value={QuestionType.Text}>Текстовый ответ</option>
@@ -211,16 +297,19 @@ export default function Templates() {
               <input
                 type="text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="input-field"
+                onChange={(e) => {
+                  setText(e.target.value)
+                  setCreateErrors(prev => ({ ...prev, text: undefined }))
+                }}
+                className={`input-field ${createErrors.text ? 'border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Введите текст вопроса"
-                required
               />
+              {createErrors.text && <p className="text-red-500 text-sm mt-1">{createErrors.text}</p>}
             </div>
 
             {type === QuestionType.SingleChoice && (
               <div className="space-y-2">
-                <label className="label-field">Варианты ответов</label>
+                <label className="label-field">Варианты ответов *</label>
                 <div className="space-y-2">
                   {options.map((option, index) => (
                     <div key={index} className="flex items-center gap-2">
@@ -228,7 +317,7 @@ export default function Templates() {
                         type="text"
                         value={option}
                         onChange={(e) => updateOption(index, e.target.value)}
-                        className="input-field flex-1"
+                        className={`input-field flex-1 ${createErrors.options ? 'border-red-500 focus:ring-red-500' : ''}`}
                         placeholder={`Вариант ${index + 1}`}
                       />
                       <button
@@ -241,6 +330,7 @@ export default function Templates() {
                     </div>
                   ))}
                 </div>
+                {createErrors.options && <p className="text-red-500 text-sm mt-1">{createErrors.options}</p>}
                 <button
                   type="button"
                   onClick={addOption}
@@ -252,7 +342,11 @@ export default function Templates() {
               </div>
             )}
 
-            <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={createMutation.isPending}
+            >
               {createMutation.isPending ? 'Создание...' : 'Сохранить шаблон'}
             </button>
           </form>
@@ -277,9 +371,10 @@ export default function Templates() {
             <div
               key={t.id}
               className="card hover:shadow-md transition-shadow animate-fadeInUp"
+              style={{ animationDelay: `${t.id * 100}ms` }}
             >
               <div className="flex justify-between items-start">
-                <div className="flex-1">
+                <div>
                   <h3 className="font-semibold text-directum-dark">{t.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">{t.text}</p>
                   <div className="flex items-center space-x-2 mt-2">
@@ -293,17 +388,17 @@ export default function Templates() {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-1 flex-shrink-0 ml-2">
+                <div className="flex space-x-1 flex-shrink-0">
                   <button
-                    onClick={() => openEditModal(t)}
-                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors hover:scale-110 transform"
+                    onClick={() => handleEditClick(t)}
+                    className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
                     title="Редактировать"
                   >
-                    <Edit2 size={18} />
+                    <Edit size={18} />
                   </button>
                   <button
-                    onClick={() => handleDelete(t.id, t.name)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors hover:scale-110 transform"
+                    onClick={() => handleDeleteClick(t.id, t.name)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
                     title="Удалить"
                   >
                     <Trash2 size={18} />
@@ -317,68 +412,66 @@ export default function Templates() {
 
       {/* Модальное окно редактирования */}
       {editingTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setEditingTemplate(null)} />
-          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full animate-fadeInUp max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full animate-fadeInUp max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-directum-dark dark:text-white">
-                Редактировать шаблон
-              </h3>
+              <h3 className="text-lg font-semibold text-directum-dark">Редактирование шаблона</h3>
               <button
-                onClick={() => setEditingTemplate(null)}
+                onClick={handleEditCancel}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X size={20} className="text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleUpdate} className="p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="label-field">Название шаблона *</label>
-                  <input
-                    type="text"
-                    value={editingTemplate.name}
-                    onChange={(e) =>
-                      setEditingTemplate({ ...editingTemplate, name: e.target.value })
-                    }
-                    className="input-field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label-field">Тип вопроса</label>
-                  <select
-                    value={editingTemplate.type}
-                    onChange={(e) =>
-                      setEditingTemplate({
-                        ...editingTemplate,
-                        type: Number(e.target.value) as QuestionType,
-                      })
-                    }
-                    className="input-field"
-                  >
-                    <option value={QuestionType.Text}>Текстовый ответ</option>
-                    <option value={QuestionType.SingleChoice}>Выбор одного варианта</option>
-                  </select>
-                </div>
-              </div>
 
+            <form onSubmit={handleEditSubmit} className="p-4 space-y-4">
+              <div>
+                <label className="label-field">Название шаблона *</label>
+                <input
+                  type="text"
+                  value={editingTemplate.name}
+                  onChange={(e) => {
+                    setEditingTemplate({ ...editingTemplate, name: e.target.value })
+                    setEditErrors(prev => ({ ...prev, name: undefined }))
+                  }}
+                  className={`input-field ${editErrors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
+                />
+                {editErrors.name && <p className="text-red-500 text-sm mt-1">{editErrors.name}</p>}
+              </div>
               <div>
                 <label className="label-field">Текст вопроса *</label>
                 <input
                   type="text"
                   value={editingTemplate.text}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEditingTemplate({ ...editingTemplate, text: e.target.value })
-                  }
-                  className="input-field"
-                  required
+                    setEditErrors(prev => ({ ...prev, text: undefined }))
+                  }}
+                  className={`input-field ${editErrors.text ? 'border-red-500 focus:ring-red-500' : ''}`}
                 />
+                {editErrors.text && <p className="text-red-500 text-sm mt-1">{editErrors.text}</p>}
+              </div>
+              <div>
+                <label className="label-field">Тип вопроса</label>
+                <select
+                  value={editingTemplate.type}
+                  onChange={(e) => {
+                    setEditingTemplate({
+                      ...editingTemplate,
+                      type: e.target.value as QuestionType,
+                    })
+                    setEditErrors(prev => ({ ...prev, options: undefined }))
+                  }}
+                  className="input-field"
+                >
+                  <option value={QuestionType.Text}>Текстовый ответ</option>
+                  <option value={QuestionType.SingleChoice}>Выбор одного варианта</option>
+                </select>
               </div>
 
               {editingTemplate.type === QuestionType.SingleChoice && (
                 <div className="space-y-2">
-                  <label className="label-field">Варианты ответов</label>
+                  <label className="label-field">Варианты ответов *</label>
                   <div className="space-y-2">
                     {editingTemplate.options.map((option, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -386,7 +479,7 @@ export default function Templates() {
                           type="text"
                           value={option}
                           onChange={(e) => updateEditOption(index, e.target.value)}
-                          className="input-field flex-1"
+                          className={`input-field flex-1 ${editErrors.options ? 'border-red-500 focus:ring-red-500' : ''}`}
                           placeholder={`Вариант ${index + 1}`}
                         />
                         <button
@@ -399,6 +492,7 @@ export default function Templates() {
                       </div>
                     ))}
                   </div>
+                  {editErrors.options && <p className="text-red-500 text-sm mt-1">{editErrors.options}</p>}
                   <button
                     type="button"
                     onClick={addEditOption}
@@ -410,20 +504,21 @@ export default function Templates() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => setEditingTemplate(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  Отмена
-                </button>
+              <div className="flex space-x-3 pt-4 border-t border-gray-200">
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="btn-primary flex-1 flex items-center justify-center space-x-2"
                   disabled={updateMutation.isPending}
                 >
-                  {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+                  <Save size={18} />
+                  <span>{updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEditCancel}
+                  className="btn-secondary flex-1"
+                >
+                  Отмена
                 </button>
               </div>
             </form>
