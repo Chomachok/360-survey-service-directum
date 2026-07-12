@@ -1,25 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { getSurveys, deleteSurvey, publishSurvey, completeSurvey } from '../api/surveys'
 import { Link } from 'react-router-dom'
 import { Plus, FileText, CheckCircle, Clock, Trash2, Rocket, Search, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useState } from 'react'
+import { useDebounce } from '../hooks/useDebounce'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
 
-  // Состояния фильтров
   const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebounce(searchInput, 500)
 
-  // Запрос опросов с параметрами фильтрации
-  const { data: surveys, isLoading, error } = useQuery({
-    queryKey: ['surveys', filterStatus, searchQuery],
-    queryFn: () => getSurveys(
-      filterStatus === 'all' ? undefined : filterStatus,
-      searchQuery || undefined
-    ),
+  const statusParam = filterStatus === 'all' ? undefined : filterStatus
+  const searchParam = debouncedSearch || undefined
+
+  const { data: surveys, isLoading, isFetching, error } = useQuery({
+    queryKey: ['surveys', statusParam, searchParam],
+    queryFn: () => getSurveys(statusParam, searchParam),
+    placeholderData: keepPreviousData,
+    staleTime: 5000,
   })
 
   const [deleteModal, setDeleteModal] = useState<{
@@ -96,8 +98,12 @@ export default function Dashboard() {
 
   const resetFilters = () => {
     setFilterStatus('all')
-    setSearchQuery('')
+    setSearchInput('')
   }
+
+  const activeSurveys = surveys?.filter(s => s.status === 'Active').length || 0
+  const completedSurveys = surveys?.filter(s => s.status === 'Completed').length || 0
+  const draftSurveys = surveys?.filter(s => s.status === 'Draft').length || 0
 
   if (isLoading) {
     return (
@@ -117,10 +123,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  const activeSurveys = surveys?.filter(s => s.status === 'Active').length || 0
-  const completedSurveys = surveys?.filter(s => s.status === 'Completed').length || 0
-  const draftSurveys = surveys?.filter(s => s.status === 'Draft').length || 0
 
   return (
     <div>
@@ -171,7 +173,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Панель фильтров */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 animate-fadeInUp">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:min-w-[200px]">
@@ -179,10 +180,15 @@ export default function Dashboard() {
             <input
               type="text"
               placeholder="Поиск по названию..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="input-field pl-10"
             />
+            {isFetching && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
           <select
             value={filterStatus}
@@ -196,7 +202,7 @@ export default function Dashboard() {
           </select>
         </div>
 
-        {(searchQuery || filterStatus !== 'all') && (
+        {(searchInput || filterStatus !== 'all') && (
           <button
             onClick={resetFilters}
             className="text-sm text-gray-500 hover:text-directum-dark flex items-center space-x-1 transition-colors"
@@ -207,11 +213,18 @@ export default function Dashboard() {
         )}
       </div>
 
-      <h2 className="text-xl font-semibold mb-4 animate-fadeInUp">
+      {/* Убрали анимацию с заголовка */}
+      <h2 className="text-xl font-semibold mb-4">
         Мои опросы
         {surveys && surveys.length > 0 && (
           <span className="text-sm font-normal text-gray-500 ml-2">
             (всего {surveys.length})
+          </span>
+        )}
+        {isFetching && !isLoading && (
+          <span className="text-sm text-gray-400 ml-2">
+            <span className="inline-block w-3 h-3 border-2 border-directum-orange border-t-transparent rounded-full animate-spin align-middle mr-1"></span>
+            обновление...
           </span>
         )}
       </h2>
@@ -220,7 +233,7 @@ export default function Dashboard() {
         <div className="card text-center py-12 animate-fadeInUp">
           <FileText size={48} className="text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500">Нет опросов, соответствующих фильтрам</p>
-          {(searchQuery || filterStatus !== 'all') && (
+          {(searchInput || filterStatus !== 'all') && (
             <button onClick={resetFilters} className="btn-secondary inline-block mt-4">
               Сбросить фильтры
             </button>
@@ -230,7 +243,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-4">
           {surveys?.map((survey, index) => (
             <div
-              key={survey.id}
+              // В ключ добавляем параметры фильтра, чтобы React пересоздавал элементы при смене фильтра
+              key={`${survey.id}-${statusParam || 'all'}-${searchParam || ''}`}
               className="card hover:shadow-md transition-shadow animate-fadeInUp"
               style={{ animationDelay: `${index * 100}ms` }}
             >
