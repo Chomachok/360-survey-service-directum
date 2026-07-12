@@ -1,12 +1,15 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getResults, exportDocx } from '../api/results'
-import { ArrowLeft, Download, User } from 'lucide-react'
+import { ArrowLeft, Download, User, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState } from 'react'
 
 export default function Results() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const surveyId = parseInt(id!)
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<number>>(new Set())
+  const [expandedEvaluators, setExpandedEvaluators] = useState<Set<string>>(new Set())
 
   const { data, isLoading } = useQuery({
     queryKey: ['results', surveyId],
@@ -15,6 +18,20 @@ export default function Results() {
 
   const handleExport = () => {
     exportDocx(surveyId)
+  }
+
+  const toggleEmployee = (employeeId: number) => {
+    const newSet = new Set(expandedEmployees)
+    if (newSet.has(employeeId)) newSet.delete(employeeId)
+    else newSet.add(employeeId)
+    setExpandedEmployees(newSet)
+  }
+
+  const toggleEvaluator = (key: string) => {
+    const newSet = new Set(expandedEvaluators)
+    if (newSet.has(key)) newSet.delete(key)
+    else newSet.add(key)
+    setExpandedEvaluators(newSet)
   }
 
   if (isLoading) {
@@ -36,7 +53,7 @@ export default function Results() {
           Назад к дашборду
         </button>
         <div className="card text-center py-12 animate-fadeInUp">
-          <User size={48} className="text-gray-300 mx-auto mb-4" />
+          <Users size={48} className="text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500">Пока нет завершённых ответов</p>
           <p className="text-sm text-gray-400">Результаты появятся после того, как респонденты пройдут опрос</p>
         </div>
@@ -71,46 +88,80 @@ export default function Results() {
         </button>
       </div>
 
-      <div className="space-y-6">
-        {data.results.map((employee, index) => (
-          <div
-            key={employee.employeeId}
-            className="card animate-fadeInUp"
-            style={{ animationDelay: `${index * 150}ms` }}
-          >
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold">
-                {employee.employeeName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="font-semibold text-directum-dark">{employee.employeeName}</h3>
-                <p className="text-sm text-gray-500">Оцениваемый сотрудник</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(employee.answersByRole).map(([role, answers]) => (
-                <div key={role} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 animate-fadeInUp">
-                  <h4 className="text-sm font-medium text-directum-orange mb-3">
-                    {roleLabels[role] || role}
-                  </h4>
-                  <div className="space-y-2">
-                    {answers.map((qa, idx) => (
-                      <div key={idx} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 text-sm">
-                        <span className="text-gray-600 dark:text-gray-400 sm:w-1/2 flex-shrink-0">
-                          {qa.questionText}
-                        </span>
-                        <span className="font-medium text-directum-dark">
-                          {qa.answerText || qa.selectedOption || '—'}
-                        </span>
-                      </div>
-                    ))}
+      <div className="space-y-4">
+        {data.results.map((employee) => {
+          const isEmployeeExpanded = expandedEmployees.has(employee.employeeId)
+          return (
+            <div key={employee.employeeId} className="card animate-fadeInUp">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleEmployee(employee.employeeId)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold">
+                    {employee.employeeName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-directum-dark">{employee.employeeName}</h3>
+                    <span className="text-sm text-gray-500">
+                      {employee.evaluators.length} оценщиков
+                    </span>
                   </div>
                 </div>
-              ))}
+                <div className="text-gray-400">
+                  {isEmployeeExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </div>
+              </div>
+
+              {isEmployeeExpanded && (
+                <div className="mt-4 space-y-4">
+                  {employee.evaluators.map((evaluator) => {
+                    const key = `${employee.employeeId}-${evaluator.evaluatorId}`
+                    const isEvaluatorExpanded = expandedEvaluators.has(key)
+                    return (
+                      <div key={key} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                        <div
+                          className="flex items-center justify-between cursor-pointer"
+                          onClick={() => toggleEvaluator(key)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold text-sm">
+                              {evaluator.evaluatorName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="font-medium text-directum-dark">{evaluator.evaluatorName}</span>
+                              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
+                                {roleLabels[evaluator.role] || evaluator.role}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-gray-400">
+                            {isEvaluatorExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          </div>
+                        </div>
+
+                        {isEvaluatorExpanded && (
+                          <div className="mt-3 space-y-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                            {evaluator.answers.map((qa, idx) => (
+                              <div key={idx} className="text-sm">
+                                <div className="text-gray-600 dark:text-gray-400">
+                                  {qa.questionText}
+                                </div>
+                                <div className="font-medium text-directum-dark">
+                                  {qa.answerText || qa.selectedOption || '—'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
