@@ -6,22 +6,19 @@ namespace Directum360Feedback.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SurveysController : ControllerBase
+public class SurveysController(ISurveyService surveyService) : ControllerBase
 {
-    private readonly ISurveyService _surveyService;
-
-    public SurveysController(ISurveyService surveyService)
-    {
-        _surveyService = surveyService;
-    }
-
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _surveyService.GetAllSurveysAsync());
+    public async Task<IActionResult> GetAll([FromQuery] string? status, [FromQuery] string? search)
+    {
+        var surveys = await surveyService.GetAllSurveyAsync(status, search);
+        return Ok(surveys);
+    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(int id)
     {
-        var survey = await _surveyService.GetSurveyByIdAsync(id);
+        var survey = await surveyService.GetSurveyByIdAsync(id);
         if (survey == null) return NotFound();
         return Ok(survey);
     }
@@ -29,7 +26,7 @@ public class SurveysController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateSurveyDto dto)
     {
-        var created = await _surveyService.CreateSurveyAsync(dto);
+        var created = await surveyService.CreateSurveyAsync(dto);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -38,7 +35,7 @@ public class SurveysController : ControllerBase
     {
         try
         {
-            var updated = await _surveyService.UpdateSurveyAsync(id, dto);
+            var updated = await surveyService.UpdateSurveyAsync(id, dto);
             return Ok(updated);
         }
         catch (Exception ex)
@@ -50,7 +47,7 @@ public class SurveysController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _surveyService.DeleteSurveyAsync(id);
+        await surveyService.DeleteSurveyAsync(id);
         return NoContent();
     }
     
@@ -59,7 +56,7 @@ public class SurveysController : ControllerBase
     {
         try
         {
-            var survey = await _surveyService.PublishSurveyAsync(id);
+            var survey = await surveyService.PublishSurveyAsync(id);
             return Ok(survey);
         }
         catch (Exception ex)
@@ -73,7 +70,7 @@ public class SurveysController : ControllerBase
     {
         try
         {
-            var survey = await _surveyService.CompleteSurveyAsync(id);
+            var survey = await surveyService.CompleteSurveyAsync(id);
             return Ok(survey);
         }
         catch (Exception ex)

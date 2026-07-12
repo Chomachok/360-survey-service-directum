@@ -1,16 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { getSurveys, deleteSurvey, publishSurvey, completeSurvey } from '../api/surveys'
 import { Link } from 'react-router-dom'
-import { Plus, FileText, CheckCircle, Clock, Trash2, Rocket } from 'lucide-react'
+import { Plus, FileText, CheckCircle, Clock, Trash2, Rocket, Search, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useState } from 'react'
+import { useDebounce } from '../hooks/useDebounce'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
-  const { data: surveys, isLoading, error } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys,
+
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebounce(searchInput, 500)
+
+  const statusParam = filterStatus === 'all' ? undefined : filterStatus
+  const searchParam = debouncedSearch || undefined
+
+  const { data: surveys, isLoading, isFetching, error } = useQuery({
+    queryKey: ['surveys', statusParam, searchParam],
+    queryFn: () => getSurveys(statusParam, searchParam),
+    placeholderData: keepPreviousData,
+    staleTime: 5000,
   })
 
   const [deleteModal, setDeleteModal] = useState<{
@@ -49,7 +60,7 @@ export default function Dashboard() {
     mutationFn: (id: number) => publishSurvey(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['surveys'] })
-      toast.success('Опрос успешно опубликован! Теперь он доступен для респондентов.')
+      toast.success('Опрос успешно опубликован!')
       setPublishModal({ isOpen: false })
     },
     onError: (error: any) => {
@@ -85,6 +96,15 @@ export default function Dashboard() {
     setCompleteModal({ isOpen: true, id, title })
   }
 
+  const resetFilters = () => {
+    setFilterStatus('all')
+    setSearchInput('')
+  }
+
+  const activeSurveys = surveys?.filter(s => s.status === 'Active').length || 0
+  const completedSurveys = surveys?.filter(s => s.status === 'Completed').length || 0
+  const draftSurveys = surveys?.filter(s => s.status === 'Draft').length || 0
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -103,10 +123,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  const activeSurveys = surveys?.filter(s => s.status === 'Active' || s.status === 1).length || 0
-  const completedSurveys = surveys?.filter(s => s.status === 'Completed' || s.status === 2).length || 0
-  const draftSurveys = surveys?.filter(s => s.status === 'Draft' || s.status === 0).length || 0
 
   return (
     <div>
@@ -157,107 +173,157 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mb-4 animate-fadeInUp">Мои опросы</h2>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 animate-fadeInUp">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Поиск по названию..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="input-field pl-10"
+            />
+            {isFetching && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="input-field w-full sm:w-auto"
+          >
+            <option value="all">Все опросы</option>
+            <option value="Draft">Черновики</option>
+            <option value="Active">Активные</option>
+            <option value="Completed">Завершённые</option>
+          </select>
+        </div>
+
+        {(searchInput || filterStatus !== 'all') && (
+          <button
+            onClick={resetFilters}
+            className="text-sm text-gray-500 hover:text-directum-dark flex items-center space-x-1 transition-colors"
+          >
+            <X size={16} />
+            <span>Сбросить фильтры</span>
+          </button>
+        )}
+      </div>
+
+      {/* Убрали анимацию с заголовка */}
+      <h2 className="text-xl font-semibold mb-4">
+        Мои опросы
+        {surveys && surveys.length > 0 && (
+          <span className="text-sm font-normal text-gray-500 ml-2">
+            (всего {surveys.length})
+          </span>
+        )}
+        {isFetching && !isLoading && (
+          <span className="text-sm text-gray-400 ml-2">
+            <span className="inline-block w-3 h-3 border-2 border-directum-orange border-t-transparent rounded-full animate-spin align-middle mr-1"></span>
+            обновление...
+          </span>
+        )}
+      </h2>
+
       {surveys?.length === 0 ? (
         <div className="card text-center py-12 animate-fadeInUp">
           <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">У вас пока нет опросов</p>
-          <Link to="/survey/new" className="btn-primary inline-block mt-4">
-            Создать первый опрос
-          </Link>
+          <p className="text-gray-500">Нет опросов, соответствующих фильтрам</p>
+          {(searchInput || filterStatus !== 'all') && (
+            <button onClick={resetFilters} className="btn-secondary inline-block mt-4">
+              Сбросить фильтры
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {surveys?.map((survey, index) => {
-            const isDraft = survey.status === 'Draft' || survey.status === 0
-            const isActive = survey.status === 'Active' || survey.status === 1
-            const isCompleted = survey.status === 'Completed' || survey.status === 2
-
-            return (
-              <div
-                key={survey.id}
-                className="card hover:shadow-md transition-shadow animate-fadeInUp"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        isActive
-                          ? 'bg-green-100 text-green-700'
-                          : isCompleted
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {isActive ? 'Активен' : isCompleted ? 'Завершён' : 'Черновик'}
-                      </span>
-                    </div>
-                    {survey.description && (
-                      <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
-                    )}
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                      <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
-                      <span>👤 {survey.authorName}</span>
-                    </div>
+          {surveys?.map((survey, index) => (
+            <div
+              // В ключ добавляем параметры фильтра, чтобы React пересоздавал элементы при смене фильтра
+              key={`${survey.id}-${statusParam || 'all'}-${searchParam || ''}`}
+              className="card hover:shadow-md transition-shadow animate-fadeInUp"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3">
+                    <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      survey.status === 'Active'
+                        ? 'bg-green-100 text-green-700'
+                        : survey.status === 'Completed'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {survey.status === 'Active' ? 'Активен' : survey.status === 'Completed' ? 'Завершён' : 'Черновик'}
+                    </span>
                   </div>
-                  <div className="flex items-center space-x-2 mt-3 md:mt-0">
-                    <Link
-                      to={`/survey/${survey.id}/questions`}
-                      className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
-                    >
-                      Вопросы
-                    </Link>
-                    <Link
-                      to={`/survey/${survey.id}/matrix`}
-                      className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
-                    >
-                      Матрица
-                    </Link>
-                    <Link
-                      to={`/survey/${survey.id}/results`}
-                      className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
-                    >
-                      Результаты
-                    </Link>
-
-                    {/* Кнопка публикации (только для черновиков) */}
-                    {isDraft && (
-                      <button
-                        onClick={() => handlePublish(survey.id, survey.title)}
-                        className="text-green-600 hover:text-green-700 transition-colors p-1 hover:scale-110 transform"
-                        title="Опубликовать опрос"
-                        disabled={publishMutation.isPending}
-                      >
-                        <Rocket size={18} />
-                      </button>
-                    )}
-
-                    {/* Кнопка завершения (только для активных) */}
-                    {isActive && (
-                      <button
-                        onClick={() => handleComplete(survey.id, survey.title)}
-                        className="text-blue-600 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
-                        title="Досрочно завершить опрос"
-                        disabled={completeMutation.isPending}
-                      >
-                        <CheckCircle size={18} />
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleDelete(survey.id, survey.title)}
-                      className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                      title="Удалить опрос"
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                  {survey.description && (
+                    <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
+                  )}
+                  <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
+                    <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
+                    <span>👤 {survey.authorName}</span>
                   </div>
                 </div>
+                <div className="flex items-center space-x-2 mt-3 md:mt-0">
+                  <Link
+                    to={`/survey/${survey.id}/questions`}
+                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                  >
+                    Вопросы
+                  </Link>
+                  <Link
+                    to={`/survey/${survey.id}/matrix`}
+                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                  >
+                    Матрица
+                  </Link>
+                  <Link
+                    to={`/survey/${survey.id}/results`}
+                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                  >
+                    Результаты
+                  </Link>
+
+                  {survey.status === 'Draft' && (
+                    <button
+                      onClick={() => handlePublish(survey.id, survey.title)}
+                      className="text-green-600 hover:text-green-700 transition-colors p-1 hover:scale-110 transform"
+                      title="Опубликовать опрос"
+                      disabled={publishMutation.isPending}
+                    >
+                      <Rocket size={18} />
+                    </button>
+                  )}
+
+                  {survey.status === 'Active' && (
+                    <button
+                      onClick={() => handleComplete(survey.id, survey.title)}
+                      className="text-blue-600 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
+                      title="Досрочно завершить опрос"
+                      disabled={completeMutation.isPending}
+                    >
+                      <CheckCircle size={18} />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleDelete(survey.id, survey.title)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                    title="Удалить опрос"
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       )}
 
