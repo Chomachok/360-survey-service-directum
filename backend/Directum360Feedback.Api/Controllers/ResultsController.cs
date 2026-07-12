@@ -32,6 +32,7 @@ public class ResultsController : ControllerBase
     public async Task<IActionResult> ExportDocx(int surveyId)
     {
         var bytes = await _resultService.ExportDocxAsync(surveyId);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", $"results_{surveyId}.docx");
+        var fileName = $"Результаты_опроса_{surveyId}_{DateTime.Now:yyyy-MM-dd}.docx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileName);
     }
 }
