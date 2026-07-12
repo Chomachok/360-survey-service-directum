@@ -52,25 +52,26 @@ public class AppDbContext : DbContext
 
         // Seed данные
         modelBuilder.Entity<Employee>().HasData(
-            new Employee { Id = 1, FullName = "John Doe", Email = "john@example.com" },
-            new Employee { Id = 2, FullName = "Jane Smith", Email = "jane@example.com" },
-            new Employee { Id = 3, FullName = "Bob Johnson", Email = "bob@example.com" }
+            new Employee { Id = 1, FullName = "Иванов Иван Иванович", Email = "ivanov@example.com" },
+            new Employee { Id = 2, FullName = "Петров Пётр Петрович", Email = "petrov@example.com" },
+            new Employee { Id = 3, FullName = "Иванова Мария Ивановна", Email = "ivanova@example.com" },
+            new Employee { Id = 4, FullName = "Александрова Александра Александровна", Email = "alexsandrovna@example.com" }
         );
 
         modelBuilder.Entity<QuestionTemplate>().HasData(
             new QuestionTemplate
             {
                 Id = 1,
-                Name = "Overall Performance",
-                Text = "How do you rate overall performance?",
+                Name = "Общая производительность команды",
+                Text = "Как вы оцениваете общую производительность команды?",
                 Type = QuestionType.SingleChoice,
-                Options = "[\"Excellent\",\"Good\",\"Average\",\"Poor\"]"
+                Options = "[\"Отлично\",\"Хорошо\",\"Средне\",\"Плохо\",\"Ужасно\"]"
             },
             new QuestionTemplate
             {
                 Id = 2,
-                Name = "Feedback Comment",
-                Text = "Please provide any additional comments.",
+                Name = "Обратная связь",
+                Text = "Пожалуйста, оставьте дополнительные комментарии.",
                 Type = QuestionType.Text,
                 Options = null
             }
