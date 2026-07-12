@@ -15,4 +15,5 @@ public class SurveyAssignment : BaseEntity
     public bool Completed { get; set; }
     public DateTime? CompletedAt { get; set; }
     public ICollection<Answer> Answers { get; set; } = new List<Answer>();
+    public bool InviteSent { get; set; }
 }
