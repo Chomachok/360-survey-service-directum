@@ -1,4 +1,4 @@
-using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.ResultDTOs;
 
 namespace Directum360Feedback.Application.Interfaces;
 
