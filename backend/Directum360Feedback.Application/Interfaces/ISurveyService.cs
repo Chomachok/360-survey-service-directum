@@ -4,7 +4,7 @@ namespace Directum360Feedback.Application.Interfaces;
 
 public interface ISurveyService
 {
-    Task<IEnumerable<SurveyDto>> GetAllSurveyAsync(string? status = null, string? search = null);
+    Task<IEnumerable<SurveyDto>> GetAllSurveysAsync(string? status = null, string? search = null);
     Task<SurveyDto?> GetSurveyByIdAsync(int id);
     Task<SurveyDto> CreateSurveyAsync(CreateSurveyDto dto);
     Task<SurveyDto> UpdateSurveyAsync(int id, UpdateSurveyDto dto);

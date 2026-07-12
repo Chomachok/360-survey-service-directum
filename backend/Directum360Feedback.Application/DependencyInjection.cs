@@ -10,25 +10,15 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddAutoMapper(typeof(DependencyInjection));
+        services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
+        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ISurveyService, SurveyService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IMatrixService, MatrixService>();
         services.AddScoped<IPublicService, PublicService>();
         services.AddScoped<IResultService, ResultService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
-        var smtpSettings = configuration.GetSection("SmtpSettings").Get<SmtpSettings>();
-        services.Configure<SmtpSettings>(options =>
-        {
-            options.Host = smtpSettings.Host;
-            options.Port = smtpSettings.Port;
-            options.EnableSsl = smtpSettings.EnableSsl;
-            options.Username = smtpSettings.Username;
-            options.Password = smtpSettings.Password;
-            options.FromEmail = smtpSettings.FromEmail;
-            options.FromName = smtpSettings.FromName;
-        });
-        services.AddScoped<IEmailService, EmailService>();
+        services.AddAutoMapper(typeof(DependencyInjection));
         return services;
     }
 }
