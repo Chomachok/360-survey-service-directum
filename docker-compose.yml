@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: directum-mailpit
+    ports:
+      - "1025:1025"   # SMTP-порт для приёма писем
+      - "8025:8025"   # Веб-интерфейс
+    restart: unless-stopped
+    volumes:
+      - mailpit-data:/data   # Сохранение писем между перезапусками
+
+volumes:
+  mailpit-data:
