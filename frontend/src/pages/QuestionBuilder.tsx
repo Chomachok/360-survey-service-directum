@@ -2,10 +2,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQuestion } from '../api/questions'
 import { getSurvey } from '../api/surveys'
-import { useState, useRef } from 'react'
-import { QuestionType } from '../types'
-import type { CreateQuestionDto, UpdateQuestionDto } from '../types'
-import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { QuestionType, CreateQuestionDto, UpdateQuestionDto } from '../types'
+import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function QuestionBuilder() {
@@ -15,7 +14,6 @@ export default function QuestionBuilder() {
   const queryClient = useQueryClient()
   const textInputRef = useRef<HTMLInputElement>(null)
 
-  // Получение данных опроса (включая статус)
   const { data: survey, isLoading: surveyLoading } = useQuery({
     queryKey: ['survey', surveyId],
     queryFn: () => getSurvey(surveyId),
@@ -32,7 +30,6 @@ export default function QuestionBuilder() {
     queryFn: getTemplates,
   })
 
-  // Состояния для добавления вопроса
   const [text, setText] = useState('')
   const [type, setType] = useState<QuestionType>(QuestionType.Text)
   const [required, setRequired] = useState(false)
@@ -44,7 +41,6 @@ export default function QuestionBuilder() {
     general?: string
   }>({})
 
-  // Состояния для редактирования
   const [editingQuestion, setEditingQuestion] = useState<{
     id: number
     text: string
@@ -55,7 +51,6 @@ export default function QuestionBuilder() {
 
   const isDraft = survey?.status === 'Draft'
 
-  // Мутации
   const addMutation = useMutation({
     mutationFn: (dto: CreateQuestionDto) => addQuestion(surveyId, dto),
     onSuccess: () => {
@@ -95,7 +90,6 @@ export default function QuestionBuilder() {
     },
   })
 
-  // Валидация формы добавления
   const validateAdd = (): boolean => {
     const newErrors: { text?: string; options?: string } = {}
     if (!text.trim()) newErrors.text = 'Пожалуйста, введите текст вопроса'
@@ -108,7 +102,6 @@ export default function QuestionBuilder() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Валидация формы редактирования
   const validateEdit = (): boolean => {
     if (!editingQuestion) return false
     const newErrors: { text?: string; options?: string } = {}
@@ -144,7 +137,6 @@ export default function QuestionBuilder() {
     })
   }
 
-  // Обработчики для формы добавления
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value)
     setErrors((prev) => ({ ...prev, text: undefined, general: undefined }))
@@ -184,7 +176,6 @@ export default function QuestionBuilder() {
     }
   }
 
-  // Обработчики для редактирования
   const handleEditClick = (q: any) => {
     if (!isDraft) {
       toast.error('Нельзя редактировать вопросы в активном или завершённом опросе')
@@ -263,14 +254,14 @@ export default function QuestionBuilder() {
     <div>
       <button
         onClick={() => navigate('/')}
-        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp dark:text-gray-100"
+        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
       >
         <ArrowLeft size={20} className="mr-2" />
         Назад к дашборду
       </button>
 
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-directum-dark dark:text-gray-100">Вопросы опроса</h1>
+        <h1 className="text-2xl font-bold text-directum-dark">Вопросы опроса</h1>
         <span className={`text-sm px-3 py-1 rounded-full font-medium ${
           isDraft ? 'bg-gray-100 text-gray-600' :
           survey?.status === 'Active' ? 'bg-green-100 text-green-700' :
@@ -290,7 +281,7 @@ export default function QuestionBuilder() {
         {/* Форма добавления (только для Draft) */}
         <div className="lg:col-span-1">
           <div className="card animate-fadeInUp">
-            <h2 className="text-xl font-semibold text-directum-dark mb-4 dark:text-gray-100">Добавить вопрос</h2>
+            <h2 className="text-xl font-semibold text-directum-dark mb-4">Добавить вопрос</h2>
 
             {!isDraft ? (
               <div className="text-sm text-gray-500 text-center py-4">
@@ -407,13 +398,22 @@ export default function QuestionBuilder() {
               </>
             )}
           </div>
+
+          {/* Кнопка перехода к матрице — ниже карточки, с отступом */}
+          <button
+            onClick={() => navigate(`/survey/${surveyId}/matrix`)}
+            className="btn-primary w-full flex items-center justify-center space-x-2 animate-fadeInUp mt-6"
+          >
+            <ArrowRight size={18} />
+            <span>Перейти к матрице</span>
+          </button>
         </div>
 
         {/* Список вопросов */}
         <div className="lg:col-span-2">
           <div className="card animate-fadeInUp">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-directum-dark dark:text-gray-100">Вопросы опроса</h2>
+              <h2 className="text-xl font-semibold text-directum-dark">Вопросы опроса</h2>
               <span className="text-sm text-gray-500">{questions?.length || 0} вопросов</span>
             </div>
 
@@ -435,7 +435,7 @@ export default function QuestionBuilder() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <span className="text-sm font-medium text-gray-400">#{index + 1}</span>
-                          <span className="font-medium text-directum-dark dark:text-gray-100">{q.text}</span>
+                          <span className="font-medium text-directum-dark">{q.text}</span>
                           {q.required && <span className="text-xs text-red-500 font-medium">*</span>}
                         </div>
                         <div className="flex items-center space-x-3 mt-1">
@@ -483,7 +483,7 @@ export default function QuestionBuilder() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full animate-fadeInUp max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-directum-dark dark:text-gray-100">Редактирование вопроса</h3>
+              <h3 className="text-lg font-semibold text-directum-dark">Редактирование вопроса</h3>
               <button
                 onClick={handleEditCancel}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"

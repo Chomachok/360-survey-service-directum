@@ -1,5 +1,5 @@
 import api from './client'
-import type { Survey, CreateSurveyDto } from '../types'
+import { Survey, CreateSurveyDto } from '../types'
 
 export const getSurveys = (status?: string, search?: string) => {
   const params = new URLSearchParams()

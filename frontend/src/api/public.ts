@@ -1,5 +1,5 @@
 import api from './client'
-import type { PublicSurvey, AnswerSubmit } from '../types'
+import { PublicSurvey, AnswerSubmit } from '../types'
 
 export const getPublicSurvey = (token: string) =>
   api.get<PublicSurvey>(`/public/${token}`).then(res => res.data)
