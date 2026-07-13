@@ -242,7 +242,6 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-4 max-w-full">
           {surveys?.map((survey, index) => (
             <div
-              // В ключ добавляем параметры фильтра, чтобы React пересоздавал элементы при смене фильтра
               key={`${survey.id}-${statusParam || 'all'}-${searchParam || ''}`}
               className="card hover:shadow-md transition-shadow animate-fadeInUp"
               style={{ animationDelay: `${index * 100}ms` }}
@@ -265,7 +264,9 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
                   )}
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                    <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
+                    <span className="whitespace-nowrap">
+                      📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} {new Date(survey.startDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(survey.endDate).toLocaleDateString('ru-RU')} {new Date(survey.endDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-3 md:mt-0">
