@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyTemplates, createSurveyTemplate, updateSurveyTemplate, deleteSurveyTemplate } from '../api/surveyTemplates'
 import { useState } from 'react'
 import { QuestionType, CreateSurveyTemplateDto, CreateTemplateQuestionDto } from '../types'
-import { Plus, Copy, Edit, Trash2, X, Save } from 'lucide-react'
+import { Plus, Copy, Edit, Trash2, X, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 
@@ -28,6 +28,9 @@ export default function SurveyTemplates() {
     questions: CreateTemplateQuestionDto[]
   } | null>(null)
   const [editErrors, setEditErrors] = useState<{ name?: string; questions?: string }>({})
+
+  // Просмотр
+  const [viewingTemplate, setViewingTemplate] = useState<any | null>(null)
 
   // Удаление
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id?: number; name?: string }>({ isOpen: false })
@@ -169,6 +172,10 @@ export default function SurveyTemplates() {
     setEditErrors({})
   }
 
+  const handleViewClick = (template: any) => {
+    setViewingTemplate(template)
+  }
+
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-directum-orange"></div></div>
 
   return (
@@ -286,10 +293,13 @@ export default function SurveyTemplates() {
                   <p className="text-xs text-gray-400 mt-1">{t.questions.length} вопросов</p>
                 </div>
                 <div className="flex space-x-1">
-                  <button onClick={() => handleEditClick(t)} className="text-blue-500 hover:text-blue-700 p-1">
+                  <button onClick={() => handleViewClick(t)} className="text-gray-500 hover:text-blue-500 p-1" title="Просмотр">
+                    <Eye size={18} />
+                  </button>
+                  <button onClick={() => handleEditClick(t)} className="text-blue-500 hover:text-blue-700 p-1" title="Редактировать">
                     <Edit size={18} />
                   </button>
-                  <button onClick={() => setDeleteModal({ isOpen: true, id: t.id, name: t.name })} className="text-gray-400 hover:text-red-500 p-1">
+                  <button onClick={() => setDeleteModal({ isOpen: true, id: t.id, name: t.name })} className="text-gray-400 hover:text-red-500 p-1" title="Удалить">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -299,7 +309,7 @@ export default function SurveyTemplates() {
         </div>
       )}
 
-      {/* Модалка редактирования — аналогична форме создания, с предзаполненными данными */}
+      {/* Модалка редактирования */}
       {editingTemplate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 animate-fadeInUp">
@@ -385,6 +395,55 @@ export default function SurveyTemplates() {
                 <button type="button" onClick={() => setEditingTemplate(null)} className="btn-secondary flex-1">Отмена</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка просмотра */}
+      {viewingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 animate-fadeInUp">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-xl font-semibold text-directum-dark">{viewingTemplate.name}</h3>
+                {viewingTemplate.description && <p className="text-sm text-gray-500 mt-1">{viewingTemplate.description}</p>}
+              </div>
+              <button onClick={() => setViewingTemplate(null)} className="text-gray-500 hover:text-gray-700">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500 mb-2">Вопросов: {viewingTemplate.questions.length}</p>
+              {viewingTemplate.questions.map((q: any, idx: number) => (
+                <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-directum-dark">
+                        {idx + 1}. {q.text}
+                        {q.required && <span className="text-red-500 ml-1 text-sm">*</span>}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
+                          {q.type === QuestionType.Text ? 'Текст' : 'Выбор'}
+                        </span>
+                        {q.options && q.options.length > 0 && (
+                          <span className="text-xs text-gray-500">
+                            Варианты: {q.options.join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setViewingTemplate(null)} className="btn-secondary">
+                Закрыть
+              </button>
+            </div>
           </div>
         </div>
       )}
