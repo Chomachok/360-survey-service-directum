@@ -1,5 +1,5 @@
 import api from './client'
-import type { Question, QuestionTemplate, CreateQuestionDto, CreateQuestionTemplateDto, UpdateQuestionTemplateDto } from '../types'
+import { Question, QuestionTemplate, CreateQuestionDto, CreateQuestionTemplateDto, UpdateQuestionTemplateDto } from '../types'
 
 export const getSurveyQuestions = (surveyId: number) =>
   api.get<Question[]>(`/questions/surveys/${surveyId}`).then(res => res.data)

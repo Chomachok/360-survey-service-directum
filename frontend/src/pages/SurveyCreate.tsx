@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { createSurvey } from '../api/surveys'
-import type { CreateSurveyDto } from '../types'
+import { CreateSurveyDto } from '../types'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -84,14 +84,14 @@ export default function SurveyCreate() {
     <div className="max-w-2xl mx-auto">
       <button
         onClick={() => navigate('/')}
-        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp dark:text-gray-100"
+        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
       >
         <ArrowLeft size={20} className="mr-2" />
         Назад к дашборду
       </button>
 
       <div className="card animate-fadeInUp">
-        <h1 className="text-2xl font-bold text-directum-dark mb-2 dark:text-gray-100">Создание нового опроса</h1>
+        <h1 className="text-2xl font-bold text-directum-dark mb-2">Создание нового опроса</h1>
         <p className="text-gray-500 mb-6">Заполните информацию о вашем опросе 360 градусов</p>
 
         {/* Общая ошибка сервера */}

@@ -46,14 +46,14 @@ public class MatrixService(
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе Черновик");
 
-        if (dto.Role == Domain.Enums.AssessmentRole.SelfAssessment && dto.EvaluatorId != dto.TargetId)
+        if (dto.Role == AssessmentRole.SelfAssessment && dto.EvaluatorId != dto.TargetId)
             throw new Exception("Для самооценки оценивающий и оцениваемый должны быть одним сотрудником");
 
         var assignment = mapper.Map<SurveyAssignment>(dto);
         assignment.SurveyId = surveyId;
         assignment.Token = Guid.NewGuid().ToString();
         assignment.InviteSent = false; // по умолчанию false
-
+            
         await assignmentRepo.AddAsync(assignment);
         await assignmentRepo.SaveChangesAsync();
 
@@ -65,6 +65,10 @@ public class MatrixService(
         var assignment = await assignmentRepo.GetByIdAsync(assignmentId);
         if (assignment == null)
             throw new Exception("Assignment not found");
+        
+        if (assignment.Completed)
+            throw new Exception("Нельзя удалить связь, по которой уже пройден опрос");
+        
         assignmentRepo.Delete(assignment);
         await assignmentRepo.SaveChangesAsync();
     }
