@@ -4,10 +4,8 @@ using Directum360Feedback.Domain.Enums;
 
 namespace Directum360Feedback.Infrastructure.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
     public DbSet<Survey> Surveys { get; set; }
     public DbSet<Employee> Employees { get; set; }
     public DbSet<SurveyQuestion> SurveyQuestions { get; set; }

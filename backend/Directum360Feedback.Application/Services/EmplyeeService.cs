@@ -15,7 +15,8 @@ public class EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper)
     public async Task<IEnumerable<EmployeeDto>> GetAllEmployeesAsync()
     {
         var employees = await employeeRepo.GetAllAsync();
-        return mapper.Map<IEnumerable<EmployeeDto>>(employees);
+        var sorted = employees.OrderBy(x => x.FullName).ToList();
+        return mapper.Map<IEnumerable<EmployeeDto>>(sorted);
     }
 
     public async Task ImportEmployeesFromCsvAsync(Stream fileStream)
