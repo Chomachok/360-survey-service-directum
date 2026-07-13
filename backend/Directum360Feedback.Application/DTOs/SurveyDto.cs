@@ -24,6 +24,7 @@ public class CreateSurveyDto
     public DateTime EndDate { get; set; }
     public int AuthorId { get; set; }
     public int? TargetId { get; set; }
+    public int? TemplateId { get; set; }
 }
 
 public class UpdateSurveyDto

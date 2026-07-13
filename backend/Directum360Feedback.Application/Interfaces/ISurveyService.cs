@@ -11,4 +11,5 @@ public interface ISurveyService
     Task DeleteSurveyAsync(int id);
     Task<SurveyDto> PublishSurveyAsync(int id);
     Task<SurveyDto> CompleteSurveyAsync(int id);
+    Task ApplyTemplateToSurveyAsync(int surveyId, int templateId);
 }

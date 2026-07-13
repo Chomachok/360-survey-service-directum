@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createSurvey } from '../api/surveys'
 import { getEmployees } from '../api/employees'
+import { getSurveyTemplates } from '../api/surveyTemplates'
 import { CreateSurveyDto } from '../types'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -16,11 +17,17 @@ export default function SurveyCreate() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [targetId, setTargetId] = useState<number | ''>('')
+  const [templateId, setTemplateId] = useState<number | ''>('')
   const authorId = 1
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: getEmployees,
+  })
+
+  const { data: templates } = useQuery({
+    queryKey: ['surveyTemplates'],
+    queryFn: getSurveyTemplates,
   })
 
   const [errors, setErrors] = useState<{
@@ -36,8 +43,17 @@ export default function SurveyCreate() {
     label: e.fullName,
   }))
 
-  const selectedOption = targetId
+  const templateOptions = (templates || []).map(t => ({
+    value: t.id,
+    label: t.name,
+  }))
+
+  const selectedEmployee = targetId
     ? employeeOptions.find(opt => opt.value === targetId)
+    : null
+
+  const selectedTemplate = templateId
+    ? templateOptions.find(opt => opt.value === templateId)
     : null
 
   const validate = (): boolean => {
@@ -76,6 +92,7 @@ export default function SurveyCreate() {
       endDate,
       authorId,
       targetId: targetId ? Number(targetId) : undefined,
+      templateId: templateId ? Number(templateId) : undefined,
     })
   }
 
@@ -97,6 +114,10 @@ export default function SurveyCreate() {
   const handleTargetIdChange = (option: any) => {
     setTargetId(option?.value || '')
     setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
+  }
+
+  const handleTemplateIdChange = (option: any) => {
+    setTemplateId(option?.value || '')
   }
 
   return (
@@ -149,7 +170,7 @@ export default function SurveyCreate() {
             </label>
             <Select
               options={employeeOptions}
-              value={selectedOption}
+              value={selectedEmployee}
               onChange={handleTargetIdChange}
               placeholder="Выберите сотрудника"
               isClearable
@@ -160,6 +181,21 @@ export default function SurveyCreate() {
               className={errors.targetId ? 'border-red-500 rounded-lg' : ''}
             />
             {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
+          </div>
+
+          <div className="animate-fadeInUp-delay-2">
+            <label className="label-field">Шаблон опроса (опционально)</label>
+            <Select
+              options={templateOptions}
+              value={selectedTemplate}
+              onChange={handleTemplateIdChange}
+              placeholder="Выберите шаблон (необязательно)"
+              isClearable
+              isSearchable
+              styles={reactSelectStyles}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -187,18 +223,18 @@ export default function SurveyCreate() {
 
           <div className="flex space-x-3 pt-4 border-t border-gray-100 animate-fadeInUp">
             <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="btn-secondary flex-1"
-            >
-              Отмена
-            </button>
-            <button
               type="submit"
               className="btn-primary flex-1"
               disabled={mutation.isPending}
             >
               {mutation.isPending ? 'Создание...' : 'Создать опрос'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="btn-secondary flex-1"
+            >
+              Отмена
             </button>
           </div>
         </form>

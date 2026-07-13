@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users } from 'lucide-react'
+import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users, FileSpreadsheet } from 'lucide-react'
 
 const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -12,6 +12,7 @@ const Layout: React.FC = () => {
     { path: '/survey/new', label: 'Создать опрос', icon: FileText },
     { path: '/templates', label: 'Шаблоны', icon: ListChecks },
     { path: '/import', label: 'Импорт сотрудников', icon: Users },
+    { path: '/survey-templates', label: 'Шаблоны опросов', icon: FileSpreadsheet },
   ]
 
   const isActive = (path: string) => location.pathname === path

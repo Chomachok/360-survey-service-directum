@@ -12,6 +12,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuestionTemplate> QuestionTemplates { get; set; }
     public DbSet<SurveyAssignment> SurveyAssignments { get; set; }
     public DbSet<Answer> Answers { get; set; }
+    public DbSet<SurveyTemplate> SurveyTemplates { get; set; }
+    public DbSet<SurveyTemplateQuestion> SurveyTemplateQuestions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +49,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(q => q.Answers)
             .HasForeignKey(a => a.QuestionId)
             .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<SurveyTemplate>()
+            .HasMany(t => t.Questions)
+            .WithOne(q => q.SurveyTemplate)
+            .HasForeignKey(q => q.SurveyTemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Seed данные
         modelBuilder.Entity<Employee>().HasData(
