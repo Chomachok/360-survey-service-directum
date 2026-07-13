@@ -56,27 +56,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(q => q.SurveyTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Seed данные
+        // Seed данные для Employee
         modelBuilder.Entity<Employee>().HasData(
             new Employee { Id = 1, FullName = "Иванов Иван Иванович", Email = "ivanov@example.com" },
             new Employee { Id = 2, FullName = "Петров Пётр Петрович", Email = "petrov@example.com" },
             new Employee { Id = 3, FullName = "Иванова Мария Ивановна", Email = "ivanova@example.com" },
             new Employee { Id = 4, FullName = "Александрова Александра Александровна", Email = "alexsandrovna@example.com" }
         );
-        
+
+        // Настройка для Survey (Author и Target)
         modelBuilder.Entity<Survey>()
             .HasOne(s => s.Author)
             .WithMany(e => e.AuthoredSurveys)
             .HasForeignKey(s => s.AuthorId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // --- Настройка для Survey (Target, если нужно) ---
         modelBuilder.Entity<Survey>()
             .HasOne(s => s.Target)
-            .WithMany() // если нет навигации с обратной стороны в Employee
+            .WithMany()
             .HasForeignKey(s => s.TargetId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Seed данные для QuestionTemplate (существующие)
         modelBuilder.Entity<QuestionTemplate>().HasData(
             new QuestionTemplate
             {
@@ -93,6 +94,219 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Text = "Пожалуйста, оставьте дополнительные комментарии.",
                 Type = QuestionType.Text,
                 Options = null
+            }
+        );
+
+        // Seed данные для SurveyTemplate (без коллекций)
+        modelBuilder.Entity<SurveyTemplate>().HasData(
+            new SurveyTemplate
+            {
+                Id = 1,
+                Name = "Оценка профессиональных компетенций",
+                Description = "Опрос для сбора обратной связи о профессиональных навыках и компетенциях сотрудника. " +
+                              "Подходит для оценки как руководителей, так и специалистов.",
+                CreatedAt = new DateTime(2025, 1, 1)
+            },
+            new SurveyTemplate
+            {
+                Id = 2,
+                Name = "Оценка лидерских качеств",
+                Description = "Опрос для сбора обратной связи о лидерских и управленческих навыках сотрудника. " +
+                              "Подходит для оценки руководителей и сотрудников с потенциалом лидерства.",
+                CreatedAt = new DateTime(2025, 1, 1)
+            }
+        );
+
+        // Seed данные для SurveyTemplateQuestion (вопросы шаблонов)
+        modelBuilder.Entity<SurveyTemplateQuestion>().HasData(
+            // Шаблон 1
+            new SurveyTemplateQuestion
+            {
+                Id = 1,
+                SurveyTemplateId = 1,
+                Text = "Как вы оцениваете уровень профессиональных знаний сотрудника в своей области?",
+                Type = QuestionType.SingleChoice,
+                Order = 1,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Требует развития\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 2,
+                SurveyTemplateId = 1,
+                Text = "Насколько сотрудник проявляет инициативу в решении рабочих задач?",
+                Type = QuestionType.SingleChoice,
+                Order = 2,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Всегда проявляет\",\"Часто\",\"Иногда\",\"Редко\",\"Никогда\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 3,
+                SurveyTemplateId = 1,
+                Text = "Как вы оцениваете способность сотрудника адаптироваться к изменениям?",
+                Type = QuestionType.SingleChoice,
+                Order = 3,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 4,
+                SurveyTemplateId = 1,
+                Text = "Насколько сотрудник умеет работать в команде и выстраивать отношения с коллегами?",
+                Type = QuestionType.SingleChoice,
+                Order = 4,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 5,
+                SurveyTemplateId = 1,
+                Text = "Как вы оцениваете качество выполнения задач сотрудником?",
+                Type = QuestionType.SingleChoice,
+                Order = 5,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Высокое\",\"Среднее\",\"Низкое\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 6,
+                SurveyTemplateId = 1,
+                Text = "Какие сильные стороны сотрудника вы можете выделить?",
+                Type = QuestionType.Text,
+                Order = 6,
+                Required = false,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = null
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 7,
+                SurveyTemplateId = 1,
+                Text = "Какие области для развития вы бы порекомендовали сотруднику?",
+                Type = QuestionType.Text,
+                Order = 7,
+                Required = false,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = null
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 8,
+                SurveyTemplateId = 1,
+                Text = "Как вы оцениваете общую эффективность сотрудника?",
+                Type = QuestionType.SingleChoice,
+                Order = 8,
+                Required = false,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Неудовлетворительно\"]"
+            },
+            // Шаблон 2
+            new SurveyTemplateQuestion
+            {
+                Id = 9,
+                SurveyTemplateId = 2,
+                Text = "Как вы оцениваете способность сотрудника вдохновлять и мотивировать других?",
+                Type = QuestionType.SingleChoice,
+                Order = 1,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Требует развития\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 10,
+                SurveyTemplateId = 2,
+                Text = "Насколько сотрудник эффективно принимает решения в сложных ситуациях?",
+                Type = QuestionType.SingleChoice,
+                Order = 2,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Всегда эффективно\",\"Часто\",\"Иногда\",\"Редко\",\"Никогда\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 11,
+                SurveyTemplateId = 2,
+                Text = "Как вы оцениваете навыки делегирования задач сотрудником?",
+                Type = QuestionType.SingleChoice,
+                Order = 3,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 12,
+                SurveyTemplateId = 2,
+                Text = "Насколько сотрудник умеет разрешать конфликты в команде?",
+                Type = QuestionType.SingleChoice,
+                Order = 4,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 13,
+                SurveyTemplateId = 2,
+                Text = "Как вы оцениваете коммуникативные навыки сотрудника?",
+                Type = QuestionType.SingleChoice,
+                Order = 5,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 14,
+                SurveyTemplateId = 2,
+                Text = "Насколько сотрудник способен брать на себя ответственность за результаты команды?",
+                Type = QuestionType.SingleChoice,
+                Order = 6,
+                Required = true,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Всегда\",\"Часто\",\"Иногда\",\"Редко\",\"Никогда\"]"
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 15,
+                SurveyTemplateId = 2,
+                Text = "Какие сильные стороны как лидера вы можете выделить у этого сотрудника?",
+                Type = QuestionType.Text,
+                Order = 7,
+                Required = false,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = null
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 16,
+                SurveyTemplateId = 2,
+                Text = "Какие качества лидера сотруднику стоит развивать?",
+                Type = QuestionType.Text,
+                Order = 8,
+                Required = false,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = null
+            },
+            new SurveyTemplateQuestion
+            {
+                Id = 17,
+                SurveyTemplateId = 2,
+                Text = "Как вы оцениваете общий уровень лидерства сотрудника?",
+                Type = QuestionType.SingleChoice,
+                Order = 9,
+                Required = false,
+                CreatedAt = new DateTime(2025, 1, 1),
+                Options = "[\"Высокий\",\"Выше среднего\",\"Средний\",\"Ниже среднего\",\"Низкий\"]"
             }
         );
     }
