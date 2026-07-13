@@ -11,7 +11,7 @@ public class SurveysController(ISurveyService surveyService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? status, [FromQuery] string? search)
     {
-        var surveys = await surveyService.GetAllSurveysAsync(status, search); // ← исправлено
+        var surveys = await surveyService.GetAllSurveysAsync(status, search);
         return Ok(surveys);
     }
 
