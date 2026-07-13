@@ -8,7 +8,9 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<Survey, SurveyDto>();
+        CreateMap<Survey, SurveyDto>()
+            .ForMember(dest => dest.AuthorName, opt => opt.Ignore()) // AuthorName заполняется вручную в сервисе
+            .ForMember(dest => dest.TargetId, opt => opt.MapFrom(src => src.TargetId)); // явно
         CreateMap<CreateSurveyDto, Survey>();
         CreateMap<UpdateSurveyDto, Survey>();
 
@@ -26,5 +28,7 @@ public class MappingProfile : Profile
         CreateMap<SurveyAssignment, MatrixItemDto>();
         CreateMap<CreateMatrixItemDto, SurveyAssignment>();
         CreateMap<Employee, EmployeeDto>();
+        CreateMap<CreateSurveyDto, Survey>();
+        CreateMap<UpdateSurveyDto, Survey>();
     }
 }

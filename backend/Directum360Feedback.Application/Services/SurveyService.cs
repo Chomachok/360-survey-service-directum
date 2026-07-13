@@ -129,10 +129,16 @@ public class SurveyService(
     public async Task<SurveyDto> CreateSurveyAsync(CreateSurveyDto dto)
     {
         var survey = mapper.Map<Survey>(dto);
+        survey.TargetId = dto.TargetId;
         survey.Status = SurveyStatus.Draft;
         await surveyRepo.AddAsync(survey);
         await surveyRepo.SaveChangesAsync();
-        return mapper.Map<SurveyDto>(survey);
+
+        var surveyDto = mapper.Map<SurveyDto>(survey);
+        surveyDto.TargetId = survey.TargetId; // явно
+        var author = await employeeRepo.GetByIdAsync(survey.AuthorId);
+        surveyDto.AuthorName = author?.FullName ?? "Unknown";
+        return surveyDto;
     }
 
     public async Task<SurveyDto> UpdateSurveyAsync(int id, UpdateSurveyDto dto)

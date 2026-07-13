@@ -4,10 +4,8 @@ using Directum360Feedback.Domain.Enums;
 
 namespace Directum360Feedback.Infrastructure.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
     public DbSet<Survey> Surveys { get; set; }
     public DbSet<Employee> Employees { get; set; }
     public DbSet<SurveyQuestion> SurveyQuestions { get; set; }
@@ -17,7 +15,7 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // 👇 Настройка отношений для SurveyAssignment
+        // Настройка отношений для SurveyAssignment
         modelBuilder.Entity<SurveyAssignment>()
             .HasOne(a => a.Evaluator)
             .WithMany(e => e.AssignmentsAsEvaluator)
@@ -30,14 +28,14 @@ public class AppDbContext : DbContext
             .HasForeignKey(a => a.TargetId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // 👇 Настройка для SurveyQuestion
+        // Настройка для SurveyQuestion
         modelBuilder.Entity<SurveyQuestion>()
             .HasOne(q => q.Survey)
             .WithMany(s => s.Questions)
             .HasForeignKey(q => q.SurveyId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // 👇 Настройка для Answer
+        // Настройка для Answer
         modelBuilder.Entity<Answer>()
             .HasOne(a => a.Assignment)
             .WithMany(a => a.Answers)
@@ -57,6 +55,19 @@ public class AppDbContext : DbContext
             new Employee { Id = 3, FullName = "Иванова Мария Ивановна", Email = "ivanova@example.com" },
             new Employee { Id = 4, FullName = "Александрова Александра Александровна", Email = "alexsandrovna@example.com" }
         );
+        
+        modelBuilder.Entity<Survey>()
+            .HasOne(s => s.Author)
+            .WithMany(e => e.AuthoredSurveys)
+            .HasForeignKey(s => s.AuthorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // --- Настройка для Survey (Target, если нужно) ---
+        modelBuilder.Entity<Survey>()
+            .HasOne(s => s.Target)
+            .WithMany() // если нет навигации с обратной стороны в Employee
+            .HasForeignKey(s => s.TargetId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<QuestionTemplate>().HasData(
             new QuestionTemplate

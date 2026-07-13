@@ -33,6 +33,7 @@ export interface CreateSurveyDto {
   startDate: string
   endDate: string
   authorId: number
+  targetId?: number
 }
 
 export interface Question {

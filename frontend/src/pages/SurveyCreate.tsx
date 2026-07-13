@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { createSurvey } from '../api/surveys'
+import { getEmployees } from '../api/employees'
 import { CreateSurveyDto } from '../types'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -12,39 +13,37 @@ export default function SurveyCreate() {
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [targetId, setTargetId] = useState<number | ''>('')
   const authorId = 1
 
-  // Состояние ошибок
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: getEmployees,
+  })
+
   const [errors, setErrors] = useState<{
     title?: string
     startDate?: string
     endDate?: string
+    targetId?: string
     general?: string
   }>({})
 
-  // Функция валидации
   const validate = (): boolean => {
-    const newErrors: { title?: string; startDate?: string; endDate?: string } = {}
+    const newErrors: { title?: string; startDate?: string; endDate?: string; targetId?: string } = {}
 
-    if (!title.trim()) {
-      newErrors.title = 'Введите название опроса'
-    }
-
-    if (!startDate) {
-      newErrors.startDate = 'Выберите дату начала'
-    }
-
-    if (!endDate) {
-      newErrors.endDate = 'Выберите дату окончания'
-    } else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+    if (!title.trim()) newErrors.title = 'Введите название опроса'
+    if (!startDate) newErrors.startDate = 'Выберите дату начала'
+    if (!endDate) newErrors.endDate = 'Выберите дату окончания'
+    else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
+    if (!targetId) newErrors.targetId = 'Выберите сотрудника, для которого проводится опрос'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  // Мутация создания
   const mutation = useMutation({
     mutationFn: (data: CreateSurveyDto) => createSurvey(data),
     onSuccess: (survey) => {
@@ -61,10 +60,16 @@ export default function SurveyCreate() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
-    mutation.mutate({ title, description, startDate, endDate, authorId })
+    mutation.mutate({
+      title,
+      description,
+      startDate,
+      endDate,
+      authorId,
+      targetId: Number(targetId),
+    })
   }
 
-  // Обработчики изменения полей с очисткой ошибок
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value)
     setErrors((prev) => ({ ...prev, title: undefined, general: undefined }))
@@ -78,6 +83,11 @@ export default function SurveyCreate() {
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(e.target.value)
     setErrors((prev) => ({ ...prev, endDate: undefined, general: undefined }))
+  }
+
+  const handleTargetIdChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTargetId(e.target.value === '' ? '' : Number(e.target.value))
+    setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
   }
 
   return (
@@ -94,7 +104,6 @@ export default function SurveyCreate() {
         <h1 className="text-2xl font-bold text-directum-dark mb-2">Создание нового опроса</h1>
         <p className="text-gray-500 mb-6">Заполните информацию о вашем опросе 360 градусов</p>
 
-        {/* Общая ошибка сервера */}
         {errors.general && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm animate-fadeIn">
             {errors.general}
@@ -123,6 +132,23 @@ export default function SurveyCreate() {
               rows={3}
               placeholder="Опишите цель и задачи опроса..."
             />
+          </div>
+
+          <div className="animate-fadeInUp-delay-2">
+            <label className="label-field">Сотрудник, по которому проводится опрос *</label>
+            <select
+              value={targetId}
+              onChange={handleTargetIdChange}
+              className={`input-field ${errors.targetId ? 'border-red-500 focus:ring-red-500' : ''}`}
+            >
+              <option value="">Выберите сотрудника</option>
+              {employees?.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </select>
+            {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
