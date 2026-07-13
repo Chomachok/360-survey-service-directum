@@ -145,6 +145,10 @@ public class SurveyService(
     {
         var survey = await surveyRepo.GetByIdAsync(id);
         if (survey == null) throw new Exception("Survey not found");
+        
+        if (survey.Status != SurveyStatus.Draft)
+            throw new Exception("Редактирование доступно только для черновиков");
+        
         mapper.Map(dto, survey);
         surveyRepo.Update(survey);
         await surveyRepo.SaveChangesAsync();

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useState } from 'react'
 import { useDebounce } from '../hooks/useDebounce'
+import { Edit } from 'lucide-react'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
@@ -309,6 +310,16 @@ export default function Dashboard() {
                     >
                       <CheckCircle size={18} />
                     </button>
+                  )}
+
+                  {survey.status === 'Draft' && (
+                    <Link
+                      to={`/survey/${survey.id}/edit`}
+                      className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
+                      title="Редактировать опрос"
+                    >
+                      <Edit size={18} />
+                    </Link>
                   )}
 
                   <button
