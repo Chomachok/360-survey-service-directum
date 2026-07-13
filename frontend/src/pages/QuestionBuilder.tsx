@@ -432,10 +432,10 @@ export default function QuestionBuilder() {
                       className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 animate-fadeInUp"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center space-x-3">
                           <span className="text-sm font-medium text-gray-400">#{index + 1}</span>
-                          <span className="font-medium text-directum-dark">{q.text}</span>
+                          <span className="font-medium text-directum-dark break-words overflow-hidden">{q.text}</span>
                           {q.required && <span className="text-xs text-red-500 font-medium">*</span>}
                         </div>
                         <div className="flex items-center space-x-3 mt-1">

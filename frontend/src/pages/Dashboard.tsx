@@ -239,7 +239,7 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 max-w-full">
           {surveys?.map((survey, index) => (
             <div
               // В ключ добавляем параметры фильтра, чтобы React пересоздавал элементы при смене фильтра
@@ -248,9 +248,9 @@ export default function Dashboard() {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
+                    <h3 className="text-lg font-semibold text-directum-dark break-words min-w-0">{survey.title}</h3>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       survey.status === 'Active'
                         ? 'bg-green-100 text-green-700'

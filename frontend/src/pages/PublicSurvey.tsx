@@ -115,7 +115,7 @@ export default function PublicSurvey() {
   return (
     <div className="card animate-fadeInUp mt-4">
       <div className="border-b border-gray-200 pb-4 mb-6">
-        <h1 className="text-2xl font-bold text-directum-dark">{survey.surveyTitle}</h1>
+        <h1 className="text-2xl font-bold text-directum-dark break-words">{survey.surveyTitle}</h1>
         <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
           <span>👤 Оцениваемый: <strong>{survey.targetName}</strong></span>
           <span>🏷️ Роль: <strong>{roleLabels[survey.role] || survey.role}</strong></span>
@@ -138,10 +138,10 @@ export default function PublicSurvey() {
           >
             <div className="flex items-start space-x-2">
               <span className="text-sm font-medium text-gray-400 mt-0.5">#{index + 1}</span>
-              <div className="flex-1">
-                <p className="font-medium text-directum-dark">
+              <div className="flex-1 max-w-full">
+                <p className="font-medium text-directum-dark break-words">
                   {q.text}
-                  {q.required && <span className="text-red-500 ml-1">*</span>}
+                  {q.required && <span className="text-red-500 ml-1" >*</span>}
                 </p>
 
                 {q.type === QuestionType.Text && (
