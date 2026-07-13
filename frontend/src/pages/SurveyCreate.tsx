@@ -116,11 +116,15 @@ export default function SurveyCreate() {
             <input
               type="text"
               value={title}
+              maxLength={250}
               onChange={handleTitleChange}
               className={`input-field ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
               placeholder="Например: Оценка эффективности команды"
             />
             {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+            <div className="text-sm text-gray-400 mt-1 text-right">
+              {title.length}/250
+            </div>
           </div>
 
           <div className="animate-fadeInUp-delay-2">
