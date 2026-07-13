@@ -2,6 +2,7 @@ using AutoMapper;
 using Directum360Feedback.Application.DTOs;
 using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
+using Directum360Feedback.Domain.Enums;
 using Directum360Feedback.Infrastructure.Repositories;
 
 namespace Directum360Feedback.Application.Services;
@@ -33,14 +34,17 @@ public class MatrixService(
     {
         var survey = await surveyRepo.GetByIdAsync(surveyId);
         if (survey == null)
-            throw new Exception("Survey not found");
+            throw new Exception("Опрос не найден");
 
         var evaluator = await employeeRepo.GetByIdAsync(dto.EvaluatorId);
         if (evaluator == null)
-            throw new Exception("Evaluator not found");
+            throw new Exception("Оценивающий не найден");
         var target = await employeeRepo.GetByIdAsync(dto.TargetId);
         if (target == null)
-            throw new Exception("Target not found");
+            throw new Exception("Оцениваемый не найден");
+
+        if (survey.Status != SurveyStatus.Draft)
+            throw new Exception("Добавление участников доступно только для опросов в статусе Черновик");
 
         if (dto.Role == Domain.Enums.AssessmentRole.SelfAssessment && dto.EvaluatorId != dto.TargetId)
             throw new Exception("Для самооценки оценивающий и оцениваемый должны быть одним сотрудником");
