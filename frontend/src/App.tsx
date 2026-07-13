@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+  import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import SurveyCreate from './pages/SurveyCreate'
 import QuestionBuilder from './pages/QuestionBuilder'
@@ -9,6 +9,7 @@ import Results from './pages/Results'
 import ImportEmployees from './pages/ImportEmployees'
 import Layout from './components/Layout'
 import PublicLayout from './components/PublicLayout'
+import SurveyEdit from './pages/SurveyEdit'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/survey/:id/matrix" element={<Matrix />} />
           <Route path="/survey/:id/results" element={<Results />} />
           <Route path="/import" element={<ImportEmployees />} />
+          <Route path="/survey/:id/edit" element={<SurveyEdit />} />
         </Route>
 
         {/* Публичный маршрут (без админского Layout) */}
