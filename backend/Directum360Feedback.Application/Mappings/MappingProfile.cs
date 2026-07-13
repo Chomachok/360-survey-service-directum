@@ -26,5 +26,9 @@ public class MappingProfile : Profile
         CreateMap<SurveyAssignment, MatrixItemDto>();
         CreateMap<CreateMatrixItemDto, SurveyAssignment>();
         CreateMap<Employee, EmployeeDto>();
+
+        // Items заполняем вручную в сервисе (нужны имена сотрудников и подпись «Сам оцениваемый»)
+        CreateMap<RespondentTemplate, RespondentTemplateDto>()
+            .ForMember(dest => dest.Items, opt => opt.Ignore());
     }
 }

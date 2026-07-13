@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<QuestionTemplate> QuestionTemplates { get; set; }
     public DbSet<SurveyAssignment> SurveyAssignments { get; set; }
     public DbSet<Answer> Answers { get; set; }
+    public DbSet<RespondentTemplate> RespondentTemplates { get; set; }
+    public DbSet<RespondentTemplateItem> RespondentTemplateItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +52,22 @@ public class AppDbContext : DbContext
             .HasForeignKey(a => a.QuestionId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // 👇 Шаблоны респондентов
+        modelBuilder.Entity<RespondentTemplateItem>()
+            .HasOne(i => i.Template)
+            .WithMany(t => t.Items)
+            .HasForeignKey(i => i.TemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // EmployeeId необязателен: null = «сам оцениваемый» (самооценка).
+        // Restrict — чтобы нельзя было удалить сотрудника, который используется в шаблоне.
+        modelBuilder.Entity<RespondentTemplateItem>()
+            .HasOne(i => i.Employee)
+            .WithMany()
+            .HasForeignKey(i => i.EmployeeId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Seed данные
         modelBuilder.Entity<Employee>().HasData(
             new Employee { Id = 1, FullName = "Иванов Иван Иванович", Email = "ivanov@example.com" },
@@ -75,6 +93,34 @@ public class AppDbContext : DbContext
                 Type = QuestionType.Text,
                 Options = null
             }
+        );
+        modelBuilder.Entity<RespondentTemplate>().HasData(
+            new RespondentTemplate
+            {
+                Id = 1,
+                Name = "Классическая 360",
+                Description = "Самооценка + руководитель + два коллеги",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new RespondentTemplate
+            {
+                Id = 2,
+                Name = "Только коллеги",
+                Description = "Горизонтальная оценка без руководителя",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            }
+        );
+
+        modelBuilder.Entity<RespondentTemplateItem>().HasData(
+            // Классическая 360
+            new { Id = 1, TemplateId = 1, EmployeeId = (int?)null, Role = AssessmentRole.SelfAssessment, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new { Id = 2, TemplateId = 1, EmployeeId = (int?)1, Role = AssessmentRole.Manager, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new { Id = 3, TemplateId = 1, EmployeeId = (int?)2, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new { Id = 4, TemplateId = 1, EmployeeId = (int?)3, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            // Только коллеги
+            new { Id = 5, TemplateId = 2, EmployeeId = (int?)2, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new { Id = 6, TemplateId = 2, EmployeeId = (int?)3, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new { Id = 7, TemplateId = 2, EmployeeId = (int?)4, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
         );
     }
 }

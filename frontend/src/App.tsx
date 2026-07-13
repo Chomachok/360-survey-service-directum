@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard'
 import SurveyCreate from './pages/SurveyCreate'
 import QuestionBuilder from './pages/QuestionBuilder'
 import Templates from './pages/Templates'
+import RespondentTemplates from './pages/RespondentTemplates'
 import Matrix from './pages/Matrix'
 import PublicSurvey from './pages/PublicSurvey'
 import Results from './pages/Results'
@@ -20,6 +21,7 @@ function App() {
           <Route path="/survey/new" element={<SurveyCreate />} />
           <Route path="/survey/:id/questions" element={<QuestionBuilder />} />
           <Route path="/templates" element={<Templates />} />
+          <Route path="/respondent-templates" element={<RespondentTemplates />} />
           <Route path="/survey/:id/matrix" element={<Matrix />} />
           <Route path="/survey/:id/results" element={<Results />} />
           <Route path="/import" element={<ImportEmployees />} />

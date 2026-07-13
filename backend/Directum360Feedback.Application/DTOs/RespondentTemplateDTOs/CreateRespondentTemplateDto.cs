@@ -1,0 +1,8 @@
+namespace Directum360Feedback.Application.DTOs;
+
+public class CreateRespondentTemplateDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public List<CreateRespondentTemplateItemDto> Items { get; set; } = new();
+}

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users } from 'lucide-react'
+import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users, UserCheck } from 'lucide-react'
 import Directum360Logo from './Directum360Logo'
 import AnimatedBackground from './AnimatedBackground'
 
@@ -12,7 +12,8 @@ const Layout: React.FC = () => {
   const navItems = [
     { path: '/', label: 'Дашборд', icon: LayoutDashboard },
     { path: '/survey/new', label: 'Создать опрос', icon: FileText },
-    { path: '/templates', label: 'Шаблоны', icon: ListChecks },
+    { path: '/templates', label: 'Шаблоны вопросов', icon: ListChecks },
+    { path: '/respondent-templates', label: 'Шаблоны респондентов', icon: UserCheck },
     { path: '/import', label: 'Импорт сотрудников', icon: Users },
   ]
 
