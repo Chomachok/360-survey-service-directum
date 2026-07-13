@@ -24,7 +24,7 @@ const Layout: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-2">
               <img src="/directum-logo.svg" alt="Directum" className="h-8 w-auto" />
-              <span className="text-xl font-bold text-directum-orange">360</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">Directum</span><span className="text-xl font-bold text-directum-orange">360</span>
             </Link>
             <nav className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
