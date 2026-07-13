@@ -180,18 +180,18 @@ export default function SurveyCreate() {
 
           <div className="flex space-x-3 pt-4 border-t border-gray-100 animate-fadeInUp">
             <button
-              type="submit"
-              className="btn-primary flex-1"
-              disabled={mutation.isPending}
-            >
-              {mutation.isPending ? 'Создание...' : 'Создать опрос'}
-            </button>
-            <button
               type="button"
               onClick={() => navigate('/')}
               className="btn-secondary flex-1"
             >
               Отмена
+            </button>
+            <button
+              type="submit"
+              className="btn-primary flex-1"
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? 'Создание...' : 'Создать опрос'}
             </button>
           </div>
         </form>
