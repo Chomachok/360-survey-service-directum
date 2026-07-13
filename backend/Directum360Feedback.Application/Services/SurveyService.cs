@@ -88,8 +88,7 @@ public class SurveyService(
         dto.AuthorName = author?.FullName ?? "Unknown";
         return dto;
     }
-
-    // Остальные методы (без изменений):
+    
     public async Task<IEnumerable<SurveyDto>> GetAllSurveysAsync(string? status = null, string? search = null)
     {
         var surveys = await surveyRepo.GetAllAsync();
@@ -105,10 +104,11 @@ public class SurveyService(
         }
 
         var result = new List<SurveyDto>();
-        foreach (var s in query)
+        foreach (var survey in query)
         {
-            var dto = mapper.Map<SurveyDto>(s);
-            var author = await employeeRepo.GetByIdAsync(s.AuthorId);
+            var updatedSurvey = await CheckAndUpdateAsync(survey);
+            var dto = mapper.Map<SurveyDto>(updatedSurvey);
+            var author = await employeeRepo.GetByIdAsync(updatedSurvey.AuthorId);
             dto.AuthorName = author?.FullName ?? "Unknown";
             result.Add(dto);
         }
@@ -119,8 +119,9 @@ public class SurveyService(
     {
         var survey = await surveyRepo.GetByIdAsync(id);
         if (survey == null) return null;
-        var dto = mapper.Map<SurveyDto>(survey);
-        var author = await employeeRepo.GetByIdAsync(survey.AuthorId);
+        var updatedSurvey = await CheckAndUpdateAsync(survey);
+        var dto = mapper.Map<SurveyDto>(updatedSurvey);
+        var author = await employeeRepo.GetByIdAsync(updatedSurvey.AuthorId);
         dto.AuthorName = author?.FullName ?? "Unknown";
         return dto;
     }
@@ -168,5 +169,24 @@ public class SurveyService(
         var author = await employeeRepo.GetByIdAsync(survey.AuthorId);
         dto.AuthorName = author?.FullName ?? "Unknown";
         return dto;
+    }
+
+    private async Task<Survey> CheckAndUpdateAsync(Survey survey)
+    {
+        if (survey.Status == SurveyStatus.Active && survey.EndDate.ToUniversalTime() <= DateTime.Now.ToUniversalTime())
+        {
+            survey.Status = SurveyStatus.Completed;
+            surveyRepo.Update(survey);
+            await surveyRepo.SaveChangesAsync();
+        }
+
+        if (survey.Status == SurveyStatus.Draft && survey.StartDate.ToUniversalTime() <= DateTime.Now.ToUniversalTime())
+        {
+            survey.Status = SurveyStatus.Active;
+            surveyRepo.Update(survey);
+            await surveyRepo.SaveChangesAsync();
+        }
+        
+        return survey;
     }
 }
