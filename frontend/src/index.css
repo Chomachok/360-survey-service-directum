@@ -150,6 +150,45 @@
 .dark textarea::placeholder { color: #6b7280; }
 
 /* ============================================================
+   АНИМИРОВАННЫЙ ФОН (компонент AnimatedBackground)
+   ============================================================ */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(30, 33, 40, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 33, 40, 0.055) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.dark .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+@keyframes gridDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 48px 48px; }
+}
+.animate-grid-drift { animation: gridDrift 20s linear infinite; }
+
+@keyframes blobA {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(6vw, 4vh, 0) scale(1.12); }
+  66%      { transform: translate3d(-3vw, 8vh, 0) scale(0.94); }
+}
+@keyframes blobB {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(-7vw, 6vh, 0) scale(0.92); }
+  66%      { transform: translate3d(-2vw, -6vh, 0) scale(1.1); }
+}
+@keyframes blobC {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(8vw, -7vh, 0) scale(1.08); }
+}
+.animate-blob-a { animation: blobA 26s ease-in-out infinite; will-change: transform; }
+.animate-blob-b { animation: blobB 32s ease-in-out infinite; will-change: transform; }
+.animate-blob-c { animation: blobC 38s ease-in-out infinite; will-change: transform; }
+
+/* ============================================================
    Уважаем системную настройку «уменьшить движение»
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {

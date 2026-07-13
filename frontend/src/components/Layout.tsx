@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users } from 'lucide-react'
 import Directum360Logo from './Directum360Logo'
+import AnimatedBackground from './AnimatedBackground'
 
 const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -18,8 +19,9 @@ const Layout: React.FC = () => {
   const isActive = (path: string) => location.pathname === path
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0">
+    <div className="min-h-screen flex flex-col">
+      <AnimatedBackground />
+      <header className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0">
         {/* ... шапка, как раньше ... */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -60,7 +62,7 @@ const Layout: React.FC = () => {
         </div>
       </header>
 
-      <nav className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-16 z-40 flex-shrink-0">
+      <nav className="md:hidden bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-16 z-40 flex-shrink-0">
         {/* мобильная навигация */}
         <div className="flex overflow-x-auto px-4 py-2 space-x-2">
           {navItems.map((item) => {
@@ -87,7 +89,7 @@ const Layout: React.FC = () => {
         <Outlet /> {}
       </main>
 
-      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 mt-auto">
+      <footer className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 flex-shrink-0 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             © {new Date().getFullYear()} Directum360 Feedback Service. Все права защищены.
