@@ -71,9 +71,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
         </div>
 
-        {/* Тело */}
+        {/* Тело с переносом длинных строк */}
         <div className="p-4">
-          <p className="text-gray-600 dark:text-gray-300">{message}</p>
+          <p className="text-gray-600 dark:text-gray-300 break-words whitespace-pre-wrap">
+            {message}
+          </p>
         </div>
 
         {/* Кнопки */}
