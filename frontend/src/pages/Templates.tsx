@@ -374,9 +374,9 @@ export default function Templates() {
               style={{ animationDelay: `${t.id * 100}ms` }}
             >
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold text-directum-dark">{t.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{t.text}</p>
+                <div className="min-w-0 overflow-hidden">
+                  <h3 className="font-semibold text-directum-dark break-words overflow-hidden">{t.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1 break-words overflow-hidden">{t.text}</p>
                   <div className="flex items-center space-x-2 mt-2">
                     <span className="text-xs px-2 py-0.5 bg-gray-200 rounded-full text-gray-600">
                       {t.type === QuestionType.Text ? 'Текст' : 'Выбор'}

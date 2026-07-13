@@ -77,10 +77,10 @@ export default function Results() {
         Назад к дашборду
       </button>
 
-      <div className="flex justify-between items-center mb-6 animate-fadeInUp">
-        <div>
+      <div className="flex justify-between items-center mb-6 animate-fadeInUp ">
+        <div className="min-w-0 overflow-hidden">
           <h1 className="text-2xl font-bold text-directum-dark">Результаты опроса</h1>
-          <p className="text-gray-500">{data.surveyTitle}</p>
+          <p className="text-gray-500 break-words overflow-hidden">{data.surveyTitle}</p>
         </div>
         <button onClick={handleExport} className="btn-primary flex items-center space-x-2">
           <Download size={18} />
