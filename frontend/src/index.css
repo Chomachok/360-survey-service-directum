@@ -188,47 +188,6 @@
 .animate-blob-b { animation: blobB 32s ease-in-out infinite; will-change: transform; }
 .animate-blob-c { animation: blobC 38s ease-in-out infinite; will-change: transform; }
 
-/* летающие двойные галочки */
-@keyframes flyA {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(3vw, -5vh, 0) rotate(180deg); }
-}
-@keyframes flyB {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(-4vw, 4vh, 0) rotate(-180deg); }
-}
-@keyframes flyC {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  33%      { transform: translate3d(-2.5vw, -3vh, 0) rotate(120deg); }
-  66%      { transform: translate3d(2vw, 3.5vh, 0) rotate(240deg); }
-}
-@keyframes flyD {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(2vw, 6vh, 0) rotate(200deg); }
-}
-.animate-fly-a { animation: flyA 34s ease-in-out infinite; will-change: transform; }
-.animate-fly-b { animation: flyB 42s ease-in-out infinite; will-change: transform; }
-.animate-fly-c { animation: flyC 50s ease-in-out infinite; will-change: transform; }
-.animate-fly-d { animation: flyD 38s ease-in-out infinite; will-change: transform; }
-
-/* корги и ёж, неспешно проплывающие через экран */
-@keyframes swimCorgi {
-  0%   { transform: translate3d(0, 0, 0); }
-  25%  { transform: translate3d(-34vw, -2.2vh, 0); }
-  50%  { transform: translate3d(-66vw, 1.8vh, 0); }
-  75%  { transform: translate3d(-98vw, -1.6vh, 0); }
-  100% { transform: translate3d(-132vw, 0, 0); }
-}
-@keyframes swimHog {
-  0%   { transform: translate3d(0, 0, 0); }
-  25%  { transform: translate3d(32vw, 1.8vh, 0); }
-  50%  { transform: translate3d(62vw, -1.6vh, 0); }
-  75%  { transform: translate3d(92vw, 1.4vh, 0); }
-  100% { transform: translate3d(126vw, 0, 0); }
-}
-.animate-swim-corgi { animation: swimCorgi 80s linear infinite; will-change: transform; }
-.animate-swim-hog   { animation: swimHog 95s linear infinite 8s; will-change: transform; }
-
 /* ============================================================
    Уважаем системную настройку «уменьшить движение»
    ============================================================ */

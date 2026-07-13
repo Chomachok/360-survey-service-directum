@@ -18,7 +18,6 @@ public static class DependencyInjection
         services.AddScoped<IPublicService, PublicService>();
         services.AddScoped<IResultService, ResultService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
-        services.AddScoped<IRespondentTemplateService, RespondentTemplateService>();
         services.AddAutoMapper(typeof(DependencyInjection));
         return services;
     }

@@ -146,79 +146,6 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("RespondentTemplates");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Самооценка + руководитель + два коллеги",
-                            Name = "Классическая 360"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Горизонтальная оценка без руководителя",
-                            Name = "Только коллеги"
-                        });
-                });
-
-            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("EmployeeId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TemplateId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("TemplateId");
-
-                    b.ToTable("RespondentTemplateItems");
-
-                    b.HasData(
-                        new { Id = 1, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), Role = 0, TemplateId = 1 },
-                        new { Id = 2, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), EmployeeId = 1, Role = 1, TemplateId = 1 },
-                        new { Id = 3, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), EmployeeId = 2, Role = 2, TemplateId = 1 },
-                        new { Id = 4, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), EmployeeId = 3, Role = 2, TemplateId = 1 },
-                        new { Id = 5, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), EmployeeId = 2, Role = 2, TemplateId = 2 },
-                        new { Id = 6, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), EmployeeId = 3, Role = 2, TemplateId = 2 },
-                        new { Id = 7, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), EmployeeId = 4, Role = 2, TemplateId = 2 });
-                });
-
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Survey", b =>
                 {
                     b.Property<int>("Id")
@@ -353,24 +280,6 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateItem", b =>
-                {
-                    b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Directum360Feedback.Domain.Entities.RespondentTemplate", "Template")
-                        .WithMany("Items")
-                        .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("Template");
-                });
-
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Survey", b =>
                 {
                     b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Author")
@@ -427,11 +336,6 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.Navigation("AssignmentsAsTarget");
 
                     b.Navigation("AuthoredSurveys");
-                });
-
-            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplate", b =>
-                {
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Survey", b =>

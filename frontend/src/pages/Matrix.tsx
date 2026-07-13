@@ -8,7 +8,6 @@ import { AssessmentRole } from '../types'
 import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
-import MatrixTemplateTools from '../components/MatrixTemplateTools'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -127,17 +126,9 @@ export default function Matrix() {
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
-        {/* Предопределённые списки респондентов: применить готовый / сохранить текущий */}
-        <MatrixTemplateTools
-          surveyId={surveyId}
-          isDraft={isDraft}
-          matrix={matrix ?? []}
-          employees={employees ?? []}
-        />
-
-        {/* Ручное добавление — только для черновика */}
+        {/* Показываем форму только для черновика */}
         {isDraft ? (
-          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
             <div className="flex-1 min-w-[150px]">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                 Кто оценивает
