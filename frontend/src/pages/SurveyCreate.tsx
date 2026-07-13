@@ -6,6 +6,8 @@ import { getEmployees } from '../api/employees'
 import { CreateSurveyDto } from '../types'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Select from 'react-select'
+import { reactSelectStyles } from '../styles/reactSelectStyles'
 
 export default function SurveyCreate() {
   const navigate = useNavigate()
@@ -29,9 +31,17 @@ export default function SurveyCreate() {
     general?: string
   }>({})
 
+  const employeeOptions = (employees || []).map(e => ({
+    value: e.id,
+    label: e.fullName,
+  }))
+
+  const selectedOption = targetId
+    ? employeeOptions.find(opt => opt.value === targetId)
+    : null
+
   const validate = (): boolean => {
     const newErrors: { title?: string; startDate?: string; endDate?: string; targetId?: string } = {}
-
     if (!title.trim()) newErrors.title = 'Введите название опроса'
     if (!startDate) newErrors.startDate = 'Выберите дату начала'
     if (!endDate) newErrors.endDate = 'Выберите дату окончания'
@@ -39,7 +49,6 @@ export default function SurveyCreate() {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
     if (!targetId) newErrors.targetId = 'Выберите сотрудника, для которого проводится опрос'
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -66,7 +75,7 @@ export default function SurveyCreate() {
       startDate,
       endDate,
       authorId,
-      targetId: Number(targetId),
+      targetId: targetId ? Number(targetId) : undefined,
     })
   }
 
@@ -85,8 +94,8 @@ export default function SurveyCreate() {
     setErrors((prev) => ({ ...prev, endDate: undefined, general: undefined }))
   }
 
-  const handleTargetIdChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTargetId(e.target.value === '' ? '' : Number(e.target.value))
+  const handleTargetIdChange = (option: any) => {
+    setTargetId(option?.value || '')
     setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
   }
 
@@ -116,15 +125,11 @@ export default function SurveyCreate() {
             <input
               type="text"
               value={title}
-              maxLength={250}
               onChange={handleTitleChange}
               className={`input-field ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
               placeholder="Например: Оценка эффективности команды"
             />
             {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-            <div className="text-sm text-gray-400 mt-1 text-right">
-              {title.length}/250
-            </div>
           </div>
 
           <div className="animate-fadeInUp-delay-2">
@@ -139,19 +144,21 @@ export default function SurveyCreate() {
           </div>
 
           <div className="animate-fadeInUp-delay-2">
-            <label className="label-field">Сотрудник, по которому проводится опрос *</label>
-            <select
-              value={targetId}
+            <label className="label-field">
+              Сотрудник, для которого проводится опрос <span className="text-red-500">*</span>
+            </label>
+            <Select
+              options={employeeOptions}
+              value={selectedOption}
               onChange={handleTargetIdChange}
-              className={`input-field ${errors.targetId ? 'border-red-500 focus:ring-red-500' : ''}`}
-            >
-              <option value="">Выберите сотрудника</option>
-              {employees?.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.fullName}
-                </option>
-              ))}
-            </select>
+              placeholder="Выберите сотрудника"
+              isClearable
+              isSearchable
+              styles={reactSelectStyles}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              className={errors.targetId ? 'border-red-500 rounded-lg' : ''}
+            />
             {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
           </div>
 
