@@ -35,6 +35,7 @@ export default function SurveyTemplates() {
   // Удаление
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id?: number; name?: string }>({ isOpen: false })
 
+  // ----- Мутации -----
   const createMutation = useMutation({
     mutationFn: (dto: CreateSurveyTemplateDto) => createSurveyTemplate(dto),
     onSuccess: () => {
@@ -89,18 +90,30 @@ export default function SurveyTemplates() {
       setCreateErrors({ questions: 'Добавьте хотя бы один вопрос' })
       return
     }
+    // Проверяем, что для SingleChoice есть варианты
+    for (const q of questions) {
+      if (q.type === QuestionType.SingleChoice && (!q.options || q.options.length < 2)) {
+        toast.error('Для вопроса с выбором добавьте минимум 2 варианта')
+        return
+      }
+    }
     createMutation.mutate({ name, description, questions })
   }
 
-  // Вспомогательные функции для работы с вопросами в форме создания
+  // ----- Функции для работы с вопросами (создание) -----
   const addQuestionToCreate = () => {
-    setQuestions([...questions, { text: '', type: QuestionType.Text, required: false, order: questions.length + 1 }])
+    setQuestions([
+      ...questions,
+      { text: '', type: QuestionType.Text, required: false, order: questions.length + 1, options: [] },
+    ])
     setCreateErrors({})
   }
+
   const removeQuestionFromCreate = (index: number) => {
     setQuestions(questions.filter((_, i) => i !== index))
     setCreateErrors({})
   }
+
   const updateQuestionInCreate = (index: number, field: keyof CreateTemplateQuestionDto, value: any) => {
     const updated = [...questions]
     updated[index] = { ...updated[index], [field]: value }
@@ -108,7 +121,34 @@ export default function SurveyTemplates() {
     setCreateErrors({})
   }
 
-  // Аналогично для редактирования
+  // Функции для работы с вариантами (создание)
+  const addOptionToCreate = (qIndex: number) => {
+    const updated = [...questions]
+    const q = updated[qIndex]
+    if (!q.options) q.options = []
+    q.options.push('')
+    setQuestions(updated)
+  }
+
+  const removeOptionFromCreate = (qIndex: number, optIndex: number) => {
+    const updated = [...questions]
+    const q = updated[qIndex]
+    if (q.options) {
+      q.options = q.options.filter((_, i) => i !== optIndex)
+      setQuestions(updated)
+    }
+  }
+
+  const updateOptionInCreate = (qIndex: number, optIndex: number, value: string) => {
+    const updated = [...questions]
+    const q = updated[qIndex]
+    if (q.options && q.options[optIndex] !== undefined) {
+      q.options[optIndex] = value
+      setQuestions(updated)
+    }
+  }
+
+  // ----- Функции для редактирования -----
   const handleEditClick = (template: any) => {
     setEditingTemplate({
       id: template.id,
@@ -135,6 +175,12 @@ export default function SurveyTemplates() {
       setEditErrors({ questions: 'Добавьте хотя бы один вопрос' })
       return
     }
+    for (const q of editingTemplate.questions) {
+      if (q.type === QuestionType.SingleChoice && (!q.options || q.options.length < 2)) {
+        toast.error('Для вопроса с выбором добавьте минимум 2 варианта')
+        return
+      }
+    }
     updateMutation.mutate({
       id: editingTemplate.id,
       dto: {
@@ -151,11 +197,12 @@ export default function SurveyTemplates() {
       ...editingTemplate,
       questions: [
         ...editingTemplate.questions,
-        { text: '', type: QuestionType.Text, required: false, order: editingTemplate.questions.length + 1 },
+        { text: '', type: QuestionType.Text, required: false, order: editingTemplate.questions.length + 1, options: [] },
       ],
     })
     setEditErrors({})
   }
+
   const removeQuestionFromEdit = (index: number) => {
     if (!editingTemplate) return
     setEditingTemplate({
@@ -164,12 +211,42 @@ export default function SurveyTemplates() {
     })
     setEditErrors({})
   }
+
   const updateQuestionInEdit = (index: number, field: keyof CreateTemplateQuestionDto, value: any) => {
     if (!editingTemplate) return
     const updated = [...editingTemplate.questions]
     updated[index] = { ...updated[index], [field]: value }
     setEditingTemplate({ ...editingTemplate, questions: updated })
     setEditErrors({})
+  }
+
+  const addOptionToEdit = (qIndex: number) => {
+    if (!editingTemplate) return
+    const updated = [...editingTemplate.questions]
+    const q = updated[qIndex]
+    if (!q.options) q.options = []
+    q.options.push('')
+    setEditingTemplate({ ...editingTemplate, questions: updated })
+  }
+
+  const removeOptionFromEdit = (qIndex: number, optIndex: number) => {
+    if (!editingTemplate) return
+    const updated = [...editingTemplate.questions]
+    const q = updated[qIndex]
+    if (q.options) {
+      q.options = q.options.filter((_, i) => i !== optIndex)
+      setEditingTemplate({ ...editingTemplate, questions: updated })
+    }
+  }
+
+  const updateOptionInEdit = (qIndex: number, optIndex: number, value: string) => {
+    if (!editingTemplate) return
+    const updated = [...editingTemplate.questions]
+    const q = updated[qIndex]
+    if (q.options && q.options[optIndex] !== undefined) {
+      q.options[optIndex] = value
+      setEditingTemplate({ ...editingTemplate, questions: updated })
+    }
   }
 
   const handleViewClick = (template: any) => {
@@ -232,7 +309,7 @@ export default function SurveyTemplates() {
                     onChange={(e) => updateQuestionInCreate(idx, 'text', e.target.value)}
                     className="input-field"
                   />
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <select
                       value={q.type}
                       onChange={(e) => updateQuestionInCreate(idx, 'type', e.target.value)}
@@ -251,13 +328,34 @@ export default function SurveyTemplates() {
                     </label>
                   </div>
                   {q.type === QuestionType.SingleChoice && (
-                    <input
-                      type="text"
-                      placeholder="Варианты через запятую"
-                      value={q.options?.join(', ') || ''}
-                      onChange={(e) => updateQuestionInCreate(idx, 'options', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                      className="input-field"
-                    />
+                    <div className="space-y-1">
+                      <label className="text-sm text-gray-600">Варианты ответа:</label>
+                      {(q.options ?? []).map((opt, optIdx) => (
+                        <div key={optIdx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => updateOptionInCreate(idx, optIdx, e.target.value)}
+                            className="input-field flex-1"
+                            placeholder={`Вариант ${optIdx + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeOptionFromCreate(idx, optIdx)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addOptionToCreate(idx)}
+                        className="text-directum-orange hover:underline text-sm flex items-center gap-1"
+                      >
+                        <Plus size={14} /> Добавить вариант
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -354,7 +452,7 @@ export default function SurveyTemplates() {
                       onChange={(e) => updateQuestionInEdit(idx, 'text', e.target.value)}
                       className="input-field"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <select
                         value={q.type}
                         onChange={(e) => updateQuestionInEdit(idx, 'type', e.target.value)}
@@ -373,13 +471,34 @@ export default function SurveyTemplates() {
                       </label>
                     </div>
                     {q.type === QuestionType.SingleChoice && (
-                      <input
-                        type="text"
-                        placeholder="Варианты через запятую"
-                        value={q.options?.join(', ') || ''}
-                        onChange={(e) => updateQuestionInEdit(idx, 'options', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                        className="input-field"
-                      />
+                      <div className="space-y-1">
+                        <label className="text-sm text-gray-600">Варианты ответа:</label>
+                        {(q.options ?? []).map((opt, optIdx) => (
+                          <div key={optIdx} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={opt}
+                              onChange={(e) => updateOptionInEdit(idx, optIdx, e.target.value)}
+                              className="input-field flex-1"
+                              placeholder={`Вариант ${optIdx + 1}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeOptionFromEdit(idx, optIdx)}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addOptionToEdit(idx)}
+                          className="text-directum-orange hover:underline text-sm flex items-center gap-1"
+                        >
+                          <Plus size={14} /> Добавить вариант
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -417,22 +536,20 @@ export default function SurveyTemplates() {
               <p className="text-sm text-gray-500 mb-2">Вопросов: {viewingTemplate.questions.length}</p>
               {viewingTemplate.questions.map((q: any, idx: number) => (
                 <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-medium text-directum-dark">
-                        {idx + 1}. {q.text}
-                        {q.required && <span className="text-red-500 ml-1 text-sm">*</span>}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
-                          {q.type === QuestionType.Text ? 'Текст' : 'Выбор'}
+                  <div className="flex-1">
+                    <p className="font-medium text-directum-dark">
+                      {idx + 1}. {q.text}
+                      {q.required && <span className="text-red-500 ml-1 text-sm">*</span>}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
+                        {q.type === QuestionType.Text ? 'Текст' : 'Выбор'}
+                      </span>
+                      {q.options && q.options.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          Варианты: {q.options.join(', ')}
                         </span>
-                        {q.options && q.options.length > 0 && (
-                          <span className="text-xs text-gray-500">
-                            Варианты: {q.options.join(', ')}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
