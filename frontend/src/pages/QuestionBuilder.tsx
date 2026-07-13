@@ -4,7 +4,7 @@ import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQu
 import { getSurvey } from '../api/surveys'
 import { useState, useRef, useEffect } from 'react'
 import { QuestionType, CreateQuestionDto, UpdateQuestionDto } from '../types'
-import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function QuestionBuilder() {
@@ -14,7 +14,6 @@ export default function QuestionBuilder() {
   const queryClient = useQueryClient()
   const textInputRef = useRef<HTMLInputElement>(null)
 
-  // Получение данных опроса (включая статус)
   const { data: survey, isLoading: surveyLoading } = useQuery({
     queryKey: ['survey', surveyId],
     queryFn: () => getSurvey(surveyId),
@@ -31,7 +30,6 @@ export default function QuestionBuilder() {
     queryFn: getTemplates,
   })
 
-  // Состояния для добавления вопроса
   const [text, setText] = useState('')
   const [type, setType] = useState<QuestionType>(QuestionType.Text)
   const [required, setRequired] = useState(false)
@@ -43,7 +41,6 @@ export default function QuestionBuilder() {
     general?: string
   }>({})
 
-  // Состояния для редактирования
   const [editingQuestion, setEditingQuestion] = useState<{
     id: number
     text: string
@@ -54,7 +51,6 @@ export default function QuestionBuilder() {
 
   const isDraft = survey?.status === 'Draft'
 
-  // Мутации
   const addMutation = useMutation({
     mutationFn: (dto: CreateQuestionDto) => addQuestion(surveyId, dto),
     onSuccess: () => {
@@ -94,7 +90,6 @@ export default function QuestionBuilder() {
     },
   })
 
-  // Валидация формы добавления
   const validateAdd = (): boolean => {
     const newErrors: { text?: string; options?: string } = {}
     if (!text.trim()) newErrors.text = 'Пожалуйста, введите текст вопроса'
@@ -107,7 +102,6 @@ export default function QuestionBuilder() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Валидация формы редактирования
   const validateEdit = (): boolean => {
     if (!editingQuestion) return false
     const newErrors: { text?: string; options?: string } = {}
@@ -143,7 +137,6 @@ export default function QuestionBuilder() {
     })
   }
 
-  // Обработчики для формы добавления
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value)
     setErrors((prev) => ({ ...prev, text: undefined, general: undefined }))
@@ -183,7 +176,6 @@ export default function QuestionBuilder() {
     }
   }
 
-  // Обработчики для редактирования
   const handleEditClick = (q: any) => {
     if (!isDraft) {
       toast.error('Нельзя редактировать вопросы в активном или завершённом опросе')
@@ -406,6 +398,15 @@ export default function QuestionBuilder() {
               </>
             )}
           </div>
+
+          {/* Кнопка перехода к матрице — ниже карточки, с отступом */}
+          <button
+            onClick={() => navigate(`/survey/${surveyId}/matrix`)}
+            className="btn-primary w-full flex items-center justify-center space-x-2 animate-fadeInUp mt-6"
+          >
+            <ArrowRight size={18} />
+            <span>Перейти к матрице</span>
+          </button>
         </div>
 
         {/* Список вопросов */}
