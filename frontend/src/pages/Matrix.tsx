@@ -255,14 +255,16 @@ export default function Matrix() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                        title="Удалить связь"
-                        disabled={deleteMutation.isPending || !isDraft}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {isDraft || (!isDraft && !item.completed) && (
+                        <button
+                          onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                          title="Удалить связь"
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
