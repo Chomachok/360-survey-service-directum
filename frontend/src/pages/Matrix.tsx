@@ -2,24 +2,16 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getMatrix, addMatrixItem, deleteMatrixItem } from '../api/matrix'
 import { getEmployees } from '../api/employees'
-import { getSurvey } from '../api/surveys'
 import { useState } from 'react'
 import { AssessmentRole } from '../types'
 import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { ConfirmModal } from '../components/ConfirmModal'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const surveyId = parseInt(id!)
   const queryClient = useQueryClient()
-
-  // Получаем данные опроса
-  const { data: survey, isLoading: surveyLoading } = useQuery({
-    queryKey: ['survey', surveyId],
-    queryFn: () => getSurvey(surveyId),
-  })
 
   const { data: matrix, isLoading: mLoading } = useQuery({
     queryKey: ['matrix', surveyId],
@@ -33,14 +25,6 @@ export default function Matrix() {
   const [evaluatorId, setEvaluatorId] = useState<number | ''>('')
   const [targetId, setTargetId] = useState<number | ''>('')
   const [role, setRole] = useState<AssessmentRole>(AssessmentRole.Colleague)
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean
-    id?: number
-    evaluatorName?: string
-    targetName?: string
-  }>({ isOpen: false })
-
-  const isDraft = survey?.status === 'Draft'
 
   const addMutation = useMutation({
     mutationFn: (data: any) => addMatrixItem(surveyId, data),
@@ -60,12 +44,10 @@ export default function Matrix() {
     mutationFn: (assignmentId: number) => deleteMatrixItem(assignmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
-      setDeleteModal({ isOpen: false })
       toast.success('Связь удалена')
     },
-    onError: (error: any) => {
+    onError: () => {
       toast.error('Не удалось удалить связь')
-      setDeleteModal({ isOpen: false })
     },
   })
 
@@ -74,10 +56,12 @@ export default function Matrix() {
       toast.error('Выберите оценивающего и оцениваемого сотрудника')
       return
     }
+
     if (evaluatorId === targetId && role !== AssessmentRole.SelfAssessment) {
       toast.error('Для самооценки выберите роль "Самооценка"')
       return
     }
+
     addMutation.mutate({
       evaluatorId: Number(evaluatorId),
       targetId: Number(targetId),
@@ -85,15 +69,19 @@ export default function Matrix() {
     })
   }
 
-  const handleDeleteClick = (id: number, evaluatorName: string, targetName: string) => {
-    setDeleteModal({ isOpen: true, id, evaluatorName, targetName })
-  }
-
   const handleCopyLink = (token: string) => {
     const url = `${window.location.origin}/survey/${token}`
-    navigator.clipboard.writeText(url)
-      .then(() => toast.success('Ссылка скопирована в буфер обмена!', { icon: '📋' }))
-      .catch(() => toast.error('Не удалось скопировать ссылку'))
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        toast.success('Ссылка скопирована в буфер обмена!', {
+          icon: '📋',
+          duration: 3000,
+        })
+      })
+      .catch(() => {
+        toast.error('Не удалось скопировать ссылку. Скопируйте её вручную.')
+      })
   }
 
   const roleLabels = {
@@ -102,7 +90,7 @@ export default function Matrix() {
     [AssessmentRole.Colleague]: 'Коллега',
   }
 
-  if (surveyLoading || mLoading) {
+  if (mLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
@@ -114,100 +102,86 @@ export default function Matrix() {
     <div>
       <button
         onClick={() => navigate('/')}
-        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
+        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp dark:text-gray-100"
       >
         <ArrowLeft size={20} className="mr-2" />
         Назад к дашборду
       </button>
 
       <div className="card animate-fadeInUp">
-        <h1 className="text-2xl font-bold text-directum-dark mb-2">Матрица опроса</h1>
+        <h1 className="text-2xl font-bold text-directum-dark mb-2 dark:text-gray-100">Матрица опроса</h1>
         <p className="text-gray-500 mb-6">
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
-        {/* Показываем форму только для черновика */}
-        {isDraft ? (
-          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кто оценивает
-              </label>
-              <select
-                value={evaluatorId}
-                onChange={(e) => setEvaluatorId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кого оценивают
-              </label>
-              <select
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Роль
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as AssessmentRole)}
-                className="input-field"
-              >
-                <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
-                <option value={AssessmentRole.Manager}>Руководитель</option>
-                <option value={AssessmentRole.Colleague}>Коллега</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <button
-                onClick={handleAdd}
-                className="btn-primary flex items-center space-x-2"
-                disabled={addMutation.isPending || !evaluatorId || !targetId}
-              >
-                <Plus size={18} />
-                <span>Добавить</span>
-              </button>
-            </div>
+        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
+          <div className="flex-1 min-w-[150px]">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Кто оценивает
+            </label>
+            <select
+              value={evaluatorId}
+              onChange={(e) => setEvaluatorId(e.target.value === '' ? '' : Number(e.target.value))}
+              className="input-field"
+            >
+              <option value="">Выберите сотрудника</option>
+              {employees?.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </select>
           </div>
-        ) : (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-700">
-            ⚠️ Добавление участников доступно только для опросов в статусе «Черновик».
-            <br />
-            Текущий статус: <strong>{survey?.status === 'Active' ? 'Активен' : 'Завершён'}</strong>
-          </div>
-        )}
 
-        {/* Таблица матрицы (всегда отображается) */}
+          <div className="flex-1 min-w-[150px]">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Кого оценивают
+            </label>
+            <select
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value === '' ? '' : Number(e.target.value))}
+              className="input-field"
+            >
+              <option value="">Выберите сотрудника</option>
+              {employees?.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="min-w-[150px]">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Роль
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as AssessmentRole)}
+              className="input-field"
+            >
+              <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
+              <option value={AssessmentRole.Manager}>Руководитель</option>
+              <option value={AssessmentRole.Colleague}>Коллега</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleAdd}
+              className="btn-primary flex items-center space-x-2"
+              disabled={addMutation.isPending || !evaluatorId || !targetId}
+            >
+              <Plus size={18} />
+              <span>Добавить</span>
+            </button>
+          </div>
+        </div>
+
         {matrix?.length === 0 ? (
           <div className="text-center py-8 text-gray-500 animate-fadeInUp">
             <p>Матрица пуста</p>
-            <p className="text-sm">
-              {isDraft
-                ? 'Добавьте связи между сотрудниками с помощью формы выше'
-                : 'Связи не добавлены'}
-            </p>
+            <p className="text-sm">Добавьте связи между сотрудниками</p>
           </div>
         ) : (
           <div className="overflow-x-auto animate-fadeInUp">
@@ -232,7 +206,7 @@ export default function Matrix() {
                     <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                     <td className="py-3 px-4 text-sm">{item.targetName}</td>
                     <td className="py-3 px-4">
-                      <span className="text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
+                      <span className="text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark dark:text-gray-100">
                         {roleLabels[item.role]}
                       </span>
                     </td>
@@ -256,10 +230,10 @@ export default function Matrix() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
-                        onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
+                        onClick={() => deleteMutation.mutate(item.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                        title="Удалить связь"
-                        disabled={deleteMutation.isPending || !isDraft}
+                        title="Удалить"
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -271,17 +245,6 @@ export default function Matrix() {
           </div>
         )}
       </div>
-
-      <ConfirmModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false })}
-        onConfirm={() => deleteModal.id && deleteMutation.mutate(deleteModal.id)}
-        title="Удаление связи"
-        message={`Вы уверены, что хотите удалить связь "${deleteModal.evaluatorName} → ${deleteModal.targetName}"?`}
-        confirmText="Удалить"
-        type="danger"
-        isLoading={deleteMutation.isPending}
-      />
     </div>
   )
 }

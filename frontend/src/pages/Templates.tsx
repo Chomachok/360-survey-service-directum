@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '../api/questions'
 import { useState } from 'react'
-import { QuestionType, CreateQuestionTemplateDto, UpdateQuestionTemplateDto } from '../types'
+import { QuestionType } from '../types'
+import type { CreateQuestionTemplateDto, UpdateQuestionTemplateDto } from '../types'
 import { Plus, Copy, Edit, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -235,7 +236,7 @@ export default function Templates() {
     <div>
       <div className="flex justify-between items-center mb-6 animate-fadeInUp">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Шаблоны вопросов</h1>
+          <h1 className="text-3xl font-bold text-directum-dark dark:text-gray-100">Шаблоны вопросов</h1>
           <p className="text-gray-500 mt-1">Создавайте и управляйте шаблонами для быстрого добавления вопросов</p>
         </div>
         <button
@@ -259,7 +260,7 @@ export default function Templates() {
       {/* Форма создания */}
       {showForm && (
         <div className="card mb-6 animate-fadeInUp">
-          <h2 className="text-xl font-semibold text-directum-dark mb-4">Новый шаблон</h2>
+          <h2 className="text-xl font-semibold text-directum-dark mb-4 dark:text-gray-100">Новый шаблон</h2>
           <form onSubmit={handleCreateSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -375,7 +376,7 @@ export default function Templates() {
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-semibold text-directum-dark">{t.name}</h3>
+                  <h3 className="font-semibold text-directum-dark dark:text-gray-100">{t.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">{t.text}</p>
                   <div className="flex items-center space-x-2 mt-2">
                     <span className="text-xs px-2 py-0.5 bg-gray-200 rounded-full text-gray-600">
@@ -415,7 +416,7 @@ export default function Templates() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full animate-fadeInUp max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-directum-dark">Редактирование шаблона</h3>
+              <h3 className="text-lg font-semibold text-directum-dark dark:text-gray-100">Редактирование шаблона</h3>
               <button
                 onClick={handleEditCancel}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"

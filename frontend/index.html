@@ -6,6 +6,19 @@
     <link rel="icon" type="image/svg+xml" href="/directum-logo-white.svg" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Directum360 Feedback</title>
+    <script>
+      // Тема применяется до первой отрисовки — иначе при загрузке
+      // страница на мгновение вспыхивает белым ("FOUC").
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var dark = saved
+            ? saved === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) { /* приватный режим — просто светлая тема */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

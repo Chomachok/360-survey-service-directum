@@ -113,3 +113,31 @@ export interface UpdateQuestionDto {
   required: boolean
   options?: string[]
 }
+// ===== Результаты опроса =====
+// Типы для ответа GET /surveys/{id}/results — раньше он был нетипизированным (any),
+// из-за чего Results.tsx не проходил проверку типов.
+export interface ResultAnswer {
+  questionId: number
+  questionText: string
+  answerText?: string          // текстовый ответ
+  selectedOption?: string      // выбранный вариант
+}
+
+export interface EvaluatorResult {
+  evaluatorId: number
+  evaluatorName: string
+  role?: AssessmentRole | string   // роль оценивающего (руководитель, коллега...)
+  answers: ResultAnswer[]
+}
+
+export interface EmployeeResult {
+  employeeId: number
+  employeeName: string
+  evaluators: EvaluatorResult[]
+}
+
+export interface SurveyResults {
+  surveyId: number
+  surveyTitle: string
+  results: EmployeeResult[]
+}

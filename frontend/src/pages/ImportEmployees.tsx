@@ -67,7 +67,7 @@ export default function ImportEmployees() {
     <div className="max-w-4xl mx-auto">
       <button
         onClick={() => navigate('/')}
-        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
+        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp dark:text-gray-100"
       >
         <ArrowLeft size={20} className="mr-2" />
         Назад к дашборду
@@ -81,7 +81,7 @@ export default function ImportEmployees() {
               <FileSpreadsheet className="text-directum-orange" size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-directum-dark">Импорт CSV</h2>
+              <h2 className="text-xl font-bold text-directum-dark dark:text-gray-100">Импорт CSV</h2>
               <p className="text-sm text-gray-500">Загрузите файл с сотрудниками</p>
             </div>
           </div>
@@ -130,7 +130,7 @@ export default function ImportEmployees() {
               <UserPlus className="text-directum-orange" size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-directum-dark">Добавить вручную</h2>
+              <h2 className="text-xl font-bold text-directum-dark dark:text-gray-100">Добавить вручную</h2>
               <p className="text-sm text-gray-500">Создать одного сотрудника</p>
             </div>
           </div>

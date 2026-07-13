@@ -2,6 +2,7 @@ import React from 'react'
 import { Link, useLocation, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users } from 'lucide-react'
+import Logo from './Logo'
 
 const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -22,9 +23,8 @@ const Layout: React.FC = () => {
         {/* ... шапка, как раньше ... */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center space-x-2">
-              <img src="/directum-logo.svg" alt="Directum" className="h-8 w-auto" />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Directum</span><span className="text-xl font-bold text-directum-orange">360</span>
+            <Link to="/" className="flex items-center">
+              <Logo height={38} />
             </Link>
             <nav className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {

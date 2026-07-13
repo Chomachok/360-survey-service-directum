@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getResults, exportDocx } from '../api/results'
-import { ArrowLeft, Download, User, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Download, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Results() {
@@ -47,7 +47,7 @@ export default function Results() {
       <div>
         <button
           onClick={() => navigate('/')}
-          className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
+          className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp dark:text-gray-100"
         >
           <ArrowLeft size={20} className="mr-2" />
           Назад к дашборду
@@ -71,7 +71,7 @@ export default function Results() {
     <div>
       <button
         onClick={() => navigate('/')}
-        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
+        className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp dark:text-gray-100"
       >
         <ArrowLeft size={20} className="mr-2" />
         Назад к дашборду
@@ -79,7 +79,7 @@ export default function Results() {
 
       <div className="flex justify-between items-center mb-6 animate-fadeInUp">
         <div>
-          <h1 className="text-2xl font-bold text-directum-dark">Результаты опроса</h1>
+          <h1 className="text-2xl font-bold text-directum-dark dark:text-gray-100">Результаты опроса</h1>
           <p className="text-gray-500">{data.surveyTitle}</p>
         </div>
         <button onClick={handleExport} className="btn-primary flex items-center space-x-2">
@@ -102,7 +102,7 @@ export default function Results() {
                     {employee.employeeName.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-directum-dark">{employee.employeeName}</h3>
+                    <h3 className="font-semibold text-directum-dark dark:text-gray-100">{employee.employeeName}</h3>
                     <span className="text-sm text-gray-500">
                       {employee.evaluators.length} оценщиков
                     </span>
@@ -129,9 +129,9 @@ export default function Results() {
                               {evaluator.evaluatorName.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <span className="font-medium text-directum-dark">{evaluator.evaluatorName}</span>
-                              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
-                                {roleLabels[evaluator.role] || evaluator.role}
+                              <span className="font-medium text-directum-dark dark:text-gray-100">{evaluator.evaluatorName}</span>
+                              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark dark:text-gray-100">
+                                {evaluator.role ? (roleLabels[evaluator.role] ?? evaluator.role) : 'Участник'}
                               </span>
                             </div>
                           </div>
@@ -147,7 +147,7 @@ export default function Results() {
                                 <div className="text-gray-600 dark:text-gray-400">
                                   {qa.questionText}
                                 </div>
-                                <div className="font-medium text-directum-dark">
+                                <div className="font-medium text-directum-dark dark:text-gray-100">
                                   {qa.answerText || qa.selectedOption || '—'}
                                 </div>
                               </div>

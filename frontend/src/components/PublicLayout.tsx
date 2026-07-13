@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link, Outlet } from 'react-router-dom'
+import Logo from './Logo'
 
 const PublicLayout: React.FC = () => {
   return (
@@ -8,15 +9,10 @@ const PublicLayout: React.FC = () => {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center space-x-2">
-              <img
-                src="/directum-logo.svg"
-                alt="Directum"
-                className="h-8 w-auto"
-              />
-              <span className="text-xl font-bold text-directum-orange">360</span>
+            <Link to="/" className="flex items-center">
+              <Logo height={38} />
             </Link>
-            <span className="text-sm text-gray-500">Опрос 360 градусов</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Опрос 360 градусов</span>
           </div>
         </div>
       </header>

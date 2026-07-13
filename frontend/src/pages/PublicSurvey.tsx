@@ -100,7 +100,7 @@ export default function PublicSurvey() {
     return (
       <div className="card text-center py-12 animate-fadeInUp">
         <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-directum-dark">Спасибо!</h2>
+        <h2 className="text-2xl font-bold text-directum-dark dark:text-gray-100">Спасибо!</h2>
         <p className="text-gray-500 mt-2">Ваши ответы успешно сохранены.</p>
       </div>
     )
@@ -115,7 +115,7 @@ export default function PublicSurvey() {
   return (
     <div className="card animate-fadeInUp mt-4">
       <div className="border-b border-gray-200 pb-4 mb-6">
-        <h1 className="text-2xl font-bold text-directum-dark">{survey.surveyTitle}</h1>
+        <h1 className="text-2xl font-bold text-directum-dark dark:text-gray-100">{survey.surveyTitle}</h1>
         <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
           <span>👤 Оцениваемый: <strong>{survey.targetName}</strong></span>
           <span>🏷️ Роль: <strong>{roleLabels[survey.role] || survey.role}</strong></span>
@@ -139,7 +139,7 @@ export default function PublicSurvey() {
             <div className="flex items-start space-x-2">
               <span className="text-sm font-medium text-gray-400 mt-0.5">#{index + 1}</span>
               <div className="flex-1">
-                <p className="font-medium text-directum-dark">
+                <p className="font-medium text-directum-dark dark:text-gray-100">
                   {q.text}
                   {q.required && <span className="text-red-500 ml-1">*</span>}
                 </p>

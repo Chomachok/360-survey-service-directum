@@ -128,7 +128,7 @@ export default function Dashboard() {
     <div>
       <div className="flex justify-between items-center mb-8 animate-fadeInUp">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Дашборд</h1>
+          <h1 className="text-3xl font-bold text-directum-dark dark:text-gray-100">Дашборд</h1>
           <p className="text-gray-500 mt-1">Управляйте своими опросами 360 градусов</p>
         </div>
         <Link to="/survey/new" className="btn-primary flex items-center space-x-2">
@@ -205,7 +205,7 @@ export default function Dashboard() {
         {(searchInput || filterStatus !== 'all') && (
           <button
             onClick={resetFilters}
-            className="text-sm text-gray-500 hover:text-directum-dark flex items-center space-x-1 transition-colors"
+            className="text-sm text-gray-500 hover:text-directum-dark flex items-center space-x-1 transition-colors dark:text-gray-100"
           >
             <X size={16} />
             <span>Сбросить фильтры</span>
@@ -213,6 +213,7 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Убрали анимацию с заголовка */}
       <h2 className="text-xl font-semibold mb-4">
         Мои опросы
         {surveys && surveys.length > 0 && (
@@ -250,7 +251,7 @@ export default function Dashboard() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
+                    <h3 className="text-lg font-semibold text-directum-dark dark:text-gray-100">{survey.title}</h3>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       survey.status === 'Active'
                         ? 'bg-green-100 text-green-700'
@@ -266,6 +267,7 @@ export default function Dashboard() {
                   )}
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                     <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
+                    <span>👤 {survey.authorName}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-3 md:mt-0">
