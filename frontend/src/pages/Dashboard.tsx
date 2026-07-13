@@ -213,7 +213,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Убрали анимацию с заголовка */}
       <h2 className="text-xl font-semibold mb-4">
         Мои опросы
         {surveys && surveys.length > 0 && (
@@ -267,7 +266,6 @@ export default function Dashboard() {
                   )}
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                     <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
-                    <span>👤 {survey.authorName}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-3 md:mt-0">
