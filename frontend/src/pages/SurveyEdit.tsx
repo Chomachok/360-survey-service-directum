@@ -5,6 +5,8 @@ import { getSurvey, updateSurvey } from '../api/surveys'
 import { getEmployees } from '../api/employees'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Select from 'react-select'
+import { reactSelectStyles } from '../styles/reactSelectStyles'
 
 export default function SurveyEdit() {
   const { id } = useParams<{ id: string }>()
@@ -12,7 +14,6 @@ export default function SurveyEdit() {
   const surveyId = parseInt(id!)
   const queryClient = useQueryClient()
 
-  // Загружаем данные опроса
   const { data: survey, isLoading: surveyLoading } = useQuery({
     queryKey: ['survey', surveyId],
     queryFn: () => getSurvey(surveyId),
@@ -37,12 +38,20 @@ export default function SurveyEdit() {
     general?: string
   }>({})
 
-  // Заполняем форму при загрузке данных
+  const employeeOptions = (employees || []).map(e => ({
+    value: e.id,
+    label: e.fullName,
+  }))
+
+  const selectedOption = targetId
+    ? employeeOptions.find(opt => opt.value === targetId)
+    : null
+
   useEffect(() => {
     if (survey) {
       setTitle(survey.title)
       setDescription(survey.description || '')
-      setStartDate(survey.startDate.slice(0, 16)) // формат для datetime-local
+      setStartDate(survey.startDate.slice(0, 16))
       setEndDate(survey.endDate.slice(0, 16))
       setTargetId(survey.targetId || '')
     }
@@ -103,8 +112,8 @@ export default function SurveyEdit() {
     setErrors((prev) => ({ ...prev, endDate: undefined, general: undefined }))
   }
 
-  const handleTargetIdChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTargetId(e.target.value === '' ? '' : Number(e.target.value))
+  const handleTargetIdChange = (option: any) => {
+    setTargetId(option?.value || '')
     setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
   }
 
@@ -120,7 +129,6 @@ export default function SurveyEdit() {
     return <div className="card">Опрос не найден</div>
   }
 
-  // Если опрос не черновик – показываем сообщение и блокируем редактирование
   const isDraft = survey.status === 'Draft'
 
   return (
@@ -177,20 +185,22 @@ export default function SurveyEdit() {
           </div>
 
           <div className="animate-fadeInUp-delay-2">
-            <label className="label-field">Сотрудник, для которого проводится опрос *</label>
-            <select
-              value={targetId}
+            <label className="label-field">
+              Сотрудник, для которого проводится опрос <span className="text-red-500">*</span>
+            </label>
+            <Select
+              options={employeeOptions}
+              value={selectedOption}
               onChange={handleTargetIdChange}
-              disabled={!isDraft}
-              className={`input-field ${errors.targetId ? 'border-red-500 focus:ring-red-500' : ''}`}
-            >
-              <option value="">Выберите сотрудника</option>
-              {employees?.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.fullName}
-                </option>
-              ))}
-            </select>
+              placeholder="Выберите сотрудника"
+              isClearable
+              isSearchable
+              styles={reactSelectStyles}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              isDisabled={!isDraft}
+              className={errors.targetId ? 'border-red-500 rounded-lg' : ''}
+            />
             {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
           </div>
 

@@ -5,9 +5,11 @@ import { getEmployees } from '../api/employees'
 import { getSurvey } from '../api/surveys'
 import { useState } from 'react'
 import { AssessmentRole } from '../types'
-import { ArrowLeft, Plus, Trash2, Link, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
+import Select from 'react-select'
+import { reactSelectStyles } from '../styles/reactSelectStyles'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -40,9 +42,16 @@ export default function Matrix() {
 
   const isDraft = survey?.status === 'Draft'
   const targetId = survey?.targetId
-
-  // Находим имя целевого сотрудника
   const targetEmployee = employees?.find(e => e.id === targetId)
+
+  const evaluatorOptions = (employees || []).map(e => ({
+    value: e.id,
+    label: e.fullName,
+  }))
+
+  const selectedEvaluator = evaluatorId
+    ? evaluatorOptions.find(opt => opt.value === evaluatorId)
+    : null
 
   const addMutation = useMutation({
     mutationFn: (data: any) => addMatrixItem(surveyId, data),
@@ -90,6 +99,10 @@ export default function Matrix() {
     })
   }
 
+  const handleEvaluatorChange = (option: any) => {
+    setEvaluatorId(option?.value || '')
+  }
+
   const handleDeleteClick = (id: number, evaluatorName: string, targetName: string) => {
     setDeleteModal({ isOpen: true, id, evaluatorName, targetName })
   }
@@ -131,21 +144,13 @@ export default function Matrix() {
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
-        {/* Информация о целевом сотруднике */}
         {targetEmployee ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
             🎯 Опрос проводится для сотрудника: <strong>{targetEmployee.fullName}</strong>
           </div>
         ) : (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700 flex items-start gap-2">
-            <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
-            <div>
-              <strong>Целевой сотрудник не указан!</strong>
-              <p className="mt-1">
-                Для этого опроса не задан сотрудник, для которого он проводится.
-                Чтобы исправить, удалите опрос и создайте заново с указанием целевого сотрудника.
-              </p>
-            </div>
+            ⚠️ Целевой сотрудник не указан. Обратитесь к администратору.
           </div>
         )}
 
@@ -155,19 +160,18 @@ export default function Matrix() {
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                 Кто оценивает
               </label>
-              <select
-                value={evaluatorId}
-                onChange={(e) => setEvaluatorId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-                disabled={!targetEmployee}
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
+              <Select
+                options={evaluatorOptions}
+                value={selectedEvaluator}
+                onChange={handleEvaluatorChange}
+                placeholder="Выберите сотрудника"
+                isClearable
+                isSearchable
+                styles={reactSelectStyles}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
+                isDisabled={!isDraft || !targetEmployee}
+              />
             </div>
 
             <div className="min-w-[150px]">
@@ -178,7 +182,7 @@ export default function Matrix() {
                 value={role}
                 onChange={(e) => setRole(e.target.value as AssessmentRole)}
                 className="input-field"
-                disabled={!targetEmployee}
+                disabled={!isDraft || !targetEmployee}
               >
                 <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
                 <option value={AssessmentRole.Manager}>Руководитель</option>
@@ -205,7 +209,6 @@ export default function Matrix() {
           </div>
         )}
 
-        {/* Таблица матрицы (без изменений) */}
         {matrix?.length === 0 ? (
           <div className="text-center py-8 text-gray-500 animate-fadeInUp">
             <p>Матрица пуста</p>
