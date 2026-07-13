@@ -179,6 +179,13 @@ public class SurveyService(
             surveyRepo.Update(survey);
             await surveyRepo.SaveChangesAsync();
         }
+
+        if (survey.Status == SurveyStatus.Draft && survey.StartDate.ToUniversalTime() <= DateTime.Now.ToUniversalTime())
+        {
+            survey.Status = SurveyStatus.Active;
+            surveyRepo.Update(survey);
+            await surveyRepo.SaveChangesAsync();
+        }
         
         return survey;
     }
