@@ -11,6 +11,8 @@ public class Survey : BaseEntity
     public DateTime EndDate { get; set; }
     public int AuthorId { get; set; }
     public Employee Author { get; set; } = null!;
+    public int? TargetId { get; set; }
+    public Employee? Target { get; set; }
     public ICollection<SurveyQuestion> Questions { get; set; } = new List<SurveyQuestion>();
     public ICollection<SurveyAssignment> Assignments { get; set; } = new List<SurveyAssignment>();
 }
