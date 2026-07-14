@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQuestion, updateQuestionsOrder } from '../api/questions'
 import { getSurvey } from '../api/surveys'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { QuestionType, CreateQuestionDto, UpdateQuestionDto, UpdateQuestionOrderDto } from '../types'
 import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight, GripVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -60,9 +60,11 @@ const SortableQuestionItem = ({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        animationDelay: `${index * 100}ms`,
+      }}
       className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 animate-fadeInUp"
-      style={{ animationDelay: `${index * 100}ms`, ...style }}
     >
       <div className="flex items-start gap-3 flex-1">
         {/* Ручка для перетаскивания */}
