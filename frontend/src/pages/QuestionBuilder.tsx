@@ -691,7 +691,7 @@ export default function QuestionBuilder() {
                     className="btn-secondary text-sm flex items-center space-x-1 px-3 py-1"
                   >
                     <FileText size={16} />
-                    <span>Сохранить как шаблон</span>
+                    <span>Сохранить опрос как шаблон</span>
                   </button>
                 )}
               </div>
