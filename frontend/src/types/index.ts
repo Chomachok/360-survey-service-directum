@@ -152,3 +152,8 @@ export interface UpdateSurveyTemplateDto {
   description?: string
   questions: CreateTemplateQuestionDto[]
 }
+
+export interface UpdateQuestionOrderDto {
+  id: number
+  order: number
+}

@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQuestion } from '../api/questions'
+import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQuestion, updateQuestionsOrder } from '../api/questions'
 import { getSurvey } from '../api/surveys'
-import { useState, useRef, useMemo } from 'react'
-import { QuestionType, CreateQuestionDto, UpdateQuestionDto } from '../types'
+import { useState, useRef, useEffect } from 'react'
+import { QuestionType, CreateQuestionDto, UpdateQuestionDto, UpdateQuestionOrderDto } from '../types'
 import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight, GripVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
@@ -19,26 +19,29 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
+  useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-function SortableQuestion({ 
-  question, 
-  index, 
-  isDraft, 
-  onEdit, 
+// Компонент для отдельного вопроса (с поддержкой перетаскивания)
+const SortableQuestionItem = ({
+  question,
+  index,
+  isDraft,
+  onEdit,
   onDelete,
-  isPending 
+  isDeleting,
+  isUpdating,
 }: {
   question: any
   index: number
   isDraft: boolean
   onEdit: (q: any) => void
   onDelete: (id: number) => void
-  isPending: boolean
-}) {
+  isDeleting: boolean
+  isUpdating: boolean
+}) => {
   const {
     attributes,
     listeners,
@@ -46,42 +49,36 @@ function SortableQuestion({
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    id: question.id,
-    disabled: !isDraft,
-  })
+  } = useSortable({ id: question.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : 'auto',
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 ${
-        isDragging ? 'shadow-lg scale-105' : ''
-      }`}
+      className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 animate-fadeInUp"
+      style={{ animationDelay: `${index * 100}ms`, ...style }}
     >
-      <div className="flex items-start gap-3 flex-1 min-w-0 overflow-hidden">
+      <div className="flex items-start gap-3 flex-1">
+        {/* Ручка для перетаскивания */}
         {isDraft && (
-          <button
+          <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mt-1 flex-shrink-0"
-            title="Перетащите для изменения порядка"
+            className="cursor-grab mt-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
-            <GripVertical size={18} />
-          </button>
+            <GripVertical size={20} />
+          </div>
         )}
-        
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-3">
             <span className="text-sm font-medium text-gray-400">#{index + 1}</span>
-            <span className="font-medium text-directum-dark break-words overflow-hidden">{question.text}</span>
+            <span className="font-medium text-directum-dark break-words">{question.text}</span>
             {question.required && <span className="text-xs text-red-500 font-medium">*</span>}
           </div>
           <div className="flex items-center space-x-3 mt-1">
@@ -89,20 +86,22 @@ function SortableQuestion({
               {question.type === QuestionType.Text ? 'Текст' : 'Выбор'}
             </span>
             {question.options && question.options.length > 0 && (
-              <span className="text-xs text-gray-500">{question.options.join(', ')}</span>
+              <span className="text-xs text-gray-500 truncate max-w-xs">
+                {question.options.join(', ')}
+              </span>
             )}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center space-x-1 flex-shrink-0 ml-4">
         {isDraft && (
           <>
             <button
               onClick={() => onEdit(question)}
               className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
               title="Редактировать вопрос"
-              disabled={isPending}
+              disabled={isUpdating}
             >
               <Edit size={18} />
             </button>
@@ -110,7 +109,7 @@ function SortableQuestion({
               onClick={() => onDelete(question.id)}
               className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
               title="Удалить вопрос"
-              disabled={isPending}
+              disabled={isDeleting}
             >
               <Trash2 size={18} />
             </button>
@@ -128,6 +127,7 @@ export default function QuestionBuilder() {
   const queryClient = useQueryClient()
   const textInputRef = useRef<HTMLInputElement>(null)
 
+  // Получение данных опроса (включая статус)
   const { data: survey, isLoading: surveyLoading } = useQuery({
     queryKey: ['survey', surveyId],
     queryFn: () => getSurvey(surveyId),
@@ -144,12 +144,7 @@ export default function QuestionBuilder() {
     queryFn: getTemplates,
   })
 
-  // ✅ КРИТИЧНО: сортируем ОДИН раз и используем везде
-  const sortedQuestions = useMemo(() => {
-    if (!questions) return []
-    return [...questions].sort((a, b) => a.order - b.order)
-  }, [questions])
-
+  // Состояния для добавления вопроса
   const [text, setText] = useState('')
   const [type, setType] = useState<QuestionType>(QuestionType.Text)
   const [required, setRequired] = useState(false)
@@ -161,6 +156,7 @@ export default function QuestionBuilder() {
     general?: string
   }>({})
 
+  // Состояния для редактирования
   const [editingQuestion, setEditingQuestion] = useState<{
     id: number
     text: string
@@ -171,6 +167,15 @@ export default function QuestionBuilder() {
 
   const isDraft = survey?.status === 'Draft'
 
+  // Настройка сенсоров для DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Мутации
   const addMutation = useMutation({
     mutationFn: (dto: CreateQuestionDto) => addQuestion(surveyId, dto),
     onSuccess: () => {
@@ -210,74 +215,19 @@ export default function QuestionBuilder() {
     },
   })
 
-  // ✅ ИСПРАВЛЕННАЯ мутация для обновления порядка
   const reorderMutation = useMutation({
-    mutationFn: async (reorderedQuestions: any[]) => {
-      // ✅ Передаём ВСЕ поля, а не только order
-      const updates = reorderedQuestions.map((q, index) =>
-        updateQuestion(q.id, {
-          text: q.text,
-          type: q.type,
-          required: q.required,
-          order: index + 1,
-          options: q.type === QuestionType.SingleChoice && q.options?.length > 0 
-            ? q.options 
-            : undefined,
-        })
-      )
-      // ✅ Выполняем последовательно, чтобы не перегружать сервер
-      for (const update of updates) {
-        await update
-      }
-    },
-    onMutate: async (reorderedQuestions) => {
-      await queryClient.cancelQueries({ queryKey: ['questions', surveyId] })
-      const previousQuestions = queryClient.getQueryData(['questions', surveyId])
-      
-      // ✅ Оптимистичное обновление кэша
-      queryClient.setQueryData(['questions', surveyId], reorderedQuestions)
-      
-      return { previousQuestions }
-    },
-    onError: (err, reorderedQuestions, context) => {
-      // ✅ Откат при ошибке
-      if (context?.previousQuestions) {
-        queryClient.setQueryData(['questions', surveyId], context.previousQuestions)
-      }
-      toast.error('Не удалось изменить порядок вопросов')
-    },
-    onSettled: () => {
-      // ✅ Перезагружаем данные с сервера для синхронизации
+    mutationFn: (orders: UpdateQuestionOrderDto[]) => updateQuestionsOrder(surveyId, orders),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questions', surveyId] })
+      toast.success('Порядок вопросов обновлён')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message || 'Не удалось обновить порядок'
+      toast.error(message)
     },
   })
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      // ✅ Используем ОТСОРТИРОВАННЫЙ массив
-      const oldIndex = sortedQuestions.findIndex((q) => q.id === active.id)
-      const newIndex = sortedQuestions.findIndex((q) => q.id === over.id)
-
-      if (oldIndex === -1 || newIndex === -1) return
-
-      const newQuestions = arrayMove(sortedQuestions, oldIndex, newIndex)
-      reorderMutation.mutate(newQuestions)
-    }
-  }
-
+  // Валидация формы добавления
   const validateAdd = (): boolean => {
     const newErrors: { text?: string; options?: string } = {}
     if (!text.trim()) newErrors.text = 'Пожалуйста, введите текст вопроса'
@@ -290,6 +240,7 @@ export default function QuestionBuilder() {
     return Object.keys(newErrors).length === 0
   }
 
+  // Валидация формы редактирования
   const validateEdit = (): boolean => {
     if (!editingQuestion) return false
     const newErrors: { text?: string; options?: string } = {}
@@ -320,11 +271,12 @@ export default function QuestionBuilder() {
       text,
       type,
       required,
-      order: (sortedQuestions.length || 0) + 1,
+      order: (questions?.length || 0) + 1,
       options: type === QuestionType.SingleChoice && options.length > 0 ? options : undefined,
     })
   }
 
+  // Обработчики для формы добавления
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value)
     setErrors((prev) => ({ ...prev, text: undefined, general: undefined }))
@@ -364,6 +316,7 @@ export default function QuestionBuilder() {
     }
   }
 
+  // Обработчики для редактирования
   const handleEditClick = (q: any) => {
     if (!isDraft) {
       toast.error('Нельзя редактировать вопросы в активном или завершённом опросе')
@@ -430,6 +383,33 @@ export default function QuestionBuilder() {
     })
   }
 
+  // Обработчик окончания перетаскивания
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    if (!questions) return
+
+    const oldIndex = questions.findIndex((q) => q.id === active.id)
+    const newIndex = questions.findIndex((q) => q.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newQuestions = arrayMove([...questions], oldIndex, newIndex)
+
+    // Формируем массив для отправки
+    const orders: UpdateQuestionOrderDto[] = newQuestions.map((q, idx) => ({
+      id: q.id,
+      order: idx + 1,
+    }))
+
+    // Оптимистично обновляем UI
+    queryClient.setQueryData(['questions', surveyId], newQuestions)
+
+    // Отправляем запрос
+    reorderMutation.mutate(orders)
+  }
+
   if (surveyLoading || qLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -466,6 +446,7 @@ export default function QuestionBuilder() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Форма добавления (только для Draft) */}
         <div className="lg:col-span-1">
           <div className="card animate-fadeInUp">
             <h2 className="text-xl font-semibold text-directum-dark mb-4">Добавить вопрос</h2>
@@ -586,6 +567,7 @@ export default function QuestionBuilder() {
             )}
           </div>
 
+          {/* Кнопка перехода к матрице */}
           <button
             onClick={() => navigate(`/survey/${surveyId}/matrix`)}
             className="btn-primary w-full flex items-center justify-center space-x-2 animate-fadeInUp mt-6"
@@ -595,14 +577,15 @@ export default function QuestionBuilder() {
           </button>
         </div>
 
+        {/* Список вопросов */}
         <div className="lg:col-span-2">
           <div className="card animate-fadeInUp">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-directum-dark">Вопросы опроса</h2>
-              <span className="text-sm text-gray-500">{sortedQuestions.length} вопросов</span>
+              <span className="text-sm text-gray-500">{questions?.length || 0} вопросов</span>
             </div>
 
-            {sortedQuestions.length === 0 ? (
+            {questions?.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>В опросе пока нет вопросов</p>
                 <p className="text-sm">Добавьте первый вопрос с помощью формы слева</p>
@@ -614,22 +597,23 @@ export default function QuestionBuilder() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={sortedQuestions.map((q) => q.id)}
+                  items={questions.map(q => q.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="space-y-3">
-                    {sortedQuestions.map((q, index) => (
-                      <SortableQuestion
+                  {questions
+                    ?.sort((a, b) => a.order - b.order)
+                    .map((q, index) => (
+                      <SortableQuestionItem
                         key={q.id}
                         question={q}
                         index={index}
                         isDraft={isDraft}
                         onEdit={handleEditClick}
                         onDelete={(id) => deleteMutation.mutate(id)}
-                        isPending={updateMutation.isPending || deleteMutation.isPending}
+                        isDeleting={deleteMutation.isPending}
+                        isUpdating={updateMutation.isPending}
                       />
                     ))}
-                  </div>
                 </SortableContext>
               </DndContext>
             )}
@@ -637,6 +621,7 @@ export default function QuestionBuilder() {
         </div>
       </div>
 
+      {/* Модальное окно редактирования */}
       {editingQuestion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full animate-fadeInUp max-h-[90vh] overflow-y-auto">
