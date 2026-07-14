@@ -91,4 +91,18 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
             return BadRequest(new { message = ex.Message });
         }
     }
+    
+    [HttpPost("{questionId}/save-as-template")]
+    public async Task<IActionResult> SaveQuestionAsTemplate(int questionId, [FromBody] SaveQuestionAsTemplateRequest request)
+    {
+        try
+        {
+            var template = await questionService.SaveQuestionAsTemplateAsync(questionId, request.Name);
+            return Ok(template);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

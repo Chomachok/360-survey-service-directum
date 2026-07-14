@@ -1,11 +1,36 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQuestion, updateQuestionsOrder } from '../api/questions'
+import {
+  getSurveyQuestions,
+  addQuestion,
+  deleteQuestion,
+  getTemplates,
+  updateQuestion,
+  updateQuestionsOrder,
+  saveQuestionAsTemplate,
+} from '../api/questions'
 import { getSurvey } from '../api/surveys'
 import { saveSurveyAsTemplate } from '../api/surveys'
 import { useState, useRef, useEffect } from 'react'
-import { QuestionType, CreateQuestionDto, UpdateQuestionDto, UpdateQuestionOrderDto } from '../types'
-import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight, GripVertical, FileText } from 'lucide-react'
+import {
+  QuestionType,
+  CreateQuestionDto,
+  UpdateQuestionDto,
+  UpdateQuestionOrderDto,
+} from '../types'
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  X,
+  Edit,
+  Save,
+  XCircle,
+  ArrowRight,
+  GripVertical,
+  FileText,
+  FilePlus,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   DndContext,
@@ -32,6 +57,7 @@ const SortableQuestionItem = ({
   isDraft,
   onEdit,
   onDelete,
+  onSaveAsTemplate,
   isDeleting,
   isUpdating,
 }: {
@@ -40,6 +66,7 @@ const SortableQuestionItem = ({
   isDraft: boolean
   onEdit: (q: any) => void
   onDelete: (id: number) => void
+  onSaveAsTemplate: (id: number, text: string) => void
   isDeleting: boolean
   isUpdating: boolean
 }) => {
@@ -99,6 +126,13 @@ const SortableQuestionItem = ({
       <div className="flex items-center space-x-1 flex-shrink-0 ml-4">
         {isDraft && (
           <>
+            <button
+              onClick={() => onSaveAsTemplate(question.id, question.text)}
+              className="text-green-500 hover:text-green-700 transition-colors p-1 hover:scale-110 transform"
+              title="Сохранить как шаблон вопроса"
+            >
+              <FilePlus size={18} />
+            </button>
             <button
               onClick={() => onEdit(question)}
               className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
@@ -167,11 +201,20 @@ export default function QuestionBuilder() {
     options: string[]
   } | null>(null)
 
-  // Состояния для сохранения в шаблон
+  // Состояния для сохранения опроса как шаблона
   const [saveTemplateModal, setSaveTemplateModal] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [templateDescription, setTemplateDescription] = useState('')
   const [isSavingTemplate, setIsSavingTemplate] = useState(false)
+
+  // Состояния для сохранения вопроса как шаблона
+  const [saveQuestionModal, setSaveQuestionModal] = useState<{
+    isOpen: boolean
+    questionId?: number
+    currentText?: string
+  }>({ isOpen: false })
+  const [questionTemplateName, setQuestionTemplateName] = useState('')
+  const [isSavingQuestionTemplate, setIsSavingQuestionTemplate] = useState(false)
 
   const isDraft = survey?.status === 'Draft'
 
@@ -347,9 +390,10 @@ export default function QuestionBuilder() {
         text: editingQuestion.text,
         type: editingQuestion.type,
         required: editingQuestion.required,
-        options: editingQuestion.type === QuestionType.SingleChoice && editingQuestion.options.length > 0
-          ? editingQuestion.options
-          : undefined,
+        options:
+          editingQuestion.type === QuestionType.SingleChoice && editingQuestion.options.length > 0
+            ? editingQuestion.options
+            : undefined,
       },
     })
   }
@@ -418,7 +462,7 @@ export default function QuestionBuilder() {
     reorderMutation.mutate(orders)
   }
 
-  // Сохранение в шаблон
+  // Сохранение опроса как шаблона
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
       toast.error('Введите название шаблона')
@@ -435,6 +479,32 @@ export default function QuestionBuilder() {
       toast.error(error.response?.data?.message || 'Ошибка сохранения шаблона')
     } finally {
       setIsSavingTemplate(false)
+    }
+  }
+
+  // Сохранение вопроса как шаблона
+  const handleSaveQuestionTemplateClick = (id: number, text: string) => {
+    setSaveQuestionModal({ isOpen: true, questionId: id, currentText: text })
+    setQuestionTemplateName('')
+  }
+
+  const handleSaveQuestionTemplate = async () => {
+    if (!questionTemplateName.trim()) {
+      toast.error('Введите название шаблона')
+      return
+    }
+    if (!saveQuestionModal.questionId) return
+
+    setIsSavingQuestionTemplate(true)
+    try {
+      await saveQuestionAsTemplate(saveQuestionModal.questionId, questionTemplateName)
+      toast.success('Шаблон вопроса создан!')
+      setSaveQuestionModal({ isOpen: false })
+      setQuestionTemplateName('')
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Ошибка сохранения шаблона')
+    } finally {
+      setIsSavingQuestionTemplate(false)
     }
   }
 
@@ -458,18 +528,23 @@ export default function QuestionBuilder() {
 
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-directum-dark">Вопросы опроса</h1>
-        <span className={`text-sm px-3 py-1 rounded-full font-medium ${
-          isDraft ? 'bg-gray-100 text-gray-600' :
-          survey?.status === 'Active' ? 'bg-green-100 text-green-700' :
-          'bg-blue-100 text-blue-700'
-        }`}>
+        <span
+          className={`text-sm px-3 py-1 rounded-full font-medium ${
+            isDraft
+              ? 'bg-gray-100 text-gray-600'
+              : survey?.status === 'Active'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}
+        >
           {isDraft ? 'Черновик' : survey?.status === 'Active' ? 'Активен' : 'Завершён'}
         </span>
       </div>
 
       {!isDraft && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-700">
-          ⚠️ Опрос {survey?.status === 'Active' ? 'активен' : 'завершён'}. Вы не можете добавлять или редактировать вопросы.
+          ⚠️ Опрос {survey?.status === 'Active' ? 'активен' : 'завершён'}. Вы не можете добавлять или
+          редактировать вопросы.
         </div>
       )}
 
@@ -480,9 +555,7 @@ export default function QuestionBuilder() {
             <h2 className="text-xl font-semibold text-directum-dark mb-4">Добавить вопрос</h2>
 
             {!isDraft ? (
-              <div className="text-sm text-gray-500 text-center py-4">
-                Добавление вопросов недоступно
-              </div>
+              <div className="text-sm text-gray-500 text-center py-4">Добавление вопросов недоступно</div>
             ) : (
               <>
                 {errors.general && (
@@ -618,7 +691,7 @@ export default function QuestionBuilder() {
                     className="btn-secondary text-sm flex items-center space-x-1 px-3 py-1"
                   >
                     <FileText size={16} />
-                    <span>Сохранить как шаблон</span>
+                    <span>Сохранить опрос как шаблон</span>
                   </button>
                 )}
               </div>
@@ -636,7 +709,7 @@ export default function QuestionBuilder() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={questions.map(q => q.id)}
+                  items={questions.map((q) => q.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   {questions
@@ -649,6 +722,7 @@ export default function QuestionBuilder() {
                         isDraft={isDraft}
                         onEdit={handleEditClick}
                         onDelete={(id) => deleteMutation.mutate(id)}
+                        onSaveAsTemplate={handleSaveQuestionTemplateClick}
                         isDeleting={deleteMutation.isPending}
                         isUpdating={updateMutation.isPending}
                       />
@@ -773,7 +847,7 @@ export default function QuestionBuilder() {
         </div>
       )}
 
-      {/* Модальное окно сохранения в шаблон */}
+      {/* Модальное окно сохранения опроса как шаблона */}
       {saveTemplateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeInUp">
@@ -826,6 +900,52 @@ export default function QuestionBuilder() {
                     setTemplateName('')
                     setTemplateDescription('')
                   }}
+                  className="btn-secondary flex-1"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно сохранения вопроса как шаблона */}
+      {saveQuestionModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeInUp">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-directum-dark">Сохранить вопрос как шаблон</h3>
+              <button
+                onClick={() => setSaveQuestionModal({ isOpen: false })}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="label-field">Название шаблона *</label>
+                <input
+                  type="text"
+                  value={questionTemplateName}
+                  onChange={(e) => setQuestionTemplateName(e.target.value)}
+                  className="input-field"
+                  placeholder="Введите название"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-400 mt-1">Вопрос: {saveQuestionModal.currentText}</p>
+              </div>
+              <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleSaveQuestionTemplate}
+                  className="btn-primary flex-1"
+                  disabled={isSavingQuestionTemplate}
+                >
+                  {isSavingQuestionTemplate ? 'Сохранение...' : 'Сохранить'}
+                </button>
+                <button
+                  onClick={() => setSaveQuestionModal({ isOpen: false })}
                   className="btn-secondary flex-1"
                 >
                   Отмена

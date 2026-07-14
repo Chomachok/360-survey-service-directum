@@ -183,4 +183,27 @@ public class QuestionService(
 
         await questionRepo.SaveChangesAsync();
     }
+    
+    public async Task<QuestionTemplateDto> SaveQuestionAsTemplateAsync(int questionId, string templateName)
+    {
+        var question = await questionRepo.GetByIdAsync(questionId);
+        if (question == null)
+            throw new Exception("Вопрос не найден");
+
+        var template = new QuestionTemplate
+        {
+            Name = templateName,
+            Text = question.Text,
+            Type = question.Type,
+            Options = question.Options
+        };
+
+        await templateRepo.AddAsync(template);
+        await templateRepo.SaveChangesAsync();
+
+        var dto = mapper.Map<QuestionTemplateDto>(template);
+        if (!string.IsNullOrEmpty(template.Options))
+            dto.Options = JsonSerializer.Deserialize<List<string>>(template.Options);
+        return dto;
+    }
 }
