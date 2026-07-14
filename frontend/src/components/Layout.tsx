@@ -13,9 +13,9 @@ const Layout: React.FC = () => {
     { path: '/', label: 'Дашборд', icon: LayoutDashboard },
     { path: '/survey/new', label: 'Создать опрос', icon: FileText },
     { path: '/templates', label: 'Шаблоны', icon: ListChecks },
-    { path: '/import', label: 'Импорт сотрудников', icon: Users },
     { path: '/survey-templates', label: 'Шаблоны опросов', icon: FileSpreadsheet },
     { path: '/respondent-templates', label: 'Шаблоны респондентов', icon: UserCheck },
+    { path: '/import', label: 'Импорт сотрудников', icon: Users },
   ]
 
   const isActive = (path: string) => location.pathname === path
