@@ -33,7 +33,7 @@ const Layout: React.FC = () => {
             >
               <Directum360Logo size={42} />
             </Link>
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden md:flex items-center space-x-1 ml-4 flex-shrink-0">
               {navItems.map((item) => {
                 const Icon = item.icon
                 return (
