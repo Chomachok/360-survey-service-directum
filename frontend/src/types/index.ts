@@ -25,6 +25,7 @@ export interface Survey {
   endDate: string
   authorId: number
   authorName: string
+  targetId: number
 }
 
 export interface CreateSurveyDto {
@@ -33,6 +34,8 @@ export interface CreateSurveyDto {
   startDate: string
   endDate: string
   authorId: number
+  targetId?: number,
+  templateId?: number
 }
 
 export interface Question {
@@ -112,4 +115,40 @@ export interface UpdateQuestionDto {
   type: QuestionType
   required: boolean
   options?: string[]
+}
+
+export interface SurveyTemplate {
+  id: number
+  name: string
+  description?: string
+  questions: TemplateQuestion[]
+}
+
+export interface TemplateQuestion {
+  id: number
+  text: string
+  type: QuestionType
+  required: boolean
+  order: number
+  options?: string[]
+}
+
+export interface CreateSurveyTemplateDto {
+  name: string
+  description?: string
+  questions: CreateTemplateQuestionDto[]
+}
+
+export interface CreateTemplateQuestionDto {
+  text: string
+  type: QuestionType
+  required: boolean
+  order: number
+  options?: string[]
+}
+
+export interface UpdateSurveyTemplateDto {
+  name: string
+  description?: string
+  questions: CreateTemplateQuestionDto[]
 }

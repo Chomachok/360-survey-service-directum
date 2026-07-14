@@ -20,17 +20,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             style: {
               background: '#363636',
               color: '#fff',
+              maxWidth: '500px',
+              wordBreak: 'break-all',
             },
             success: {
               style: {
                 background: '#22c55e',
                 color: '#fff',
+                wordBreak: 'break-all',
               },
             },
             error: {
               style: {
                 background: '#ef4444',
                 color: '#fff',
+                wordBreak: 'break-all',
               },
             },
           }}

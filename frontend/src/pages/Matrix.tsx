@@ -7,7 +7,9 @@ import { useState } from 'react'
 import { AssessmentRole } from '../types'
 import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { ConfirmModal } from '../components/ConfirmModal'
+import { ConfirmModal } from '../components/ConfirmModal' 
+import Select from 'react-select'
+import { reactSelectStyles } from '../styles/reactSelectStyles'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -31,7 +33,6 @@ export default function Matrix() {
   })
 
   const [evaluatorId, setEvaluatorId] = useState<number | ''>('')
-  const [targetId, setTargetId] = useState<number | ''>('')
   const [role, setRole] = useState<AssessmentRole>(AssessmentRole.Colleague)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
@@ -41,13 +42,14 @@ export default function Matrix() {
   }>({ isOpen: false })
 
   const isDraft = survey?.status === 'Draft'
+  const targetId = survey?.targetId
+  const targetEmployee = employees?.find(e => e.id === targetId)
 
   const addMutation = useMutation({
     mutationFn: (data: any) => addMatrixItem(surveyId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setEvaluatorId('')
-      setTargetId('')
       toast.success('Связь добавлена в матрицу')
     },
     onError: (error: any) => {
@@ -70,12 +72,16 @@ export default function Matrix() {
   })
 
   const handleAdd = () => {
-    if (!evaluatorId || !targetId) {
-      toast.error('Выберите оценивающего и оцениваемого сотрудника')
+    if (!evaluatorId) {
+      toast.error('Выберите оценивающего сотрудника')
       return
     }
-    if (evaluatorId === targetId && role !== AssessmentRole.SelfAssessment) {
-      toast.error('Для самооценки выберите роль "Самооценка"')
+    if (!targetId) {
+      toast.error('Для этого опроса не указан целевой сотрудник. Обратитесь к администратору.')
+      return
+    }
+    if (role === AssessmentRole.SelfAssessment && evaluatorId !== targetId) {
+      toast.error('Для самооценки оценивающий должен быть тем же сотрудником, для которого проводится опрос')
       return
     }
     addMutation.mutate({
@@ -84,7 +90,7 @@ export default function Matrix() {
       role,
     })
   }
-
+  
   const handleDeleteClick = (id: number, evaluatorName: string, targetName: string) => {
     setDeleteModal({ isOpen: true, id, evaluatorName, targetName })
   }
@@ -110,6 +116,19 @@ export default function Matrix() {
     )
   }
 
+  const evaluatorOptions = (employees || []).map(e => ({
+    value: e.id,
+    label: e.fullName,
+  }))
+
+  const selectedEvaluator = evaluatorId
+    ? evaluatorOptions.find(opt => opt.value === evaluatorId)
+    : null
+
+   const handleEvaluatorChange = (option: any) => {
+    setEvaluatorId(option?.value || '')
+  }
+
   return (
     <div>
       <button
@@ -126,44 +145,37 @@ export default function Matrix() {
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
+        {targetEmployee ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+            🎯 Опрос проводится для сотрудника: <strong>{targetEmployee.fullName}</strong>
+          </div>
+        ) : (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700 flex items-start gap-2">
+            ⚠️ Целевой сотрудник не указан. Обратитесь к администратору.
+          </div>
+        )}
+
         {/* Показываем форму только для черновика */}
         {isDraft ? (
           <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
             <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кто оценивает
-              </label>
-              <select
-                value={evaluatorId}
-                onChange={(e) => setEvaluatorId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кого оценивают
-              </label>
-              <select
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Кто оценивает <span className="text-red-500">*</span>
+            </label>
+            <Select
+                options={evaluatorOptions}
+                value={selectedEvaluator}
+                onChange={handleEvaluatorChange}
+                placeholder="Выберите сотрудника"
+                isClearable
+                isSearchable
+                styles={reactSelectStyles}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
+                isDisabled={!isDraft || !targetEmployee}
+              />
+            
+          </div>
 
             <div className="min-w-[150px]">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
@@ -173,6 +185,7 @@ export default function Matrix() {
                 value={role}
                 onChange={(e) => setRole(e.target.value as AssessmentRole)}
                 className="input-field"
+                disabled={!isDraft || !targetEmployee}
               >
                 <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
                 <option value={AssessmentRole.Manager}>Руководитель</option>
@@ -184,7 +197,7 @@ export default function Matrix() {
               <button
                 onClick={handleAdd}
                 className="btn-primary flex items-center space-x-2"
-                disabled={addMutation.isPending || !evaluatorId || !targetId}
+                disabled={addMutation.isPending || !evaluatorId || !targetEmployee}
               >
                 <Plus size={18} />
                 <span>Добавить</span>
@@ -204,7 +217,7 @@ export default function Matrix() {
           <div className="text-center py-8 text-gray-500 animate-fadeInUp">
             <p>Матрица пуста</p>
             <p className="text-sm">
-              {isDraft
+              {isDraft && targetEmployee
                 ? 'Добавьте связи между сотрудниками с помощью формы выше'
                 : 'Связи не добавлены'}
             </p>
@@ -255,16 +268,14 @@ export default function Matrix() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      {isDraft || (!isDraft && !item.completed) && (
-                        <button
-                          onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
-                          className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                          title="Удалить связь"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                        title="Удалить связь"
+                        disabled={deleteMutation.isPending || !isDraft || item.completed}
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </td>
                   </tr>
                 ))}

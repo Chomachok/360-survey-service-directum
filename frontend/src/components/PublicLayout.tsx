@@ -17,7 +17,7 @@ const PublicLayout: React.FC = () => {
             >
               <Directum360Logo size={42} />
             </Link>
-            <span className="text-sm text-gray-500 dark:text-gray-400">Опрос 360 градусов</span>
+            <span className="text-sm text-gray-500">Опрос 360 градусов</span>
           </div>
         </div>
       </header>

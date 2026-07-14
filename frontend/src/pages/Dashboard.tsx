@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useState } from 'react'
 import { useDebounce } from '../hooks/useDebounce'
+import { Edit } from 'lucide-react'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
@@ -239,18 +240,17 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 max-w-full">
           {surveys?.map((survey, index) => (
             <div
-              // В ключ добавляем параметры фильтра, чтобы React пересоздавал элементы при смене фильтра
               key={`${survey.id}-${statusParam || 'all'}-${searchParam || ''}`}
               className="card hover:shadow-md transition-shadow animate-fadeInUp"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-directum-dark">{survey.title}</h3>
+                    <h3 className="text-lg font-semibold text-directum-dark break-words min-w-0">{survey.title}</h3>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       survey.status === 'Active'
                         ? 'bg-green-100 text-green-700'
@@ -265,7 +265,9 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
                   )}
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                    <span>📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} — {new Date(survey.endDate).toLocaleDateString('ru-RU')}</span>
+                    <span className="whitespace-nowrap">
+                      📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} {new Date(survey.startDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(survey.endDate).toLocaleDateString('ru-RU')} {new Date(survey.endDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-3 md:mt-0">
@@ -308,6 +310,16 @@ export default function Dashboard() {
                     >
                       <CheckCircle size={18} />
                     </button>
+                  )}
+
+                  {survey.status === 'Draft' && (
+                    <Link
+                      to={`/survey/${survey.id}/edit`}
+                      className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
+                      title="Редактировать опрос"
+                    >
+                      <Edit size={18} />
+                    </Link>
                   )}
 
                   <button
