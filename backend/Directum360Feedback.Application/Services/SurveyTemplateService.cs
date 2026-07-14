@@ -25,7 +25,17 @@ public class SurveyTemplateService(
             {
                 var qDto = mapper.Map<TemplateQuestionDto>(q);
                 if (!string.IsNullOrEmpty(q.Options))
-                    qDto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+                {
+                    try
+                    {
+                        qDto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+                    }
+                    catch
+                    {
+                        // Если JSON невалиден, оставляем null
+                        qDto.Options = null;
+                    }
+                }
                 return qDto;
             }).ToList();
             result.Add(dto);
@@ -43,7 +53,16 @@ public class SurveyTemplateService(
         {
             var qDto = mapper.Map<TemplateQuestionDto>(q);
             if (!string.IsNullOrEmpty(q.Options))
-                qDto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+            {
+                try
+                {
+                    qDto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+                }
+                catch
+                {
+                    qDto.Options = null;
+                }
+            }
             return qDto;
         }).ToList();
         return dto;
@@ -59,8 +78,10 @@ public class SurveyTemplateService(
         {
             var question = mapper.Map<SurveyTemplateQuestion>(qDto);
             question.SurveyTemplateId = template.Id;
-            if (qDto.Options != null)
+            if (qDto.Options != null && qDto.Options.Any())
                 question.Options = JsonSerializer.Serialize(qDto.Options);
+            else
+                question.Options = null;
             await questionRepo.AddAsync(question);
         }
         await questionRepo.SaveChangesAsync();
@@ -89,8 +110,10 @@ public class SurveyTemplateService(
         {
             var question = mapper.Map<SurveyTemplateQuestion>(qDto);
             question.SurveyTemplateId = template.Id;
-            if (qDto.Options != null)
+            if (qDto.Options != null && qDto.Options.Any())
                 question.Options = JsonSerializer.Serialize(qDto.Options);
+            else
+                question.Options = null;
             await questionRepo.AddAsync(question);
         }
         await questionRepo.SaveChangesAsync();
