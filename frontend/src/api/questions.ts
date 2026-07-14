@@ -27,3 +27,6 @@ export const updateQuestion = (id: number, dto: any) =>
 
 export const updateQuestionsOrder = (surveyId: number, orders: UpdateQuestionOrderDto[]) =>
   api.put(`/questions/surveys/${surveyId}/reorder`, orders)
+
+export const saveQuestionAsTemplate = (questionId: number, name: string) =>
+  api.post<QuestionTemplate>(`/questions/${questionId}/save-as-template`, { name }).then(res => res.data)
