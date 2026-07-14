@@ -7,7 +7,8 @@ import { useState } from 'react'
 import { AssessmentRole } from '../types'
 import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { ConfirmModal } from '../components/ConfirmModal' 
+import { ConfirmModal } from '../components/ConfirmModal'
+import MatrixTemplateTools from '../components/MatrixTemplateTools'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
 
@@ -154,6 +155,14 @@ export default function Matrix() {
             ⚠️ Целевой сотрудник не указан. Обратитесь к администратору.
           </div>
         )}
+
+        {/* Готовый список респондентов: применить шаблон / сохранить текущий */}
+        <MatrixTemplateTools
+          surveyId={surveyId}
+          isDraft={isDraft}
+          hasTarget={!!targetId}
+          matrixCount={matrix?.length ?? 0}
+        />
 
         {/* Показываем форму только для черновика */}
         {isDraft ? (

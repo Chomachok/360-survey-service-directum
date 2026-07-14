@@ -152,3 +152,39 @@ export interface UpdateSurveyTemplateDto {
   description?: string
   questions: CreateTemplateQuestionDto[]
 }
+
+// ---------- Шаблоны респондентов ----------
+
+/** Один респондент в шаблоне. employeeId === null — «сам оцениваемый» (самооценка) */
+export interface RespondentTemplateItem {
+  id: number
+  employeeId: number | null
+  employeeName: string
+  role: AssessmentRole
+}
+
+export interface RespondentTemplate {
+  id: number
+  name: string
+  description?: string
+  items: RespondentTemplateItem[]
+}
+
+export interface CreateRespondentTemplateItemDto {
+  employeeId: number | null
+  role: AssessmentRole
+}
+
+export interface CreateRespondentTemplateDto {
+  name: string
+  description?: string
+  items: CreateRespondentTemplateItemDto[]
+}
+
+export type UpdateRespondentTemplateDto = CreateRespondentTemplateDto
+
+export interface ApplyRespondentTemplateResult {
+  created: number
+  skipped: number
+  items: MatrixItem[]
+}
