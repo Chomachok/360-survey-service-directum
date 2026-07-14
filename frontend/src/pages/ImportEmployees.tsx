@@ -100,7 +100,7 @@ export default function ImportEmployees() {
                 <span className="text-sm font-medium text-gray-600">
                   {file ? file.name : 'Нажмите для выбора файла'}
                 </span>
-                <span className="text-xs text-gray-400">CSV или XLSX</span>
+                <span className="text-xs text-gray-400">CSV</span>
               </label>
             </div>
 
@@ -108,7 +108,7 @@ export default function ImportEmployees() {
               <p className="font-medium">Требования к файлу:</p>
               <ul className="list-disc list-inside mt-1 space-y-0.5">
                 <li>Заголовки: <code className="bg-blue-100 px-1 rounded">FullName</code> и <code className="bg-blue-100 px-1 rounded">Email</code></li>
-                <li>Разделитель: запятая или точка с запятой</li>
+                <li>Разделитель: запятая</li>
               </ul>
             </div>
 
