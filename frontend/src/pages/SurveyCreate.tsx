@@ -145,7 +145,7 @@ export default function SurveyCreate() {
 
           <div className="animate-fadeInUp-delay-2">
             <label className="label-field">
-              Сотрудник, для которого проводится опрос <span className="text-red-500">*</span>
+              Сотрудник, про которого проводится опрос <span className="text-red-500">*</span>
             </label>
             <Select
               options={employeeOptions}

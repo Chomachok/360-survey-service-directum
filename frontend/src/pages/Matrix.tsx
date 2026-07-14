@@ -7,7 +7,9 @@ import { useState } from 'react'
 import { AssessmentRole } from '../types'
 import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { ConfirmModal } from '../components/ConfirmModal'
+import { ConfirmModal } from '../components/ConfirmModal' 
+import Select from 'react-select'
+import { reactSelectStyles } from '../styles/reactSelectStyles'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -114,6 +116,19 @@ export default function Matrix() {
     )
   }
 
+  const evaluatorOptions = (employees || []).map(e => ({
+    value: e.id,
+    label: e.fullName,
+  }))
+
+  const selectedEvaluator = evaluatorId
+    ? evaluatorOptions.find(opt => opt.value === evaluatorId)
+    : null
+
+   const handleEvaluatorChange = (option: any) => {
+    setEvaluatorId(option?.value || '')
+  }
+
   return (
     <div>
       <button
@@ -144,40 +159,23 @@ export default function Matrix() {
         {isDraft ? (
           <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
             <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кто оценивает
-              </label>
-              <select
-                value={evaluatorId}
-                onChange={(e) => setEvaluatorId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кого оценивают
-              </label>
-              <select
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value === '' ? '' : Number(e.target.value))}
-                className="input-field"
-              >
-                <option value="">Выберите сотрудника</option>
-                {employees?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Кто оценивает <span className="text-red-500">*</span>
+            </label>
+            <Select
+                options={evaluatorOptions}
+                value={selectedEvaluator}
+                onChange={handleEvaluatorChange}
+                placeholder="Выберите сотрудника"
+                isClearable
+                isSearchable
+                styles={reactSelectStyles}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
+                isDisabled={!isDraft || !targetEmployee}
+              />
+            
+          </div>
 
             <div className="min-w-[150px]">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">

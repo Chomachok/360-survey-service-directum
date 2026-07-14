@@ -25,6 +25,7 @@ export interface Survey {
   endDate: string
   authorId: number
   authorName: string
+  targetId: number
 }
 
 export interface CreateSurveyDto {
