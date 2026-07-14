@@ -125,9 +125,15 @@ export default function Matrix() {
     ? evaluatorOptions.find(opt => opt.value === evaluatorId)
     : null
 
-   const handleEvaluatorChange = (option: any) => {
-    setEvaluatorId(option?.value || '')
-  }
+  const handleEvaluatorChange = (option: any) => {
+    const id = option?.value || '';
+    setEvaluatorId(id);
+    if (id && targetId && Number(id) === targetId) {
+      setRole(AssessmentRole.SelfAssessment);
+    } else if (id) {
+      setRole(AssessmentRole.Colleague); // или Manager, как вам удобнее
+    }
+  };
 
   return (
     <div>
@@ -177,21 +183,26 @@ export default function Matrix() {
             
           </div>
 
-            <div className="min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Роль
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as AssessmentRole)}
-                className="input-field"
-                disabled={!isDraft || !targetEmployee}
-              >
+          <div className="min-w-[150px]">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Роль
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as AssessmentRole)}
+              className="input-field"
+              disabled={!isDraft || !targetEmployee || !evaluatorId}
+            >
+              {evaluatorId && targetId && Number(evaluatorId) === targetId ? (
                 <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
-                <option value={AssessmentRole.Manager}>Руководитель</option>
-                <option value={AssessmentRole.Colleague}>Коллега</option>
-              </select>
-            </div>
+              ) : (
+                <>
+                  <option value={AssessmentRole.Manager}>Руководитель</option>
+                  <option value={AssessmentRole.Colleague}>Коллега</option>
+                </>
+              )}
+            </select>
+          </div>
 
             <div className="flex items-end">
               <button
