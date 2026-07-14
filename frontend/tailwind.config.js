@@ -13,6 +13,8 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        // фирменный шрифт Directum
+        directum: ["'Golos Text'", "Inter", "system-ui", "sans-serif"],
       },
       keyframes: {
         fadeInUp: {
@@ -33,13 +35,19 @@ export default {
         },
       },
       animation: {
-        fadeInUp: 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
-        fadeIn: 'fadeIn 0.5s ease-out',
+        // ВАЖНО: fill-mode `backwards`, а не `both`.
+        // `both` навсегда фиксировал transform: translateY(0) scale(1) после
+        // окончания анимации, и этот "залипший" transform перебивал
+        // hover:-translate-y-1 у карточки -> hover дёргался/не работал.
+        // `backwards` держит только начальный кадр во время delay,
+        // а после завершения отпускает transform обратно в CSS.
+        fadeInUp: 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        fadeIn: 'fadeIn 0.5s ease-out backwards',
         pulseSoft: 'pulseSoft 2s ease-in-out infinite',
-        slideIn: 'slideIn 0.5s ease-out',
-        'fadeInUp-delay': 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both',
-        'fadeInUp-delay-2': 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both',
-        'fadeInUp-delay-3': 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both',
+        slideIn: 'slideIn 0.5s ease-out backwards',
+        'fadeInUp-delay': 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards',
+        'fadeInUp-delay-2': 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s backwards',
+        'fadeInUp-delay-3': 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.6s backwards',
       },
     },
   },

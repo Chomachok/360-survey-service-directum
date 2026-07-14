@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getResults, exportDocx } from '../api/results'
-import { ArrowLeft, Download, User, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Download, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Results() {
