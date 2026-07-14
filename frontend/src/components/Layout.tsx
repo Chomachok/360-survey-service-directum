@@ -1,9 +1,13 @@
 import React from 'react'
 import { Link, useLocation, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
+<<<<<<< HEAD
 import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users } from 'lucide-react'
 import Directum360Logo from './Directum360Logo'
 import AnimatedBackground from './AnimatedBackground'
+=======
+import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users, FileSpreadsheet } from 'lucide-react'
+>>>>>>> e81a6a410abaf8c7b96d20405f289a5df2e31b11
 
 const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -14,6 +18,7 @@ const Layout: React.FC = () => {
     { path: '/survey/new', label: 'Создать опрос', icon: FileText },
     { path: '/templates', label: 'Шаблоны', icon: ListChecks },
     { path: '/import', label: 'Импорт сотрудников', icon: Users },
+    { path: '/survey-templates', label: 'Шаблоны опросов', icon: FileSpreadsheet },
   ]
 
   const isActive = (path: string) => location.pathname === path

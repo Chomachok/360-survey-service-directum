@@ -10,6 +10,8 @@ import Results from './pages/Results'
 import ImportEmployees from './pages/ImportEmployees'
 import Layout from './components/Layout'
 import PublicLayout from './components/PublicLayout'
+import SurveyTemplates from './pages/SurveyTemplates'
+import SurveyTemplateView from './pages/SurveyTemplateView'
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
           <Route path="/survey/:id/matrix" element={<Matrix />} />
           <Route path="/survey/:id/results" element={<Results />} />
           <Route path="/import" element={<ImportEmployees />} />
+          <Route path="/survey-templates" element={<SurveyTemplates />} />
+          <Route path="/survey-templates/:id" element={<SurveyTemplateView />} />
         </Route>
 
         <Route element={<PublicLayout />}>
