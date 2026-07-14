@@ -188,3 +188,7 @@ export interface ApplyRespondentTemplateResult {
   skipped: number
   items: MatrixItem[]
 }
+export interface UpdateQuestionOrderDto {
+  id: number
+  order: number
+}

@@ -77,4 +77,18 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
             return BadRequest(new { message = ex.Message });
         }
     }
+    
+    [HttpPut("surveys/{surveyId}/reorder")]
+    public async Task<IActionResult> ReorderQuestions(int surveyId, [FromBody] List<UpdateQuestionOrderDto> updatedOrders)
+    {
+        try
+        {
+            await questionService.UpdateQuestionsOrderAsync(surveyId, updatedOrders);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

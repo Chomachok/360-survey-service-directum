@@ -157,4 +157,30 @@ public class QuestionService(
             result.Options = JsonSerializer.Deserialize<List<string>>(question.Options);
         return result;
     }
+    
+    public async Task UpdateQuestionsOrderAsync(int surveyId, List<UpdateQuestionOrderDto> updatedOrders)
+    {
+        // Загружаем все вопросы опроса
+        var questions = await questionRepo.FindAsync(q => q.SurveyId == surveyId);
+        if (!questions.Any())
+            throw new Exception("Вопросы для данного опроса не найдены");
+
+        // Проверяем, что все ID из запроса принадлежат этому опросу
+        var questionIds = questions.Select(q => q.Id).ToHashSet();
+        foreach (var item in updatedOrders)
+        {
+            if (!questionIds.Contains(item.Id))
+                throw new Exception($"Вопрос с ID {item.Id} не принадлежит данному опросу");
+        }
+
+        // Обновляем порядок
+        foreach (var item in updatedOrders)
+        {
+            var question = questions.First(q => q.Id == item.Id);
+            question.Order = item.Order;
+            questionRepo.Update(question);
+        }
+
+        await questionRepo.SaveChangesAsync();
+    }
 }
