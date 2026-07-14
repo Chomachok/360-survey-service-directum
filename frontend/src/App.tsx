@@ -11,6 +11,7 @@ import ImportEmployees from './pages/ImportEmployees'
 import Layout from './components/Layout'
 import PublicLayout from './components/PublicLayout'
 import SurveyTemplates from './pages/SurveyTemplates'
+import RespondentTemplates from './pages/RespondentTemplates'
 import SurveyTemplateView from './pages/SurveyTemplateView'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="/survey/:id/results" element={<Results />} />
           <Route path="/import" element={<ImportEmployees />} />
           <Route path="/survey-templates" element={<SurveyTemplates />} />
+          <Route path="/respondent-templates" element={<RespondentTemplates />} />
           <Route path="/survey-templates/:id" element={<SurveyTemplateView />} />
         </Route>
 
