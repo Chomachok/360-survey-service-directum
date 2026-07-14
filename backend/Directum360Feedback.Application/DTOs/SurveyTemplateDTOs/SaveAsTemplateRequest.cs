@@ -1,6 +1,7 @@
 namespace Directum360Feedback.Application.DTOs.SurveyTemplateDTOs;
 
-public class SaveAsTemplateDto
+public class SaveAsTemplateRequest
 {
-    
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
 }
