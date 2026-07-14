@@ -1,4 +1,5 @@
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.SurveyTemplateDTOs;
 
 namespace Directum360Feedback.Application.Interfaces;
 
@@ -12,4 +13,5 @@ public interface ISurveyService
     Task<SurveyDto> PublishSurveyAsync(int id);
     Task<SurveyDto> CompleteSurveyAsync(int id);
     Task ApplyTemplateToSurveyAsync(int surveyId, int templateId);
+    Task<SurveyTemplateDto> SaveSurveyAsTemplateAsync(int surveyId, string templateName, string? templateDescription);
 }

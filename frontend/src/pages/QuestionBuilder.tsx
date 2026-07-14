@@ -2,9 +2,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyQuestions, addQuestion, deleteQuestion, getTemplates, updateQuestion, updateQuestionsOrder } from '../api/questions'
 import { getSurvey } from '../api/surveys'
-import { useState, useRef } from 'react'
+import { saveSurveyAsTemplate } from '../api/surveys'
+import { useState, useRef, useEffect } from 'react'
 import { QuestionType, CreateQuestionDto, UpdateQuestionDto, UpdateQuestionOrderDto } from '../types'
-import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight, GripVertical } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, X, Edit, Save, XCircle, ArrowRight, GripVertical, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   DndContext,
@@ -67,7 +68,6 @@ const SortableQuestionItem = ({
       className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 animate-fadeInUp"
     >
       <div className="flex items-start gap-3 flex-1">
-        {/* Ручка для перетаскивания */}
         {isDraft && (
           <div
             {...attributes}
@@ -166,6 +166,12 @@ export default function QuestionBuilder() {
     required: boolean
     options: string[]
   } | null>(null)
+
+  // Состояния для сохранения в шаблон
+  const [saveTemplateModal, setSaveTemplateModal] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [templateDescription, setTemplateDescription] = useState('')
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false)
 
   const isDraft = survey?.status === 'Draft'
 
@@ -412,6 +418,26 @@ export default function QuestionBuilder() {
     reorderMutation.mutate(orders)
   }
 
+  // Сохранение в шаблон
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) {
+      toast.error('Введите название шаблона')
+      return
+    }
+    setIsSavingTemplate(true)
+    try {
+      await saveSurveyAsTemplate(surveyId, { name: templateName, description: templateDescription })
+      toast.success('Шаблон успешно создан!')
+      setSaveTemplateModal(false)
+      setTemplateName('')
+      setTemplateDescription('')
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Ошибка сохранения шаблона')
+    } finally {
+      setIsSavingTemplate(false)
+    }
+  }
+
   if (surveyLoading || qLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -582,9 +608,20 @@ export default function QuestionBuilder() {
         {/* Список вопросов */}
         <div className="lg:col-span-2">
           <div className="card animate-fadeInUp">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
               <h2 className="text-xl font-semibold text-directum-dark">Вопросы опроса</h2>
-              <span className="text-sm text-gray-500">{questions?.length || 0} вопросов</span>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">{questions?.length || 0} вопросов</span>
+                {isDraft && (
+                  <button
+                    onClick={() => setSaveTemplateModal(true)}
+                    className="btn-secondary text-sm flex items-center space-x-1 px-3 py-1"
+                  >
+                    <FileText size={16} />
+                    <span>Сохранить как шаблон</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {questions?.length === 0 ? (
@@ -726,6 +763,69 @@ export default function QuestionBuilder() {
                 </button>
                 <button
                   onClick={handleEditCancel}
+                  className="btn-secondary flex-1"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно сохранения в шаблон */}
+      {saveTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeInUp">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-directum-dark">Сохранить опрос как шаблон</h3>
+              <button
+                onClick={() => {
+                  setSaveTemplateModal(false)
+                  setTemplateName('')
+                  setTemplateDescription('')
+                }}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="label-field">Название шаблона *</label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  className="input-field"
+                  placeholder="Введите название"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="label-field">Описание</label>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  className="input-field resize-none"
+                  rows={3}
+                  placeholder="Описание шаблона (необязательно)"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleSaveTemplate}
+                  className="btn-primary flex-1"
+                  disabled={isSavingTemplate}
+                >
+                  {isSavingTemplate ? 'Сохранение...' : 'Сохранить'}
+                </button>
+                <button
+                  onClick={() => {
+                    setSaveTemplateModal(false)
+                    setTemplateName('')
+                    setTemplateDescription('')
+                  }}
                   className="btn-secondary flex-1"
                 >
                   Отмена

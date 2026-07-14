@@ -21,3 +21,5 @@ export const deleteSurvey = (id: number) => api.delete(`/surveys/${id}`)
 export const publishSurvey = (id: number) => api.post<Survey>(`/surveys/${id}/publish`).then(res => res.data)
 
 export const completeSurvey = (id: number) => api.post<Survey>(`/surveys/${id}/complete`).then(res => res.data)
+export const saveSurveyAsTemplate = (surveyId: number, data: { name: string; description?: string }) =>
+  api.post<SurveyTemplate>(`/surveys/${surveyId}/save-as-template`, data).then(res => res.data)
