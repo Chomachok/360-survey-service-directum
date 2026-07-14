@@ -12,4 +12,5 @@ public interface IQuestionService
     Task<QuestionTemplateDto> UpdateTemplateAsync(int id, UpdateQuestionTemplateDto dto);
     Task DeleteTemplateAsync(int id);
     Task<QuestionDto> UpdateQuestionAsync(int id, UpdateQuestionDto dto);
+    Task UpdateQuestionsOrderAsync(int surveyId, List<UpdateQuestionOrderDto> updatedOrders);
 }
