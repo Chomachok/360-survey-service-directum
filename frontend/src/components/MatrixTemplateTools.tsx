@@ -16,6 +16,8 @@ interface Props {
   hasTarget: boolean
   /** сколько связей уже в матрице — от этого зависит, можно ли сохранить состав как шаблон */
   matrixCount: number
+  currentUserId: number | null
+  targetId: number | null
 }
 
 /**
@@ -27,11 +29,11 @@ interface Props {
  * он задан в самом опросе (Survey.targetId). Самооценка из шаблона автоматически
  * назначается на него же.
  */
-export default function MatrixTemplateTools({ surveyId, isDraft, hasTarget, matrixCount }: Props) {
+export default function MatrixTemplateTools({ surveyId, isDraft, hasTarget, matrixCount, currentUserId, targetId}: Props) {
   const queryClient = useQueryClient()
 
   const { data: templates } = useQuery({
-    queryKey: ['respondent-templates'],
+    queryKey: ['respondent-templates'], 
     queryFn: getRespondentTemplates,
   })
 
@@ -136,9 +138,15 @@ export default function MatrixTemplateTools({ surveyId, isDraft, hasTarget, matr
                 value={templateId}
                 onChange={(e) => setTemplateId(e.target.value === '' ? '' : Number(e.target.value))}
                 className="input-field"
-              >
-                <option value="">Выберите шаблон</option>
-                {templates?.map((t) => (
+                >
+              <option value="">Выберите шаблон</option>
+              {templates
+                ?.filter((t) => {
+                  if (!targetId) return true;
+                  const targetIdNum = Number(targetId);
+                  return !t.items.some((item) => Number(item.employeeId) === targetIdNum);
+                })
+                .map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name} ({t.items.length})
                   </option>
