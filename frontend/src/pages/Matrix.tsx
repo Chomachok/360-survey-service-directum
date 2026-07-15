@@ -255,24 +255,6 @@ export default function Matrix() {
             <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
               <div className="flex-1 min-w-[150px]">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Кто оценивает
-                </label>
-                <Select
-                  options={evaluatorOptions}
-                  value={selectedEvaluator}
-                  onChange={handleEvaluatorChange}
-                  placeholder="Выберите сотрудника"
-                  isClearable
-                  isSearchable
-                  styles={reactSelectStyles}
-                  menuPortalTarget={document.body}
-                  menuPosition="fixed"
-                  isDisabled={!isDraft || !targetId}
-                />
-              </div>
-
-              <div className="flex-1 min-w-[150px]">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                   Кого оценивают
                 </label>
                 <Select
@@ -286,6 +268,24 @@ export default function Matrix() {
                   menuPortalTarget={document.body}
                   menuPosition="fixed"
                   isDisabled={!isDraft}
+                />
+              </div>
+              
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Кто оценивает
+                </label>
+                <Select
+                  options={evaluatorOptions}
+                  value={selectedEvaluator}
+                  onChange={handleEvaluatorChange}
+                  placeholder="Выберите сотрудника"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft || !targetId}
                 />
               </div>
 
