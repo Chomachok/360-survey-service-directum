@@ -16,10 +16,10 @@ export default function SurveyCreate() {
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [targetId, setTargetId] = useState<number | ''>('')
   const [templateId, setTemplateId] = useState<number | ''>('')
   const authorId = 1
 
+  // Получаем список сотрудников (если нужен для других целей, можно оставить)
   const { data: employees } = useQuery({
     queryKey: ['employees'],
     queryFn: getEmployees,
@@ -34,37 +34,26 @@ export default function SurveyCreate() {
     title?: string
     startDate?: string
     endDate?: string
-    targetId?: string
     general?: string
   }>({})
-
-  const employeeOptions = (employees || []).map(e => ({
-    value: e.id,
-    label: e.fullName,
-  }))
 
   const templateOptions = (templates || []).map(t => ({
     value: t.id,
     label: t.name,
   }))
 
-  const selectedEmployee = targetId
-    ? employeeOptions.find(opt => opt.value === targetId)
-    : null
-
   const selectedTemplate = templateId
     ? templateOptions.find(opt => opt.value === templateId)
     : null
 
   const validate = (): boolean => {
-    const newErrors: { title?: string; startDate?: string; endDate?: string; targetId?: string } = {}
+    const newErrors: { title?: string; startDate?: string; endDate?: string } = {}
     if (!title.trim()) newErrors.title = 'Введите название опроса'
     if (!startDate) newErrors.startDate = 'Выберите дату начала'
     if (!endDate) newErrors.endDate = 'Выберите дату окончания'
     else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
-    if (!targetId) newErrors.targetId = 'Выберите сотрудника, для которого проводится опрос'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -91,7 +80,6 @@ export default function SurveyCreate() {
       startDate,
       endDate,
       authorId,
-      targetId: targetId ? Number(targetId) : undefined,
       templateId: templateId ? Number(templateId) : undefined,
     })
   }
@@ -109,11 +97,6 @@ export default function SurveyCreate() {
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(e.target.value)
     setErrors((prev) => ({ ...prev, endDate: undefined, general: undefined }))
-  }
-
-  const handleTargetIdChange = (option: any) => {
-    setTargetId(option?.value || '')
-    setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
   }
 
   const handleTemplateIdChange = (option: any) => {
@@ -152,9 +135,11 @@ export default function SurveyCreate() {
               maxLength={250}
             />
             {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-              <span className={`text-sm ml-auto ${title.length >= 240 ? 'text-red-500' : 'text-gray-400'}`}>
+            <div className="flex justify-end mt-1">
+              <span className={`text-sm ${title.length >= 240 ? 'text-red-500' : 'text-gray-400'}`}>
                 {title.length}/250
               </span>
+            </div>
           </div>
 
           <div className="animate-fadeInUp-delay-2">
