@@ -29,10 +29,8 @@ public class AuthService(
         if (employee == null)
             throw new Exception("Пользователь с таким email не найден");
 
-        // Генерируем 6-значный код
         var code = new Random().Next(100000, 999999).ToString();
 
-        // Удаляем старые неиспользованные коды для этого email
         var oldCodes = await codeRepo.FindAsync(c => c.Email == email && !c.IsUsed);
         foreach (var old in oldCodes)
             codeRepo.Delete(old);
@@ -48,16 +46,8 @@ public class AuthService(
         await codeRepo.AddAsync(oneTimeCode);
         await codeRepo.SaveChangesAsync();
 
-        // Отправляем код на email
-        var subject = "Код для входа в Directum360";
-        var body = $@"
-            <h2>Здравствуйте, {employee.FullName}!</h2>
-            <p>Ваш одноразовый код для входа в систему:</p>
-            <h1 style='font-size: 36px; color: #FF8600;'>{code}</h1>
-            <p>Код действителен в течение 15 минут.</p>
-            <p>Если вы не запрашивали вход, проигнорируйте это письмо.</p>
-        ";
-        await emailService.SendEmailAsync(employee.Email, subject, body);
+        // Отправляем код через шаблон
+        await emailService.SendCodeEmailAsync(employee.Email, employee.FullName, code);
     }
 
     public async Task<AuthResponse> VerifyCodeAsync(string email, string code)
