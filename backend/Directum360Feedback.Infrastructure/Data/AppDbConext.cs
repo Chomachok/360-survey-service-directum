@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RespondentTemplateItem> RespondentTemplateItems { get; set; }
     public DbSet<SurveyTemplate> SurveyTemplates { get; set; }
     public DbSet<SurveyTemplateQuestion> SurveyTemplateQuestions { get; set; }
+    public DbSet<OneTimeCode> OneTimeCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -356,6 +357,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new { Id = 6, TemplateId = 2, EmployeeId = (int?)3, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
             new { Id = 7, TemplateId = 2, EmployeeId = (int?)4, Role = AssessmentRole.Colleague, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
         );
-        // ====================================================================
+        
+        modelBuilder.Entity<OneTimeCode>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(10);
+            entity.HasIndex(e => e.Email);
+            entity.HasIndex(e => e.Code);
+        });
+        
+        modelBuilder.Entity<Employee>().HasData(
+            new Employee { Id = 5, FullName = "Администратор", Email = "admin@directum360.ru", IsAdmin = true, CreatedAt = DateTime.UtcNow }
+        );
     }
 }

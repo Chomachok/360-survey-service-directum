@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Link, useLocation, Outlet } from 'react-router-dom'
+import { Link, NavLink, useLocation, Outlet, useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import Directum360Logo from './Directum360Logo'
 import AnimatedBackground from './AnimatedBackground'
-import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users, FileSpreadsheet, UserCheck, ChevronDown } from 'lucide-react'
+import { Sun, Moon, LayoutDashboard, FileText, ListChecks, Users, FileSpreadsheet, UserCheck, ChevronDown, LogOut } from 'lucide-react'
 
 const Layout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
+  const navigate = useNavigate()
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const userName = localStorage.getItem('userName') || 'Пользователь'
 
   const navItems = [
     { path: '/', label: 'Дашборд', icon: LayoutDashboard },
@@ -25,11 +28,11 @@ const Layout: React.FC = () => {
 
   const isTemplateActive = templateItems.some(item => location.pathname === item.path)
 
-  const isNavActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/'
-    }
-    return location.pathname === path
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('userName')
+    localStorage.removeItem('isAdmin')
+    navigate('/login')
   }
 
   useEffect(() => {
@@ -58,20 +61,22 @@ const Layout: React.FC = () => {
             <nav className="hidden md:flex items-center space-x-1 ml-4 flex-shrink-0">
               {navItems.map((item) => {
                 const Icon = item.icon
-                const active = isNavActive(item.path)
                 return (
-                  <Link
+                  <NavLink
                     key={item.path}
                     to={item.path}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                      active
-                        ? 'bg-directum-orange text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-105'
-                    }`}
+                    end={true}
+                    className={({ isActive }) =>
+                      `px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                        isActive
+                          ? 'bg-directum-orange text-white shadow-md'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-105'
+                      }`
+                    }
                   >
                     <Icon size={18} />
                     <span>{item.label}</span>
-                  </Link>
+                  </NavLink>
                 )
               })}
 
@@ -93,21 +98,23 @@ const Layout: React.FC = () => {
                   <div className="absolute left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 animate-fadeInUp">
                     {templateItems.map((item) => {
                       const Icon = item.icon
-                      const active = location.pathname === item.path
                       return (
-                        <Link
+                        <NavLink
                           key={item.path}
                           to={item.path}
-                          className={`flex items-center space-x-2 px-4 py-2 text-sm transition-colors ${
-                            active
-                              ? 'bg-directum-yellow text-directum-dark dark:bg-gray-700'
-                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
+                          end={true}
+                          className={({ isActive }) =>
+                            `flex items-center space-x-2 px-4 py-2 text-sm transition-colors ${
+                              isActive
+                                ? 'bg-directum-yellow text-directum-dark dark:bg-gray-700'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`
+                          }
                           onClick={() => setIsTemplatesOpen(false)}
                         >
                           <Icon size={18} />
                           <span>{item.label}</span>
-                        </Link>
+                        </NavLink>
                       )
                     })}
                   </div>
@@ -116,6 +123,9 @@ const Layout: React.FC = () => {
             </nav>
 
             <div className="flex items-center space-x-3">
+              <span className="text-sm text-gray-700 dark:text-gray-300 hidden sm:block">
+                {userName}
+              </span>
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-110"
@@ -124,9 +134,16 @@ const Layout: React.FC = () => {
                 {theme === 'light' ? <Moon size={20} className="text-gray-600" /> : <Sun size={20} className="text-yellow-400" />}
               </button>
               <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">
-                A
+                {userName.charAt(0).toUpperCase()}
               </div>
-            </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-110 text-gray-600 dark:text-gray-300"
+                title="Выйти"
+              >
+                <LogOut size={20} />
+              </button>
+            </div> 
           </div>
         </div>
       </header>
@@ -135,22 +152,24 @@ const Layout: React.FC = () => {
         <div className="flex overflow-x-auto px-4 py-2 space-x-2">
           {navItems.map((item) => {
             const Icon = item.icon
-            const active = isNavActive(item.path)
             return (
-              <Link
+              <NavLink
                 key={item.path}
                 to={item.path}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center space-x-1.5 ${
-                  active
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                <Icon size={16} />
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
+                end={true}
+                className={({ isActive }) =>
+                  `px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center space-x-1.5 ${
+                    isActive
+                      ? 'bg-directum-orange text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span>{item.label}</span>
+                </NavLink>
+              )
+            })
+          })
           <div className="relative">
             <button
               onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
@@ -168,21 +187,23 @@ const Layout: React.FC = () => {
               <div className="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
                 {templateItems.map((item) => {
                   const Icon = item.icon
-                  const active = location.pathname === item.path
                   return (
-                    <Link
+                    <NavLink
                       key={item.path}
                       to={item.path}
-                      className={`flex items-center space-x-2 px-4 py-2 text-sm transition-colors ${
-                        active
-                          ? 'bg-directum-yellow text-directum-dark dark:bg-gray-700'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
+                      end={true}
+                      className={({ isActive }) =>
+                        `flex items-center space-x-2 px-4 py-2 text-sm transition-colors ${
+                          isActive
+                            ? 'bg-directum-yellow text-directum-dark dark:bg-gray-700'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`
+                      }
                       onClick={() => setIsTemplatesOpen(false)}
                     >
                       <Icon size={16} />
                       <span>{item.label}</span>
-                    </Link>
+                    </NavLink>
                   )
                 })}
               </div>

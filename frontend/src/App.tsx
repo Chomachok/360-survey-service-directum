@@ -10,14 +10,18 @@ import Matrix from './pages/Matrix'
 import PublicSurvey from './pages/PublicSurvey'
 import Results from './pages/Results'
 import ImportEmployees from './pages/ImportEmployees'
+import LoginPage from './pages/LoginPage'
 import Layout from './components/Layout'
 import PublicLayout from './components/PublicLayout'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout />}>
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/survey/new" element={<SurveyCreate />} />
           <Route path="/survey/:id/edit" element={<SurveyEdit />} />
