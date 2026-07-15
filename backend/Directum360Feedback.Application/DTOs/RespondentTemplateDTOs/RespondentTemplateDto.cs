@@ -1,4 +1,4 @@
-namespace Directum360Feedback.Application.DTOs;
+namespace Directum360Feedback.Application.DTOs.RespondentTemplateDTOs;
 
 public class RespondentTemplateDto
 {

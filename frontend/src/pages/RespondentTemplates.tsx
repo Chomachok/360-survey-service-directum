@@ -9,26 +9,12 @@ import {
   deleteRespondentTemplate,
 } from '../api/respondentTemplates'
 import { getEmployees } from '../api/employees'
-import { AssessmentRole } from '../types'
 import type { RespondentTemplate, CreateRespondentTemplateItemDto } from '../types'
 import { ConfirmModal } from '../components/ConfirmModal'
 
-const roleLabels: Record<AssessmentRole, string> = {
-  [AssessmentRole.SelfAssessment]: 'Самооценка',
-  [AssessmentRole.Manager]: 'Руководитель',
-  [AssessmentRole.Colleague]: 'Коллега',
-}
-
-const roleBadge: Record<AssessmentRole, string> = {
-  [AssessmentRole.SelfAssessment]: 'bg-blue-100 text-blue-700',
-  [AssessmentRole.Manager]: 'bg-orange-100 text-directum-orange',
-  [AssessmentRole.Colleague]: 'bg-green-100 text-green-700',
-}
-
 /** пустая строка состава по умолчанию */
 const emptyItem = (): CreateRespondentTemplateItemDto => ({
-  employeeId: null,
-  role: AssessmentRole.Colleague,
+  employeeId: -1,
 })
 
 export default function RespondentTemplates() {
@@ -73,7 +59,7 @@ export default function RespondentTemplates() {
     setDescription(t.description ?? '')
     setItems(
       t.items.length
-        ? t.items.map((i) => ({ employeeId: i.employeeId, role: i.role }))
+        ? t.items.map((i) => ({ employeeId: i.employeeId ?? -1 }))
         : [emptyItem()],
     )
     setEditorOpen(true)
@@ -91,9 +77,7 @@ export default function RespondentTemplates() {
         name: name.trim(),
         description: description.trim() || undefined,
         items: items.map((i) => ({
-          // для самооценки сотрудник не нужен — оценивающим станет сам оцениваемый
-          employeeId: i.role === AssessmentRole.SelfAssessment ? null : i.employeeId,
-          role: i.role,
+          employeeId: i.employeeId,
         })),
       }
       return editingId ? updateRespondentTemplate(editingId, dto) : createRespondentTemplate(dto)
@@ -122,11 +106,13 @@ export default function RespondentTemplates() {
   })
 
   // ---------- валидация формы ----------
-  const selfCount = items.filter((i) => i.role === AssessmentRole.SelfAssessment).length
-  const missingEmployee = items.some(
-    (i) => i.role !== AssessmentRole.SelfAssessment && !i.employeeId,
-  )
-  const canSave = name.trim().length > 0 && items.length > 0 && !missingEmployee && selfCount <= 1
+  const duplicateEmployees = items
+    .map((i) => i.employeeId)
+    .filter((id) => id !== null)
+    .some((id, index, arr) => arr.indexOf(id) !== index)
+
+  const missingEmployee = items.some((i) => i.employeeId === null)
+  const canSave = name.trim().length > 0 && items.length > 0 && !missingEmployee && !duplicateEmployees
 
   const updateItem = (index: number, patch: Partial<CreateRespondentTemplateItemDto>) => {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
@@ -146,8 +132,7 @@ export default function RespondentTemplates() {
         <div>
           <h1 className="text-3xl font-bold text-directum-dark">Шаблоны респондентов</h1>
           <p className="mt-1 text-gray-500">
-            Заранее описанный состав оценивающих. Один шаблон подходит любому оцениваемому:
-            самооценка подставится автоматически.
+            Заранее описанный состав оценивающих. Один шаблон подходит любому оцениваемому.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center space-x-2">
@@ -199,14 +184,11 @@ export default function RespondentTemplates() {
                 {t.items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700"
+                    className="flex items-center rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700"
                   >
                     <span className="flex items-center gap-2 text-sm">
                       <UserCheck size={15} className="text-gray-400" />
-                      {item.employeeName}
-                    </span>
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${roleBadge[item.role]}`}>
-                      {roleLabels[item.role]}
+                      {item.employeeName || 'Неизвестно'}
                     </span>
                   </div>
                 ))}
@@ -272,70 +254,45 @@ export default function RespondentTemplates() {
                 </div>
 
                 <div className="space-y-2">
-                  {items.map((item, index) => {
-                    const isSelf = item.role === AssessmentRole.SelfAssessment
-                    return (
-                      <div key={index} className="flex items-center gap-2">
-                        <select
-                          value={item.role}
-                          onChange={(e) =>
-                            updateItem(index, {
-                              role: e.target.value as AssessmentRole,
-                              employeeId:
-                                (e.target.value as AssessmentRole) === AssessmentRole.SelfAssessment
-                                  ? null
-                                  : item.employeeId,
-                            })
-                          }
-                          className="input-field w-40 shrink-0"
-                        >
-                          <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
-                          <option value={AssessmentRole.Manager}>Руководитель</option>
-                          <option value={AssessmentRole.Colleague}>Коллега</option>
-                        </select>
+                  {items.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <select
+                        value={item.employeeId ?? ''}
+                        onChange={(e) =>
+                          updateItem(index, {
+                            employeeId: e.target.value === '' ? -1 : Number(e.target.value),
+                          })
+                        }
+                        className="input-field flex-1"
+                      >
+                        <option value="">Выберите сотрудника</option>
+                        {employees?.map((e) => (
+                          <option key={e.id} value={e.id}>
+                            {e.fullName}
+                          </option>
+                        ))}
+                      </select>
 
-                        {isSelf ? (
-                          <div className="input-field flex-1 cursor-not-allowed bg-gray-50 text-sm text-gray-500 dark:bg-gray-900">
-                            Сам оцениваемый
-                          </div>
-                        ) : (
-                          <select
-                            value={item.employeeId ?? ''}
-                            onChange={(e) =>
-                              updateItem(index, {
-                                employeeId: e.target.value === '' ? null : Number(e.target.value),
-                              })
-                            }
-                            className="input-field flex-1"
-                          >
-                            <option value="">Выберите сотрудника</option>
-                            {employees?.map((e) => (
-                              <option key={e.id} value={e.id}>
-                                {e.fullName}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-
-                        <button
-                          onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-                          className="p-1 text-gray-400 transition-colors hover:text-red-500 disabled:opacity-30"
-                          title="Убрать"
-                          disabled={items.length === 1}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    )
-                  })}
+                      <button
+                        onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
+                        className="p-1 text-gray-400 transition-colors hover:text-red-500 disabled:opacity-30"
+                        title="Убрать"
+                        disabled={items.length === 1}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
-                {selfCount > 1 && (
-                  <p className="mt-2 text-sm text-red-500">Самооценка может быть только одна</p>
-                )}
                 {missingEmployee && (
                   <p className="mt-2 text-sm text-red-500">
-                    У каждого респондента, кроме самооценки, нужно выбрать сотрудника
+                    У каждого респондента должен быть выбран сотрудник
+                  </p>
+                )}
+                {duplicateEmployees && (
+                  <p className="mt-2 text-sm text-red-500">
+                    Один сотрудник не может быть добавлен дважды
                   </p>
                 )}
               </div>

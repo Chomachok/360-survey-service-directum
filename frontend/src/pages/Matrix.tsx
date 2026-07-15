@@ -5,7 +5,6 @@ import { getEmployees } from '../api/employees'
 import { getSurvey } from '../api/surveys'
 import { getRespondentTemplates, applyRespondentTemplate } from '../api/respondentTemplates'
 import { useState, useEffect } from 'react'
-import { AssessmentRole } from '../types'
 import { ArrowLeft, Plus, Trash2, Link, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -39,7 +38,6 @@ export default function Matrix() {
   // Состояния
   const [evaluatorId, setEvaluatorId] = useState<number | ''>('')
   const [targetId, setTargetId] = useState<number | ''>('')
-  const [role, setRole] = useState<AssessmentRole>(AssessmentRole.Colleague)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
@@ -92,7 +90,6 @@ export default function Matrix() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setEvaluatorId('')
-      setRole(AssessmentRole.Colleague)
       toast.success('Связь добавлена в матрицу')
     },
     onError: (error: any) => {
@@ -140,14 +137,9 @@ export default function Matrix() {
       toast.error('Выберите сотрудника, которого оценивают')
       return
     }
-    if (role === AssessmentRole.SelfAssessment && evaluatorId !== targetId) {
-      toast.error('Для самооценки оценивающий должен быть тем же сотрудником, для которого проводится опрос')
-      return
-    }
     addMutation.mutate({
       evaluatorId: Number(evaluatorId),
       targetId: Number(targetId),
-      role,
     })
   }
 
@@ -185,12 +177,6 @@ export default function Matrix() {
     navigator.clipboard.writeText(url)
       .then(() => toast.success('Ссылка скопирована в буфер обмена!', { icon: '📋' }))
       .catch(() => toast.error('Не удалось скопировать ссылку'))
-  }
-
-  const roleLabels = {
-    [AssessmentRole.SelfAssessment]: 'Самооценка',
-    [AssessmentRole.Manager]: 'Руководитель',
-    [AssessmentRole.Colleague]: 'Коллега',
   }
 
   if (surveyLoading || mLoading || templatesLoading) {
@@ -289,27 +275,6 @@ export default function Matrix() {
                 />
               </div>
 
-              <div className="min-w-[150px]">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Роль
-                </label>
-                <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as AssessmentRole)}
-                className="input-field"
-                disabled={!isDraft || !targetEmployee || !evaluatorId}
-              >
-                {evaluatorId && targetId && Number(evaluatorId) === targetId ? (
-                  <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
-                ) : (
-                  <>
-                    <option value={AssessmentRole.Manager}>Руководитель</option>
-                    <option value={AssessmentRole.Colleague}>Коллега</option>
-                  </>
-                )}
-              </select>
-              </div>
-
               <div className="flex items-end">
                 <button
                   onClick={handleAdd}
@@ -346,7 +311,6 @@ export default function Matrix() {
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Роль</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
@@ -361,11 +325,6 @@ export default function Matrix() {
                   >
                     <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                     <td className="py-3 px-4 text-sm">{item.targetName}</td>
-                    <td className="py-3 px-4">
-                      <span className="text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
-                        {roleLabels[item.role]}
-                      </span>
-                    </td>
                     <td className="py-3 px-4">
                       <button
                         onClick={() => handleCopyLink(item.token)}

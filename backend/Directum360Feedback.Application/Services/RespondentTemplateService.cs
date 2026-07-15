@@ -17,8 +17,6 @@ public class RespondentTemplateService(
     IMapper mapper)
     : IRespondentTemplateService
 {
-    private const string SelfLabel = "Сам оцениваемый";
-
     // ---------- чтение ----------
 
     public async Task<IEnumerable<RespondentTemplateDto>> GetAllAsync()
@@ -52,8 +50,7 @@ public class RespondentTemplateService(
             Items = dto.Items
                 .Select(i => new RespondentTemplateItem
                 {
-                    EmployeeId = i.Role == AssessmentRole.SelfAssessment ? null : i.EmployeeId,
-                    Role = i.Role
+                    EmployeeId = i.EmployeeId
                 })
                 .ToList()
         };
@@ -72,10 +69,7 @@ public class RespondentTemplateService(
         template.Name = dto.Name.Trim();
         template.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
 
-        // Состав перезаписываем целиком — так проще и предсказуемее, чем диффить.
-        // Сущность уже отслеживается (загружена через FindAsync с Include), поэтому
-        // достаточно менять коллекцию: DbSet.Update здесь не нужен и только мешал бы,
-        // переводя удаляемых детей обратно в Modified.
+        // Перезаписываем состав целиком
         foreach (var old in template.Items.ToList())
         {
             template.Items.Remove(old);
@@ -87,8 +81,7 @@ public class RespondentTemplateService(
             template.Items.Add(new RespondentTemplateItem
             {
                 TemplateId = template.Id,
-                EmployeeId = i.Role == AssessmentRole.SelfAssessment ? null : i.EmployeeId,
-                Role = i.Role
+                EmployeeId = i.EmployeeId,
             });
         }
 
@@ -115,7 +108,7 @@ public class RespondentTemplateService(
 
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе «Черновик»");
-        
+
         var target = await employeeRepo.GetByIdAsync(dto.TargetId)
                      ?? throw new Exception("Оцениваемый сотрудник не найден");
 
@@ -124,25 +117,22 @@ public class RespondentTemplateService(
         if (template.Items.Count == 0)
             throw new Exception("Шаблон пуст — добавьте в него хотя бы одного респондента");
 
-        // уже существующие связи этого опроса, чтобы не плодить дубли
+        // уже существующие связи этого опроса (EvaluatorId, TargetId)
         var existing = (await assignmentRepo.FindAsync(a => a.SurveyId == surveyId))
-            .Select(a => (a.EvaluatorId, a.TargetId, a.Role))
+            .Select(a => (a.EvaluatorId, a.TargetId))
             .ToHashSet();
 
         var result = new ApplyRespondentTemplateResultDto();
 
         foreach (var item in template.Items)
         {
-            // для самооценки оценивающий и есть оцениваемый
-            if (item.Role != AssessmentRole.SelfAssessment && item.EmployeeId is null)
-                throw new Exception($"Шаблон «{template.Name}» повреждён: у респондента с ролью {item.Role} не указан сотрудник");
+            if (item.EmployeeId is null)
+                throw new Exception($"Шаблон «{template.Name}» повреждён: у респондента не указан сотрудник");
 
-            var evaluatorId = item.Role == AssessmentRole.SelfAssessment
-                ? target.Id
-                : item.EmployeeId!.Value;
+            var evaluatorId = item.EmployeeId.Value;
 
-            var key = (evaluatorId, target.Id, item.Role);
-            if (!existing.Add(key))
+            var key = (evaluatorId, target.Id);
+            if (existing.Contains(key))
             {
                 result.Skipped++;
                 continue;
@@ -153,7 +143,6 @@ public class RespondentTemplateService(
                 SurveyId = surveyId,
                 EvaluatorId = evaluatorId,
                 TargetId = target.Id,
-                Role = item.Role,
                 Token = Guid.NewGuid().ToString(),
                 InviteSent = false
             };
@@ -163,7 +152,6 @@ public class RespondentTemplateService(
             {
                 EvaluatorId = evaluatorId,
                 TargetId = target.Id,
-                Role = item.Role,
                 TargetName = target.FullName,
                 EvaluatorName = evaluatorId == target.Id
                     ? target.FullName
@@ -172,6 +160,7 @@ public class RespondentTemplateService(
                 Completed = false
             });
             result.Created++;
+            existing.Add(key);
         }
 
         if (result.Created > 0)
@@ -209,11 +198,7 @@ public class RespondentTemplateService(
             Items = assignments
                 .Select(a => new RespondentTemplateItem
                 {
-                    // самооценку сохраняем как «сам оцениваемый», чтобы шаблон остался переносимым
-                    EmployeeId = a.Role == AssessmentRole.SelfAssessment || a.EvaluatorId == a.TargetId
-                        ? null
-                        : a.EvaluatorId,
-                    Role = a.Role
+                    EmployeeId = a.EvaluatorId
                 })
                 .ToList()
         };
@@ -240,29 +225,22 @@ public class RespondentTemplateService(
         if (items.Count == 0)
             throw new Exception("Добавьте в шаблон хотя бы одного респондента");
 
-        if (items.Count(i => i.Role == AssessmentRole.SelfAssessment) > 1)
-            throw new Exception("Самооценка может быть в шаблоне только одна");
-
         foreach (var item in items)
         {
-            if (item.Role == AssessmentRole.SelfAssessment)
-                continue;
-
             if (item.EmployeeId is null)
-                throw new Exception("У каждого респондента, кроме самооценки, должен быть выбран сотрудник");
+                throw new Exception("У каждого респондента должен быть выбран сотрудник");
 
             if (await employeeRepo.GetByIdAsync(item.EmployeeId.Value) is null)
                 throw new Exception($"Сотрудник с id={item.EmployeeId} не найден");
         }
 
-        // один и тот же сотрудник в одной и той же роли дважды — почти наверняка ошибка
+        // Проверка дублирования одного и того же сотрудника в шаблоне
         var duplicate = items
-            .Where(i => i.Role != AssessmentRole.SelfAssessment)
-            .GroupBy(i => new { i.EmployeeId, i.Role })
+            .GroupBy(i => i.EmployeeId)
             .FirstOrDefault(g => g.Count() > 1);
 
         if (duplicate != null)
-            throw new Exception("В шаблоне есть повторяющийся респондент с той же ролью");
+            throw new Exception("В шаблоне есть повторяющийся респондент");
     }
 
     private RespondentTemplateDto ToDto(RespondentTemplate t, IReadOnlyDictionary<int, string> employees)
@@ -273,13 +251,11 @@ public class RespondentTemplateService(
             {
                 Id = i.Id,
                 EmployeeId = i.EmployeeId,
-                Role = i.Role,
                 EmployeeName = i.EmployeeId is null
-                    ? SelfLabel
+                    ? "Неизвестно"
                     : employees.TryGetValue(i.EmployeeId.Value, out var n) ? n : "Unknown"
             })
-            .OrderBy(i => i.Role)
-            .ThenBy(i => i.EmployeeName)
+            .OrderBy(i => i.EmployeeName)
             .ToList();
         return dto;
     }

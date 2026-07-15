@@ -200,7 +200,7 @@ export default function SurveyEdit() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/survey/${surveyId}/questions`)}
+              onClick={() => navigate(`/`)}
               className="btn-secondary flex-1"
             >
               Отмена

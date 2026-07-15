@@ -1,5 +1,6 @@
 using AutoMapper;
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.RespondentTemplateDTOs;
 using Directum360Feedback.Domain.Entities;
 
 namespace Directum360Feedback.Application.Mappings;

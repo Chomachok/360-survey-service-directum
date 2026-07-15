@@ -9,7 +9,6 @@ public class MatrixItemDto
     public string EvaluatorName { get; set; } = string.Empty;
     public int TargetId { get; set; }
     public string TargetName { get; set; } = string.Empty;
-    public AssessmentRole Role { get; set; }
     public string Token { get; set; } = string.Empty;
     public bool Completed { get; set; }
 }

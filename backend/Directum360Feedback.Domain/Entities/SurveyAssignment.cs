@@ -10,7 +10,6 @@ public class SurveyAssignment : BaseEntity
     public Employee Evaluator { get; set; } = null!;
     public int TargetId { get; set; }
     public Employee Target { get; set; } = null!;
-    public AssessmentRole Role { get; set; }
     public string Token { get; set; } = Guid.NewGuid().ToString();
     public bool Completed { get; set; }
     public DateTime? CompletedAt { get; set; }

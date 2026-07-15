@@ -27,12 +27,6 @@ public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailServ
             }
 
             var targetName = assignment.Target?.FullName ?? "сотрудника";
-            var roleName = assignment.Role switch
-            {
-                Domain.Enums.AssessmentRole.SelfAssessment => "Самооценка",
-                Domain.Enums.AssessmentRole.Manager => "Руководитель",
-                _ => "Коллега"
-            };
 
             var surveyLink = $"{baseUrl.TrimEnd('/')}/survey/{assignment.Token}";
 
@@ -41,7 +35,6 @@ public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailServ
             htmlBody = htmlBody
                 .Replace("{{FullName}}", evaluator.FullName)
                 .Replace("{{TargetName}}", targetName)
-                .Replace("{{Role}}", roleName)
                 .Replace("{{SurveyLink}}", surveyLink);
 
             var subject = $"Приглашение на опрос 360 градусов для {targetName}";

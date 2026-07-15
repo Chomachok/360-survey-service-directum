@@ -8,5 +8,4 @@ public class RespondentTemplateItemDto
     /// <summary>null — «сам оцениваемый» (самооценка)</summary>
     public int? EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
-    public AssessmentRole Role { get; set; }
 }
