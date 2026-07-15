@@ -1,9 +1,7 @@
-using AutoMapper;
 using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Infrastructure.Repositories;
 using Directum360Feedback.Application.DTOs.ResultDTOs;
-using Directum360Feedback.Domain.Enums;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -14,9 +12,7 @@ public class ResultService(
     IRepository<Survey> surveyRepo,
     IRepository<SurveyAssignment> assignmentRepo,
     IRepository<SurveyQuestion> questionRepo,
-    IRepository<Answer> answerRepo,
-    IRepository<Employee> employeeRepo,
-    IMapper mapper)
+    IRepository<Answer> answerRepo)
     : IResultService
 {
     public async Task<ResultDto> GetSurveyResultsAsync(int surveyId)
@@ -74,8 +70,7 @@ public class ResultService(
                 var evaluatorResult = new EvaluatorResultDto
                 {
                     EvaluatorId = assignment.EvaluatorId,
-                    EvaluatorName = assignment.Evaluator?.FullName ?? "Unknown",
-                    Role = assignment.Role,
+                    EvaluatorName = assignment.Evaluator.FullName,
                     Answers = new List<QuestionAnswerDto>()
                 };
 
@@ -161,16 +156,9 @@ public class ResultService(
                 // ---- По каждому оценщику ----
                 foreach (var evaluator in empResult.Evaluators)
                 {
-                    var role = evaluator.Role switch
-                    {
-                        AssessmentRole.Manager => "Руководитель",
-                        AssessmentRole.SelfAssessment => "Самооценка",
-                        _ => "Коллега"
-                    };
-
                     // Оценщик + роль (оранжевый, жирный, 12pt)
                     var evalPara = new Paragraph();
-                    var evalRun = new Run(new Text($"  Оценщик: {evaluator.EvaluatorName} (Роль: {role})"));
+                    var evalRun = new Run(new Text($"  Оценщик: {evaluator.EvaluatorName}"));
                     evalRun.RunProperties = new RunProperties(
                         new Bold(),
                         new FontSize { Val = "24" },

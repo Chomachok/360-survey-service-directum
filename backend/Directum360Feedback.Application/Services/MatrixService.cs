@@ -45,10 +45,7 @@ public class MatrixService(
 
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе Черновик");
-
-        if (dto.Role == AssessmentRole.SelfAssessment && dto.EvaluatorId != dto.TargetId)
-            throw new Exception("Для самооценки оценивающий и оцениваемый должны быть одним сотрудником");
-
+        
         var assignment = mapper.Map<SurveyAssignment>(dto);
         assignment.SurveyId = surveyId;
         assignment.Token = Guid.NewGuid().ToString();

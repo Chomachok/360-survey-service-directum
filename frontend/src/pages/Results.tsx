@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getResults, exportDocx } from '../api/results'
 import { ArrowLeft, Download, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
+import { EmployeeResultDto, EvaluatorResultDto, QuestionAnswerDto } from '../types'
 
 export default function Results() {
   const { id } = useParams<{ id: string }>()
@@ -61,12 +62,6 @@ export default function Results() {
     )
   }
 
-  const roleLabels: Record<string, string> = {
-    SelfAssessment: 'Самооценка',
-    Manager: 'Руководитель',
-    Colleague: 'Коллеги',
-  }
-
   return (
     <div>
       <button
@@ -77,7 +72,7 @@ export default function Results() {
         Назад к дашборду
       </button>
 
-      <div className="flex justify-between items-center mb-6 animate-fadeInUp ">
+      <div className="flex justify-between items-center mb-6 animate-fadeInUp">
         <div className="min-w-0 overflow-hidden">
           <h1 className="text-2xl font-bold text-directum-dark">Результаты опроса</h1>
           <p className="text-gray-500 break-words overflow-hidden">{data.surveyTitle}</p>
@@ -89,7 +84,7 @@ export default function Results() {
       </div>
 
       <div className="space-y-4">
-        {data.results.map((employee) => {
+        {data.results.map((employee: EmployeeResultDto) => {
           const isEmployeeExpanded = expandedEmployees.has(employee.employeeId)
           return (
             <div key={employee.employeeId} className="card animate-fadeInUp">
@@ -115,7 +110,7 @@ export default function Results() {
 
               {isEmployeeExpanded && (
                 <div className="mt-4 space-y-4">
-                  {employee.evaluators.map((evaluator) => {
+                  {employee.evaluators.map((evaluator: EvaluatorResultDto) => {
                     const key = `${employee.employeeId}-${evaluator.evaluatorId}`
                     const isEvaluatorExpanded = expandedEvaluators.has(key)
                     return (
@@ -128,12 +123,7 @@ export default function Results() {
                             <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold text-sm">
                               {evaluator.evaluatorName.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                              <span className="font-medium text-directum-dark">{evaluator.evaluatorName}</span>
-                              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
-                                {roleLabels[evaluator.role] || evaluator.role}
-                              </span>
-                            </div>
+                            <span className="font-medium text-directum-dark">{evaluator.evaluatorName}</span>
                           </div>
                           <div className="text-gray-400">
                             {isEvaluatorExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -142,7 +132,7 @@ export default function Results() {
 
                         {isEvaluatorExpanded && (
                           <div className="mt-3 space-y-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
-                            {evaluator.answers.map((qa, idx) => (
+                            {evaluator.answers.map((qa: QuestionAnswerDto, idx: number) => (
                               <div key={idx} className="text-sm">
                                 <div className="text-gray-600 dark:text-gray-400">
                                   {qa.questionText}

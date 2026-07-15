@@ -7,7 +7,6 @@ public class PublicSurveyDto
     public int SurveyId { get; set; }
     public string SurveyTitle { get; set; } = string.Empty;
     public string TargetName { get; set; } = string.Empty;
-    public AssessmentRole Role { get; set; }
     public List<PublicQuestionDto> Questions { get; set; } = new();
 }
 
