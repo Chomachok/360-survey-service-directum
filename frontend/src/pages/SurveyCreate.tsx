@@ -169,25 +169,6 @@ export default function SurveyCreate() {
           </div>
 
           <div className="animate-fadeInUp-delay-2">
-            <label className="label-field">
-              Сотрудник, про которого проводится опрос <span className="text-red-500">*</span>
-            </label>
-            <Select
-              options={employeeOptions}
-              value={selectedEmployee}
-              onChange={handleTargetIdChange}
-              placeholder="Выберите сотрудника"
-              isClearable
-              isSearchable
-              styles={reactSelectStyles}
-              menuPortalTarget={document.body}
-              menuPosition="fixed"
-              className={errors.targetId ? 'border-red-500 rounded-lg' : ''}
-            />
-            {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
-          </div>
-
-          <div className="animate-fadeInUp-delay-2">
             <label className="label-field">Шаблон опроса (опционально)</label>
             <Select
               options={templateOptions}
