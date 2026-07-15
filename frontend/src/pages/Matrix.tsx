@@ -355,7 +355,7 @@ export default function Matrix() {
                     <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                     <td className="py-3 px-4 text-sm">{item.targetName}</td>
                     <td className="py-3 px-4">
-                      <span className="text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
+                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
                         {roleLabels[item.role]}
                       </span>
                     </td>
