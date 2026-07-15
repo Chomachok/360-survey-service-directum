@@ -294,15 +294,20 @@ export default function Matrix() {
                   Роль
                 </label>
                 <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as AssessmentRole)}
-                  className="input-field"
-                  disabled={!isDraft || !targetId}
-                >
+                value={role}
+                onChange={(e) => setRole(e.target.value as AssessmentRole)}
+                className="input-field"
+                disabled={!isDraft || !targetEmployee || !evaluatorId}
+              >
+                {evaluatorId && targetId && Number(evaluatorId) === targetId ? (
                   <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
-                  <option value={AssessmentRole.Manager}>Руководитель</option>
-                  <option value={AssessmentRole.Colleague}>Коллега</option>
-                </select>
+                ) : (
+                  <>
+                    <option value={AssessmentRole.Manager}>Руководитель</option>
+                    <option value={AssessmentRole.Colleague}>Коллега</option>
+                  </>
+                )}
+              </select>
               </div>
 
               <div className="flex items-end">
