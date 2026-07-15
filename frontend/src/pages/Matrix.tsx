@@ -234,7 +234,7 @@ export default function Matrix() {
                   styles={reactSelectStyles}
                   menuPortalTarget={document.body}
                   menuPosition="fixed"
-                  isDisabled={!isDraft || !targetId}
+                  isDisabled={!isDraft} // убрали зависимость от targetId
                 />
               </div>
               <button
@@ -246,6 +246,7 @@ export default function Matrix() {
                 <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
               </button>
               <span className="text-xs text-gray-500">
+                {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
               </span>
             </div>
 
@@ -355,7 +356,7 @@ export default function Matrix() {
                     <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                     <td className="py-3 px-4 text-sm">{item.targetName}</td>
                     <td className="py-3 px-4">
-                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                      <span className="text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
                         {roleLabels[item.role]}
                       </span>
                     </td>
