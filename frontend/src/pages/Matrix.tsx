@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getMatrix, addMatrixItem, deleteMatrixItem } from '../api/matrix'
 import { getEmployees } from '../api/employees'
 import { getSurvey } from '../api/surveys'
+import { getRespondentTemplates, applyRespondentTemplate } from '../api/respondentTemplates'
 import { useState, useEffect } from 'react'
 import { AssessmentRole } from '../types'
-import { ArrowLeft, Plus, Trash2, Link } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Link, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import Select from 'react-select'
@@ -30,17 +31,23 @@ export default function Matrix() {
     queryKey: ['employees'],
     queryFn: getEmployees,
   })
+  const { data: templates, isLoading: templatesLoading } = useQuery({
+    queryKey: ['respondentTemplates'],
+    queryFn: getRespondentTemplates,
+  })
 
   // Состояния
   const [evaluatorId, setEvaluatorId] = useState<number | ''>('')
   const [targetId, setTargetId] = useState<number | ''>('')
   const [role, setRole] = useState<AssessmentRole>(AssessmentRole.Colleague)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     id?: number
     evaluatorName?: string
     targetName?: string
   }>({ isOpen: false })
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
 
   const isDraft = survey?.status === 'Draft'
 
@@ -60,6 +67,10 @@ export default function Matrix() {
     value: e.id,
     label: e.fullName,
   }))
+  const templateOptions = (templates || []).map(t => ({
+    value: t.id,
+    label: t.name,
+  }))
 
   const selectedEvaluator = evaluatorId
     ? evaluatorOptions.find(opt => opt.value === evaluatorId)
@@ -69,6 +80,10 @@ export default function Matrix() {
     ? targetOptions.find(opt => opt.value === targetId)
     : null
 
+  const selectedTemplate = selectedTemplateId
+    ? templateOptions.find(opt => opt.value === selectedTemplateId)
+    : null
+
   // Находим имя целевого сотрудника для отображения
   const targetEmployee = employees?.find(e => e.id === targetId)
 
@@ -76,7 +91,6 @@ export default function Matrix() {
     mutationFn: (data: any) => addMatrixItem(surveyId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
-      // Сбрасываем только оценивающего и роль, целевой сотрудник остаётся
       setEvaluatorId('')
       setRole(AssessmentRole.Colleague)
       toast.success('Связь добавлена в матрицу')
@@ -100,6 +114,22 @@ export default function Matrix() {
     },
   })
 
+  const applyTemplateMutation = useMutation({
+    mutationFn: (data: { templateId: number }) =>
+      applyRespondentTemplate(surveyId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
+      setIsApplyingTemplate(false)
+      setSelectedTemplateId(null)
+      toast.success('Шаблон матрицы успешно применён!')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message || 'Не удалось применить шаблон'
+      toast.error(message)
+      setIsApplyingTemplate(false)
+    },
+  })
+
   const handleAdd = () => {
     if (!evaluatorId) {
       toast.error('Выберите оценивающего сотрудника')
@@ -120,12 +150,29 @@ export default function Matrix() {
     })
   }
 
+  const handleApplyTemplate = () => {
+    if (!selectedTemplateId) {
+      toast.error('Выберите шаблон матрицы')
+      return
+    }
+    if (!targetId) {
+      toast.error('Сначала выберите сотрудника, которого оценивают')
+      return
+    }
+    setIsApplyingTemplate(true)
+    applyTemplateMutation.mutate({ templateId: selectedTemplateId })
+  }
+
   const handleEvaluatorChange = (option: any) => {
     setEvaluatorId(option?.value || '')
   }
 
   const handleTargetChange = (option: any) => {
     setTargetId(option?.value || '')
+  }
+
+  const handleTemplateChange = (option: any) => {
+    setSelectedTemplateId(option?.value || null)
   }
 
   const handleDeleteClick = (id: number, evaluatorName: string, targetName: string) => {
@@ -145,7 +192,7 @@ export default function Matrix() {
     [AssessmentRole.Colleague]: 'Коллега',
   }
 
-  if (surveyLoading || mLoading) {
+  if (surveyLoading || mLoading || templatesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
@@ -170,68 +217,102 @@ export default function Matrix() {
         </p>
 
         {isDraft ? (
-          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кто оценивает
-              </label>
-              <Select
-                options={evaluatorOptions}
-                value={selectedEvaluator}
-                onChange={handleEvaluatorChange}
-                placeholder="Выберите сотрудника"
-                isClearable
-                isSearchable
-                styles={reactSelectStyles}
-                menuPortalTarget={document.body}
-                menuPosition="fixed"
-                isDisabled={!isDraft || !targetEmployee}
-              />
-            </div>
-
-            <div className="flex-1 min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Кого оценивают
-              </label>
-              <Select
-                options={targetOptions}
-                value={selectedTarget}
-                onChange={handleTargetChange}
-                placeholder="Выберите сотрудника"
-                isClearable
-                isSearchable
-                styles={reactSelectStyles}
-                menuPortalTarget={document.body}
-                menuPosition="fixed"
-                isDisabled={!isDraft}
-              />
-            </div>
-
-            <div className="min-w-[150px]">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                Роль
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as AssessmentRole)}
-                className="input-field"
-                disabled={!isDraft || !targetEmployee}
-              >
-                <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
-                <option value={AssessmentRole.Manager}>Руководитель</option>
-                <option value={AssessmentRole.Colleague}>Коллега</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
+          <div className="space-y-4">
+            {/* Блок применения шаблона */}
+            <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Шаблон матрицы
+                </label>
+                <Select
+                  options={templateOptions}
+                  value={selectedTemplate}
+                  onChange={handleTemplateChange}
+                  placeholder="Выберите шаблон"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft || !targetId}
+                />
+              </div>
               <button
-                onClick={handleAdd}
+                onClick={handleApplyTemplate}
                 className="btn-primary flex items-center space-x-2"
-                disabled={addMutation.isPending || !evaluatorId || !targetEmployee}
+                disabled={isApplyingTemplate || !selectedTemplateId || !targetId}
               >
-                <Plus size={18} />
-                <span>Добавить</span>
+                <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
+                <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
               </button>
+              <span className="text-xs text-gray-500">
+              </span>
+            </div>
+
+            {/* Ручное добавление */}
+            <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Кто оценивает
+                </label>
+                <Select
+                  options={evaluatorOptions}
+                  value={selectedEvaluator}
+                  onChange={handleEvaluatorChange}
+                  placeholder="Выберите сотрудника"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft || !targetId}
+                />
+              </div>
+
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Кого оценивают
+                </label>
+                <Select
+                  options={targetOptions}
+                  value={selectedTarget}
+                  onChange={handleTargetChange}
+                  placeholder="Выберите сотрудника"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft}
+                />
+              </div>
+
+              <div className="min-w-[150px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Роль
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as AssessmentRole)}
+                  className="input-field"
+                  disabled={!isDraft || !targetId}
+                >
+                  <option value={AssessmentRole.SelfAssessment}>Самооценка</option>
+                  <option value={AssessmentRole.Manager}>Руководитель</option>
+                  <option value={AssessmentRole.Colleague}>Коллега</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={handleAdd}
+                  className="btn-primary flex items-center space-x-2"
+                  disabled={addMutation.isPending || !evaluatorId || !targetId}
+                >
+                  <Plus size={18} />
+                  <span>Добавить</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -246,8 +327,8 @@ export default function Matrix() {
           <div className="text-center py-8 text-gray-500 animate-fadeInUp">
             <p>Матрица пуста</p>
             <p className="text-sm">
-              {isDraft && targetEmployee
-                ? 'Добавьте связи между сотрудниками с помощью формы выше'
+              {isDraft && targetId
+                ? 'Добавьте связи между сотрудниками с помощью формы выше или примените шаблон'
                 : 'Связи не добавлены'}
             </p>
           </div>
