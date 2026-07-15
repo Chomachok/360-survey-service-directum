@@ -169,13 +169,6 @@ export default function Matrix() {
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
-        {/* Информация о целевом сотруднике */}
-        {targetEmployee && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
-            🎯 Опрос проводится для сотрудника: <strong>{targetEmployee.fullName}</strong>
-          </div>
-        )}
-
         {isDraft ? (
           <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
             <div className="flex-1 min-w-[150px]">
