@@ -29,10 +29,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<SurveyAssignment>()
-            .HasOne(a => a.Target)
-            .WithMany(e => e.AssignmentsAsTarget)
-            .HasForeignKey(a => a.TargetId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasOne(a => a.Survey)
+            .WithMany(s => s.Assignments)
+            .HasForeignKey(a => a.SurveyId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Настройка для SurveyQuestion
         modelBuilder.Entity<SurveyQuestion>()
