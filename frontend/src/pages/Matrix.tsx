@@ -115,7 +115,7 @@ export default function Matrix() {
   })
 
   const applyTemplateMutation = useMutation({
-    mutationFn: (data: { templateId: number }) =>
+    mutationFn: (data: { templateId: number; targetId: number }) =>
       applyRespondentTemplate(surveyId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
@@ -124,6 +124,7 @@ export default function Matrix() {
       toast.success('Шаблон матрицы успешно применён!')
     },
     onError: (error: any) => {
+      console.error('Ошибка применения шаблона:', error)
       const message = error.response?.data?.message || error.message || 'Не удалось применить шаблон'
       toast.error(message)
       setIsApplyingTemplate(false)
@@ -160,7 +161,7 @@ export default function Matrix() {
       return
     }
     setIsApplyingTemplate(true)
-    applyTemplateMutation.mutate({ templateId: selectedTemplateId })
+    applyTemplateMutation.mutate({ templateId: selectedTemplateId, targetId: Number(targetId) })
   }
 
   const handleEvaluatorChange = (option: any) => {
@@ -234,7 +235,7 @@ export default function Matrix() {
                   styles={reactSelectStyles}
                   menuPortalTarget={document.body}
                   menuPosition="fixed"
-                  isDisabled={!isDraft} // убрали зависимость от targetId
+                  isDisabled={!isDraft}
                 />
               </div>
               <button
@@ -356,7 +357,7 @@ export default function Matrix() {
                     <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                     <td className="py-3 px-4 text-sm">{item.targetName}</td>
                     <td className="py-3 px-4">
-                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                      <span className="text-xs px-2 py-1 rounded-full bg-directum-yellow text-directum-dark">
                         {roleLabels[item.role]}
                       </span>
                     </td>

@@ -28,24 +28,13 @@ export default function SurveyEdit() {
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [targetId, setTargetId] = useState<number | ''>('')
 
   const [errors, setErrors] = useState<{
     title?: string
     startDate?: string
     endDate?: string
-    targetId?: string
     general?: string
   }>({})
-
-  const employeeOptions = (employees || []).map(e => ({
-    value: e.id,
-    label: e.fullName,
-  }))
-
-  const selectedOption = targetId
-    ? employeeOptions.find(opt => opt.value === targetId)
-    : null
 
   useEffect(() => {
     if (survey) {
@@ -53,19 +42,17 @@ export default function SurveyEdit() {
       setDescription(survey.description || '')
       setStartDate(survey.startDate.slice(0, 16))
       setEndDate(survey.endDate.slice(0, 16))
-      setTargetId(survey.targetId || '')
     }
   }, [survey])
 
   const validate = (): boolean => {
-    const newErrors: { title?: string; startDate?: string; endDate?: string; targetId?: string } = {}
+    const newErrors: { title?: string; startDate?: string; endDate?: string } = {}
     if (!title.trim()) newErrors.title = 'Введите название опроса'
     if (!startDate) newErrors.startDate = 'Выберите дату начала'
     if (!endDate) newErrors.endDate = 'Выберите дату окончания'
     else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
-    if (!targetId) newErrors.targetId = 'Выберите сотрудника, для которого проводится опрос'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -93,7 +80,6 @@ export default function SurveyEdit() {
       description,
       startDate,
       endDate,
-      targetId: targetId ? Number(targetId) : undefined,
     })
   }
 
@@ -110,11 +96,6 @@ export default function SurveyEdit() {
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(e.target.value)
     setErrors((prev) => ({ ...prev, endDate: undefined, general: undefined }))
-  }
-
-  const handleTargetIdChange = (option: any) => {
-    setTargetId(option?.value || '')
-    setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
   }
 
   if (surveyLoading) {
@@ -182,26 +163,6 @@ export default function SurveyEdit() {
               rows={3}
               placeholder="Опишите цель и задачи опроса..."
             />
-          </div>
-
-          <div className="animate-fadeInUp-delay-2">
-            <label className="label-field">
-              Сотрудник, для которого проводится опрос <span className="text-red-500">*</span>
-            </label>
-            <Select
-              options={employeeOptions}
-              value={selectedOption}
-              onChange={handleTargetIdChange}
-              placeholder="Выберите сотрудника"
-              isClearable
-              isSearchable
-              styles={reactSelectStyles}
-              menuPortalTarget={document.body}
-              menuPosition="fixed"
-              isDisabled={!isDraft}
-              className={errors.targetId ? 'border-red-500 rounded-lg' : ''}
-            />
-            {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

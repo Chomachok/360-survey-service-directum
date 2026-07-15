@@ -34,8 +34,14 @@ export interface CreateSurveyDto {
   startDate: string
   endDate: string
   authorId: number
-  targetId?: number,
   templateId?: number
+}
+
+export interface UpdateSurveyDto {
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
 }
 
 export interface Question {

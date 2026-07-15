@@ -1,5 +1,6 @@
 using AutoMapper;
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.RespondentTemplateDTOs;
 using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Domain.Enums;
@@ -114,12 +115,8 @@ public class RespondentTemplateService(
 
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе «Черновик»");
-
-        // оцениваемый теперь задаётся на уровне опроса
-        if (survey.TargetId is null)
-            throw new Exception("Для опроса не указан оцениваемый сотрудник — задайте его в настройках опроса");
-
-        var target = await employeeRepo.GetByIdAsync(survey.TargetId.Value)
+        
+        var target = await employeeRepo.GetByIdAsync(dto.TargetId)
                      ?? throw new Exception("Оцениваемый сотрудник не найден");
 
         var template = await LoadWithItemsAsync(dto.TemplateId);

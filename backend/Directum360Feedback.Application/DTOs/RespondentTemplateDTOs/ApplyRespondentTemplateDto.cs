@@ -1,4 +1,4 @@
-namespace Directum360Feedback.Application.DTOs;
+namespace Directum360Feedback.Application.DTOs.RespondentTemplateDTOs;
 
 /// <summary>
 /// Применить шаблон респондентов к опросу.
@@ -8,4 +8,5 @@ namespace Directum360Feedback.Application.DTOs;
 public class ApplyRespondentTemplateDto
 {
     public int TemplateId { get; set; }
+    public int TargetId { get; set; }
 }

@@ -132,7 +132,6 @@ public class SurveyService(
     {
         var survey = mapper.Map<Survey>(dto);
         survey.Status = SurveyStatus.Draft;
-        survey.TargetId = dto.TargetId;
         await surveyRepo.AddAsync(survey);
         await surveyRepo.SaveChangesAsync();
 

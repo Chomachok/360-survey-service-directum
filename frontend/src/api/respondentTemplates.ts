@@ -17,16 +17,12 @@ export const updateRespondentTemplate = (id: number, dto: UpdateRespondentTempla
 
 export const deleteRespondentTemplate = (id: number) => api.delete(`/respondent-templates/${id}`)
 
-/**
- * Развернуть шаблон в матрицу опроса.
- * Оцениваемого передавать не нужно — он задан в самом опросе (Survey.targetId).
- */
-export const applyRespondentTemplate = (surveyId: number, dto: { templateId: number }) =>
+// Теперь принимает targetId
+export const applyRespondentTemplate = (surveyId: number, dto: { templateId: number; targetId: number }) =>
   api
     .post<ApplyRespondentTemplateResult>(`/surveys/${surveyId}/matrix/apply-template`, dto)
     .then((res) => res.data)
 
-/** Сохранить вручную набранный список респондентов опроса как шаблон */
 export const createTemplateFromSurvey = (dto: {
   surveyId: number
   name: string

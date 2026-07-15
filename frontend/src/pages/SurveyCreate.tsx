@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createSurvey } from '../api/surveys'
-import { getEmployees } from '../api/employees'
 import { getSurveyTemplates } from '../api/surveyTemplates'
 import { CreateSurveyDto } from '../types'
 import { ArrowLeft } from 'lucide-react'
@@ -18,12 +17,6 @@ export default function SurveyCreate() {
   const [endDate, setEndDate] = useState('')
   const [templateId, setTemplateId] = useState<number | ''>('')
   const authorId = 1
-
-  // Получаем список сотрудников (если нужен для других целей, можно оставить)
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: getEmployees,
-  })
 
   const { data: templates } = useQuery({
     queryKey: ['surveyTemplates'],

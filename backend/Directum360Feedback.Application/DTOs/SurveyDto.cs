@@ -23,7 +23,6 @@ public class CreateSurveyDto
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public int AuthorId { get; set; }
-    public int? TargetId { get; set; }
     public int? TemplateId { get; set; }
 }
 
@@ -33,5 +32,4 @@ public class UpdateSurveyDto
     public string? Description { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
-    public int? TargetId { get; set; } 
 }

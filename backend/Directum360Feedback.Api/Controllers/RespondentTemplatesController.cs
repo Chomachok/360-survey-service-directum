@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.RespondentTemplateDTOs;
 using Directum360Feedback.Application.Interfaces;
 
 namespace Directum360Feedback.Api.Controllers;
