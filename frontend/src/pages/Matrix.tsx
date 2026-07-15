@@ -168,7 +168,6 @@ export default function Matrix() {
           isDraft={isDraft}
           hasTarget={!!targetId}
           matrixCount={matrix?.length ?? 0}
-          currentUserId={evaluatorId ? Number(evaluatorId) : null}
           targetId={targetId ?? null}  
         />
 

@@ -16,7 +16,6 @@ interface Props {
   hasTarget: boolean
   /** сколько связей уже в матрице — от этого зависит, можно ли сохранить состав как шаблон */
   matrixCount: number
-  currentUserId: number | null
   targetId: number | null
 }
 
@@ -29,11 +28,11 @@ interface Props {
  * он задан в самом опросе (Survey.targetId). Самооценка из шаблона автоматически
  * назначается на него же.
  */
-export default function MatrixTemplateTools({ surveyId, isDraft, hasTarget, matrixCount, currentUserId, targetId}: Props) {
+export default function MatrixTemplateTools({ surveyId, isDraft, hasTarget, matrixCount, targetId}: Props) {
   const queryClient = useQueryClient()
 
   const { data: templates } = useQuery({
-    queryKey: ['respondent-templates'], 
+    queryKey: ['respondent-templates'],
     queryFn: getRespondentTemplates,
   })
 
