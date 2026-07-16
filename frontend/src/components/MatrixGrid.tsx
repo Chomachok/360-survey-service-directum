@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, X, Check, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { Plus, X, Check, Link as LinkIcon, Trash2, Users2 } from 'lucide-react';
 import Select from 'react-select';
 import { reactSelectStyles } from '../styles/reactSelectStyles';
 import toast from 'react-hot-toast';
-import { UseMutationResult } from '@tanstack/react-query';
 
 // Типы данных
 interface MatrixItem {
@@ -30,9 +29,19 @@ interface SurveyMatrixProps {
   onCopyLink: (token: string) => void;
   isMutating: boolean;
   deleteMutation: { mutateAsync: (id: number) => Promise<unknown> };
+  /**
+   * 'live' — обычная матрица реального опроса (ссылки, статус прохождения).
+   * 'preview' — статичный предпросмотр состава группы респондентов: ячейка
+   * означает «этот респондент входит в состав для этого оцениваемого»,
+   * без ссылок и статусов прохождения. Используется в шаблонах респондентов.
+   */
+  variant?: 'live' | 'preview';
+  /** Подписи для превью-режима */
+  rowLabel?: string;
+  colLabel?: string;
 }
 
-// Утилита для разбивки ФИО на 3 строки
+// Утилита для разбивки ФИО на короткие строки
 const formatNameToLines = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length >= 3) {
@@ -44,7 +53,6 @@ const formatNameToLines = (fullName: string) => {
       </>
     );
   }
-  // Если слов меньше 3, просто выводим как есть, но с переносом
   return <div className="leading-tight">{fullName}</div>;
 };
 
@@ -57,7 +65,11 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   onCopyLink,
   isMutating,
   deleteMutation,
+  variant = 'live',
+  rowLabel = 'Оценивает',
+  colLabel = 'Оценивают',
 }) => {
+  const isPreview = variant === 'preview';
   const [addingMode, setAddingMode] = useState<{ type: 'col' | 'row' } | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
 
@@ -81,13 +93,13 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
 
   const stats = useMemo(() => {
     const total = subjects.length * respondents.length;
-    const evaluated = Array.from(matrixMap.values()).filter(i => i.completed).length;
+    const evaluated = Array.from(matrixMap.values()).filter((i) => i.completed).length;
     const percentage = total > 0 ? Math.round((evaluated / total) * 100) : 0;
     return { total, evaluated, percentage };
   }, [subjects, respondents, matrixMap]);
 
-  const availableSubjects = employees.filter(e => !subjects.some(s => s.id === e.value));
-  const availableRespondents = employees.filter(e => !respondents.some(r => r.id === e.value));
+  const availableSubjects = employees.filter((e) => !subjects.some((s) => s.id === e.value));
+  const availableRespondents = employees.filter((e) => !respondents.some((r) => r.id === e.value));
 
   const handleConfirmAdd = () => {
     if (!selectedEmployee || !addingMode) return;
@@ -115,30 +127,26 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     setSelectedEmployee(null);
   };
 
- const handleRemoveEntity = async (type: 'row' | 'col', id: number, name: string) => {
+  const handleRemoveEntity = async (type: 'row' | 'col', id: number, name: string) => {
     if (!confirm(`Удалить ${type === 'row' ? 'эксперта' : 'кандидата'} "${name}" и все его связи?`)) return;
-    
-    // Собираем ВСЕ связи, подлежащие удалению
-    const itemsToRemove = data.filter(item => 
-      (type === 'row' && item.evaluatorId === id) || 
-      (type === 'col' && item.targetId === id)
+
+    const itemsToRemove = data.filter(
+      (item) => (type === 'row' && item.evaluatorId === id) || (type === 'col' && item.targetId === id),
     );
 
-    // Удаляем последовательно, ожидая завершения каждой мутации
     for (const item of itemsToRemove) {
       try {
         await deleteMutation.mutateAsync(item.id);
       } catch (error) {
         console.error(`Ошибка при удалении связи ${item.id}:`, error);
         toast.error('Не удалось удалить часть связей');
-        break; // Прерываем цикл при ошибке
+        break;
       }
     }
   };
 
-
   const handleCellClick = (respId: number, subId: number) => {
-    if (!isDraft) return;
+    if (!isDraft || isPreview) return;
     const key = `${respId}_${subId}`;
     const item = matrixMap.get(key);
 
@@ -154,7 +162,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   };
 
   const renderAddForm = (options: EmployeeOption[]) => (
-    <div className="flex flex-col gap-1 min-w-[140px] p-1.5 bg-white dark:bg-gray-800 rounded border border-dashed border-directum-orange/50 shadow-lg animate-fadeIn z-50">
+    <div className="animate-fadeIn z-50 flex min-w-[180px] flex-col gap-2 rounded-lg border border-dashed border-directum-orange/50 bg-white p-2 shadow-lg dark:bg-gray-800">
       <Select
         options={options}
         value={selectedEmployee}
@@ -162,93 +170,109 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
         placeholder="Выберите..."
         styles={{
           ...reactSelectStyles,
-          control: (base) => ({ ...base, minHeight: '26px', fontSize: '11px' }),
+          control: (base) => ({ ...base, minHeight: '32px', fontSize: '13px' }),
           menuPortalTarget: document.body,
         }}
         menuPortalTarget={document.body}
         autoFocus
         openMenuOnFocus
       />
-      <div className="flex gap-1 mt-1">
-        <button 
-          onClick={handleConfirmAdd} 
+      <div className="mt-0.5 flex gap-1.5">
+        <button
+          onClick={handleConfirmAdd}
           disabled={!selectedEmployee || isMutating}
-          className="flex-1 text-[10px] bg-green-600 text-white rounded px-1 py-0.5 hover:bg-green-700 disabled:opacity-50"
+          className="flex-1 rounded-md bg-directum-orange px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-directum-orange/90 disabled:opacity-50"
         >
-          {isMutating ? '...' : 'OK'}
+          {isMutating ? '...' : 'Добавить'}
         </button>
-        <button 
-          onClick={handleCancelAdd} 
-          className="flex-1 text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded px-1 py-0.5 hover:bg-gray-300 dark:hover:bg-gray-600"
+        <button
+          onClick={handleCancelAdd}
+          className="flex-1 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
         >
-          ✕
+          Отмена
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="animate-fadeInUp space-y-2">
+    <div className="animate-fadeInUp space-y-3">
       {/* Статистика */}
-      <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded text-xs font-medium border border-blue-100 dark:border-blue-800">
-        <span>📈</span>
-        <span>{stats.evaluated}/{stats.total}</span>
-        <span className="px-1.5 py-0.5 bg-blue-200 dark:bg-blue-800 rounded-full text-[10px]">
-          {stats.percentage}%
-        </span>
-      </div>
+      {isPreview ? (
+        <div className="inline-flex items-center gap-2 rounded-full border border-directum-orange/20 bg-directum-orange/10 px-3 py-1.5 text-xs font-medium text-directum-orange">
+          <Users2 size={14} />
+          <span>
+            {respondents.length} {respondents.length === 1 ? 'респондент' : 'респондентов'} ×{' '}
+            {subjects.length} {subjects.length === 1 ? 'оцениваемый' : 'оцениваемых'}
+          </span>
+          <span className="rounded-full bg-directum-orange/20 px-2 py-0.5 text-[11px]">
+            {stats.total} {stats.total === 1 ? 'связь' : 'связей'}
+          </span>
+        </div>
+      ) : (
+        <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          <span>Пройдено</span>
+          <span>
+            {stats.evaluated}/{stats.total}
+          </span>
+          <span className="rounded-full bg-blue-200 px-2 py-0.5 text-[11px] dark:bg-blue-800">
+            {stats.percentage}%
+          </span>
+        </div>
+      )}
 
       {/* Таблица Матрицы */}
       {subjects.length === 0 && respondents.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
-          <p className="text-sm mb-1 font-medium">Матрица пуста</p>
-          <p className="text-xs max-w-md mx-auto">
-            Нажмите <span className="text-directum-orange font-bold">+</span> чтобы добавить участников
+        <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 py-14 text-center dark:border-gray-700 dark:bg-gray-800/30">
+          <p className="mb-1 text-sm font-medium text-gray-500">Матрица пуста</p>
+          <p className="mx-auto max-w-md text-xs text-gray-400">
+            {isPreview
+              ? 'Добавьте оцениваемых и респондентов, чтобы увидеть матрицу'
+              : <>Нажмите <span className="font-bold text-directum-orange">+</span> чтобы добавить участников</>}
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
-          <table className="w-full border-collapse min-w-[400px]">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <table className="w-full min-w-[480px] border-collapse">
             <thead>
-              <tr className="bg-gray-800 text-white">
+              <tr className="bg-directum-dark text-white">
                 {/* Угловая ячейка */}
-                <th className="sticky left-0 z-20 bg-gray-800 p-1.5 border-r border-gray-600 text-left min-w-[100px] text-[10px] uppercase tracking-wider opacity-80 leading-tight">
-                  Эксперт ↓<br/>Кандидат →
+                <th className="sticky left-0 z-20 min-w-[140px] border-r border-white/10 bg-directum-dark p-3 text-left text-[11px] font-semibold uppercase leading-tight tracking-wide opacity-90">
+                  {rowLabel}
+                  <br />↓ &nbsp;/&nbsp; {colLabel} →
                 </th>
-                
+
                 {/* Столбцы кандидатов */}
-                {subjects.map(sub => (
-                  <th key={sub.id} className="p-1.5 border-r border-gray-600 relative group min-w-[60px] align-top">
-                    <div className="pr-4 truncate font-medium text-[12px] leading-tight text-center" title={sub.name}>
+                {subjects.map((sub) => (
+                  <th key={sub.id} className="group relative min-w-[92px] border-r border-white/10 p-2 align-top">
+                    <div className="truncate pr-4 text-center text-[13px] font-medium leading-tight" title={sub.name}>
                       {formatNameToLines(sub.name)}
                     </div>
-                    {isDraft && (
+                    {isDraft && !isPreview && (
                       <button
                         onClick={() => handleRemoveEntity('col', sub.id, sub.name)}
-                        className="absolute right-0.5 top-0.5 opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 transition-all p-0.5 rounded hover:bg-red-500/10"
+                        className="absolute right-1 top-1 rounded p-0.5 text-white/50 opacity-0 transition-all hover:bg-red-500/20 hover:text-red-300 group-hover:opacity-100"
                         title="Удалить столбец"
                       >
-                        <X size={10} />
+                        <X size={13} />
                       </button>
                     )}
                   </th>
                 ))}
 
                 {/* Кнопка добавления столбца (+) */}
-                {isDraft && (
-                  <th className="p-1 border-l border-gray-600 w-8 text-center bg-gray-800/50 align-middle relative">
+                {isDraft && !isPreview && (
+                  <th className="relative w-10 border-l border-white/10 bg-white/5 p-1 text-center align-middle">
                     {!addingMode ? (
-                      <button 
+                      <button
                         onClick={() => setAddingMode({ type: 'col' })}
-                        className="w-6 h-6 flex items-center justify-center rounded-full bg-directum-orange/20 text-directum-orange hover:bg-directum-orange hover:text-white transition-all mx-auto"
+                        className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-directum-orange/25 text-directum-orange transition-all hover:bg-directum-orange hover:text-white"
                         title="Добавить кандидата"
                       >
-                        <Plus size={14} />
+                        <Plus size={16} />
                       </button>
                     ) : addingMode.type === 'col' ? (
-                      <div className="absolute right-0 top-full mt-1 z-50">
-                        {renderAddForm(availableSubjects)}
-                      </div>
+                      <div className="absolute right-0 top-full z-50 mt-1">{renderAddForm(availableSubjects)}</div>
                     ) : null}
                   </th>
                 )}
@@ -256,99 +280,116 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
             </thead>
             <tbody>
               {respondents.map((resp, idx) => (
-                <tr key={resp.id} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'}>
+                <tr key={resp.id} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/70 dark:bg-gray-800/40'}>
                   {/* Заголовок строки (Эксперт) */}
-                  <td className="sticky left-0 z-10 bg-inherit p-1.5 border-r border-b border-gray-200 dark:border-gray-700 font-bold text-gray-800 dark:text-gray-200 text-[12px] leading-tight align-top">
+                  <td className="sticky left-0 z-10 min-w-[140px] border-b border-r border-gray-200 bg-inherit p-3 align-top text-[13px] font-semibold leading-tight text-gray-800 dark:border-gray-700 dark:text-gray-200">
                     <div className="truncate pr-2" title={resp.name}>
                       {formatNameToLines(resp.name)}
                     </div>
                   </td>
 
-                  {/* Ячейки пересечения - МАКСИМАЛЬНО КОМПАКТНЫЕ */}
-                  {subjects.map(sub => {
+                  {/* Ячейки пересечения */}
+                  {subjects.map((sub) => {
                     const key = `${resp.id}_${sub.id}`;
                     const item = matrixMap.get(key);
                     const isEvaluated = item?.completed === true;
                     const hasLink = !!item;
 
                     return (
-                      <td 
-                        key={key} 
-                        className={`border-r border-b border-gray-200 dark:border-gray-700 text-center align-middle transition-colors relative cursor-pointer select-none h-9 ${
-                          isEvaluated 
-                            ? 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30' 
-                            : hasLink 
-                              ? 'bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20' 
-                              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                      <td
+                        key={key}
+                        className={`relative h-12 border-b border-r border-gray-200 text-center align-middle transition-colors dark:border-gray-700 ${
+                          isPreview
+                            ? hasLink
+                              ? 'bg-directum-orange/10 dark:bg-directum-orange/[0.12]'
+                              : ''
+                            : `cursor-pointer select-none ${
+                                isEvaluated
+                                  ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30'
+                                  : hasLink
+                                  ? 'bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/10 dark:hover:bg-yellow-900/20'
+                                  : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                              }`
                         }`}
                         onClick={() => handleCellClick(resp.id, sub.id)}
-                        title={isDraft ? (hasLink ? 'Нажмите, чтобы удалить связь' : 'Нажмите, чтобы создать связь') : ''}
+                        title={isDraft && !isPreview ? (hasLink ? 'Нажмите, чтобы удалить связь' : 'Нажмите, чтобы создать связь') : ''}
                       >
-                        <div className="flex items-center justify-center h-full w-full pointer-events-none">
-                          {/* Визуальный индикатор (квадрат) */}
-                          <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-all ${
-                            isEvaluated 
-                              ? 'bg-green-600 border-green-600 text-white shadow-sm' 
-                              : hasLink
-                                ? 'border-yellow-400 bg-white dark:bg-gray-800'
-                                : 'border-transparent'
-                          }`}>
-                            {isEvaluated && <Check size={9} strokeWidth={3} />}
-                            {hasLink && !isEvaluated && <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
-                          </div>
+                        <div className="pointer-events-none flex h-full w-full items-center justify-center">
+                          {isPreview ? (
+                            hasLink && (
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-directum-orange text-white shadow-sm">
+                                <Check size={13} strokeWidth={3} />
+                              </div>
+                            )
+                          ) : (
+                            <div
+                              className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
+                                isEvaluated
+                                  ? 'border-green-600 bg-green-600 text-white shadow-sm'
+                                  : hasLink
+                                  ? 'border-yellow-400 bg-white dark:bg-gray-800'
+                                  : 'border-gray-200 dark:border-gray-700'
+                              }`}
+                            >
+                              {isEvaluated && <Check size={12} strokeWidth={3} />}
+                              {hasLink && !isEvaluated && <div className="h-2 w-2 rounded-full bg-yellow-400" />}
+                            </div>
+                          )}
                         </div>
 
                         {/* Действия при наведении */}
-                        {hasLink && !isEvaluated && isDraft && (
-                          <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/5 dark:bg-black/20 opacity-0 hover:opacity-100 transition-opacity backdrop-blur-[1px] pointer-events-auto">
+                        {!isPreview && hasLink && !isEvaluated && isDraft && (
+                          <div className="pointer-events-auto absolute inset-0 flex items-center justify-center gap-1.5 bg-black/5 opacity-0 backdrop-blur-[1px] transition-opacity hover:opacity-100 dark:bg-black/20">
                             <button
-                              onClick={(e) => { e.stopPropagation(); onCopyLink(item!.token); }}
-                              className="p-0.5 bg-white dark:bg-gray-800 rounded-full text-directum-orange shadow-sm hover:scale-110 transition-transform"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCopyLink(item!.token);
+                              }}
+                              className="rounded-full bg-white p-1 text-directum-orange shadow-sm transition-transform hover:scale-110 dark:bg-gray-800"
                               title="Копировать ссылку"
                             >
-                              <LinkIcon size={9} />
+                              <LinkIcon size={11} />
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); onDelete(item!.id, item!.evaluatorName, item!.targetName); }}
-                              className="p-0.5 bg-white dark:bg-gray-800 rounded-full text-red-500 shadow-sm hover:scale-110 transition-transform"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(item!.id, item!.evaluatorName, item!.targetName);
+                              }}
+                              className="rounded-full bg-white p-1 text-red-500 shadow-sm transition-transform hover:scale-110 dark:bg-gray-800"
                               title="Удалить связь"
                             >
-                              <Trash2 size={9} />
+                              <Trash2 size={11} />
                             </button>
                           </div>
                         )}
                       </td>
                     );
                   })}
-                  
-                  {/* Пустая ячейка под кнопкой "+" */}
-                  {isDraft && <td className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 h-9"></td>}
+
+                  {isDraft && !isPreview && <td className="h-12 border-b border-gray-200 bg-gray-50/30 dark:border-gray-700 dark:bg-gray-800/30" />}
                 </tr>
               ))}
 
               {/* Строка добавления нового эксперта (внизу) */}
-              {isDraft && (
+              {isDraft && !isPreview && (
                 <tr>
-                  <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 p-1 border-t border-r border-gray-200 dark:border-gray-700 relative">
-                     {!addingMode ? (
-                      <button 
+                  <td className="sticky left-0 z-10 border-r border-t border-gray-200 bg-gray-50 p-1.5 dark:border-gray-700 dark:bg-gray-900">
+                    {!addingMode ? (
+                      <button
                         onClick={() => setAddingMode({ type: 'row' })}
-                        className="w-full flex items-center justify-center gap-1 py-1.5 text-[10px] text-gray-500 hover:text-directum-orange transition-colors border border-dashed border-gray-300 dark:border-gray-700 rounded hover:border-directum-orange/50 hover:bg-directum-orange/5"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-xs text-gray-500 transition-colors hover:border-directum-orange/50 hover:bg-directum-orange/5 hover:text-directum-orange dark:border-gray-700"
                       >
-                        <Plus size={12} />
+                        <Plus size={14} />
                         <span>Добавить эксперта</span>
                       </button>
-                     ) : addingMode.type === 'row' ? (
-                        <div className="absolute left-0 bottom-full mb-1 z-50 w-full">
-                          {renderAddForm(availableRespondents)}
-                        </div>
-                     ) : null}
+                    ) : addingMode.type === 'row' ? (
+                      <div className="absolute bottom-full left-0 z-50 mb-1 w-full">{renderAddForm(availableRespondents)}</div>
+                    ) : null}
                   </td>
-                  {/* Пустые ячейки под столбцами */}
-                  {subjects.map(sub => (
-                    <td key={`empty-${sub.id}`} className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 h-9"></td>
+                  {subjects.map((sub) => (
+                    <td key={`empty-${sub.id}`} className="h-12 border-t border-gray-200 bg-gray-50/30 dark:border-gray-700 dark:bg-gray-800/30" />
                   ))}
-                  {isDraft && <td className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 h-9"></td>}
+                  {isDraft && <td className="h-12 border-t border-gray-200 bg-gray-50/30 dark:border-gray-700 dark:bg-gray-800/30" />}
                 </tr>
               )}
             </tbody>
@@ -356,8 +397,8 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
         </div>
       )}
 
-      {!isDraft && (
-        <div className="text-[10px] text-gray-500 italic text-right mt-1">
+      {!isPreview && !isDraft && (
+        <div className="mt-1 text-right text-[11px] italic text-gray-500">
           * Режим просмотра. Изменения доступны только в статусе «Черновик».
         </div>
       )}
