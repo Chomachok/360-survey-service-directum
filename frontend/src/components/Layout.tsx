@@ -17,8 +17,8 @@ const Layout: React.FC = () => {
   const navItems = [
     { path: '/', label: 'Дашборд', icon: LayoutDashboard },
     { path: '/survey/new', label: 'Создать опрос', icon: FileText },
-    { path: '/import', label: 'Импорт сотрудников', icon: Users },
   ]
+  const importItem = { path: '/import', label: 'Импорт сотрудников', icon: Users }
 
   const templateItems = [
     { path: '/templates', label: 'Шаблоны вопросов', icon: ListChecks },
@@ -120,6 +120,20 @@ const Layout: React.FC = () => {
                   </div>
                 )}
               </div>
+            <NavLink
+              key={importItem.path}
+              to={importItem.path}
+              end={true}
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center space-x-1.5 ${
+                  isActive
+                    ? 'bg-directum-orange text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <importItem.icon size={16} />
+                <span>{importItem.label}</span>
+              </NavLink>
             </nav>
 
             <div className="flex items-center space-x-3">
@@ -169,7 +183,7 @@ const Layout: React.FC = () => {
                 </NavLink>
               )
             })
-          })
+          }
           <div className="relative">
             <button
               onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
