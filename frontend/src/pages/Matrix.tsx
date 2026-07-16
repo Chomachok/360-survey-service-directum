@@ -240,17 +240,13 @@ export default function Matrix() {
               <button
                 onClick={handleApplyTemplate}
                 className="btn-primary flex items-center space-x-2"
-                disabled={isApplyingTemplate || !selectedTemplateId || (!templateHasOwnTargets && !targetId)}
+                disabled={isApplyingTemplate || !selectedTemplateId || !targetId}
               >
                 <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
                 <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
               </button>
               <span className="text-xs text-gray-500">
-                {templateHasOwnTargets
-                  ? `У шаблона уже заданы оцениваемые (${selectedTemplateObj?.targets.length}) — они будут добавлены сразу все`
-                  : !targetId
-                    ? 'Сначала выберите сотрудника, которого оценивают'
-                    : ''}
+                {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
               </span>
             </div>
 

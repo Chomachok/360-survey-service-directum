@@ -49,6 +49,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import LogoLoader from '../components/LogoLoader'
 
 // Компонент для отдельного вопроса (с поддержкой перетаскивания)
 const SortableQuestionItem = ({
@@ -510,9 +511,7 @@ export default function QuestionBuilder() {
 
   if (surveyLoading || qLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 

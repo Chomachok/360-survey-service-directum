@@ -5,6 +5,7 @@ import { QuestionType, CreateQuestionTemplateDto, UpdateQuestionTemplateDto } fr
 import { Plus, Copy, Edit, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
+import LogoLoader from '../components/LogoLoader'
 
 export default function Templates() {
   const queryClient = useQueryClient()
@@ -225,9 +226,7 @@ export default function Templates() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 
