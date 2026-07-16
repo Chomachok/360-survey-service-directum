@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Directum360Feedback.Application.DTOs.AuthDto;
 using Directum360Feedback.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Directum360Feedback.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[AllowAnonymous]
 public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("send-code")]
