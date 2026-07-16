@@ -41,7 +41,11 @@ export default function LoginPage() {
       localStorage.setItem('userName', response.fullName)
       localStorage.setItem('isAdmin', String(response.isAdmin))
       toast.success('Вход выполнен успешно')
-      navigate('/')
+      if (response.isAdmin) {
+        navigate('/')
+      } else {
+        navigate('/user')
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Неверный код')
     } finally {

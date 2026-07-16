@@ -14,4 +14,5 @@ public interface ISurveyService
     Task<SurveyDto> CompleteSurveyAsync(int id);
     Task ApplyTemplateToSurveyAsync(int surveyId, int templateId);
     Task<SurveyTemplateDto> SaveSurveyAsTemplateAsync(int surveyId, string templateName, string? templateDescription);
+    Task<IEnumerable<UserSurveyDto>> GetUserSurveysAsync(int userId);
 }

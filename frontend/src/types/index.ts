@@ -240,3 +240,11 @@ export interface ApplyRespondentTemplateResult {
   skipped: number
   items: MatrixItem[]
 }
+
+export interface UserSurvey {
+  surveyId: number
+  surveyTitle: string
+  targetName: string
+  token: string
+  completed: boolean
+}

@@ -10,10 +10,14 @@ import Matrix from './pages/Matrix'
 import PublicSurvey from './pages/PublicSurvey'
 import Results from './pages/Results'
 import ImportEmployees from './pages/ImportEmployees'
+import UserDashboard from './pages/UserDashboard'
 import LoginPage from './pages/LoginPage'
 import Layout from './components/Layout'
+import UserLayout from './components/UserLayout'
 import PublicLayout from './components/PublicLayout'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
+import UserRoute from './components/UserRoute'
 
 function App() {
   return (
@@ -21,17 +25,27 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/survey/new" element={<SurveyCreate />} />
-          <Route path="/survey/:id/edit" element={<SurveyEdit />} />
-          <Route path="/survey/:id/questions" element={<QuestionBuilder />} />
-          <Route path="/templates" element={<Templates />} />
-          <Route path="/survey-templates" element={<SurveyTemplates />} />
-          <Route path="/respondent-templates" element={<RespondentTemplates />} />
-          <Route path="/survey/:id/matrix" element={<Matrix />} />
-          <Route path="/survey/:id/results" element={<Results />} />
-          <Route path="/import" element={<ImportEmployees />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AdminRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/survey/new" element={<SurveyCreate />} />
+              <Route path="/survey/:id/edit" element={<SurveyEdit />} />
+              <Route path="/survey/:id/questions" element={<QuestionBuilder />} />
+              <Route path="/templates" element={<Templates />} />
+              <Route path="/survey-templates" element={<SurveyTemplates />} />
+              <Route path="/respondent-templates" element={<RespondentTemplates />} />
+              <Route path="/survey/:id/matrix" element={<Matrix />} />
+              <Route path="/survey/:id/results" element={<Results />} />
+              <Route path="/import" element={<ImportEmployees />} />
+            </Route>
+          </Route>
+
+          <Route element={<UserRoute />}>
+            <Route element={<UserLayout />}>
+              <Route path="/user" element={<UserDashboard />} />
+            </Route>
+          </Route>
         </Route>
 
         <Route element={<PublicLayout />}>
