@@ -258,3 +258,13 @@ export interface UserSurvey {
   token: string
   completed: boolean
 }
+
+// src/types/index.ts
+export interface CreateTemplateQuestionDto {
+  text: string
+  type: QuestionType
+  required: boolean
+  order: number
+  options?: string[]
+  tempId?: string // для временных ключей React
+}
