@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { QuestionType } from '../types'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import LogoLoader from '../components/LogoLoader'
 
 export default function PublicSurvey() {
   const { token } = useParams<{ token: string }>()
@@ -60,9 +61,7 @@ export default function PublicSurvey() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 

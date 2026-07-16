@@ -7,6 +7,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { useState } from 'react'
 import { useDebounce } from '../hooks/useDebounce'
 import { Edit } from 'lucide-react'
+import LogoLoader from '../components/LogoLoader'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
@@ -108,12 +109,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center animate-pulseSoft">
-          <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-500">Загрузка опросов...</p>
-        </div>
-      </div>
+      <LogoLoader label="Загрузка опросов..." />
     )
   }
 
