@@ -80,7 +80,7 @@ const Directum360Logo: React.FC<Props> = ({
   const dur = `${duration}s`
 
   return (
-    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+    <span className={`d360-logo inline-flex items-center gap-2.5 ${className}`}>
       <svg
         viewBox="0 0 120 120"
         width={size}
@@ -89,6 +89,22 @@ const Directum360Logo: React.FC<Props> = ({
         aria-label="Directum 360"
         className="shrink-0 overflow-visible"
       >
+        {!reduceMotion && (
+          <style>{`
+            .d360-logo .d360-orbit {
+              transform-origin: 60px 60px;
+              animation: d360-spin ${dur} linear infinite;
+              animation-play-state: paused;
+            }
+            .d360-logo:hover .d360-orbit {
+              animation-play-state: running;
+            }
+            @keyframes d360-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        )}
         <defs>
           <radialGradient id="d360-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={ORANGE} stopOpacity="0.35" />
@@ -150,18 +166,8 @@ const Directum360Logo: React.FC<Props> = ({
           360
         </text>
 
-        {/* орбита с двумя двойными знаками, всегда остриём на «360» */}
-        <g>
-          {!reduceMotion && (
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              from="0 60 60"
-              to="360 60 60"
-              dur={dur}
-              repeatCount="indefinite"
-            />
-          )}
+        {/* орбита с двумя двойными знаками, всегда остриём на «360»; вращается только при hover */}
+        <g className={reduceMotion ? '' : 'd360-orbit'}>
           {/* снизу: разворот 60° -> остриё вверх, на центр */}
           <DoubleCheck x={60} y={60 + R} rotate={60} />
           {/* сверху: разворот 240° -> остриё вниз, на центр */}
