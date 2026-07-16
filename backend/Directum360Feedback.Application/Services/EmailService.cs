@@ -78,7 +78,6 @@ public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailServ
             {
                 logger.LogInformation($"✅ Найден файл шаблона: {path}");
                 var content = await File.ReadAllTextAsync(path);
-                logger.LogInformation($"📄 Содержимое файла (первые 200 символов): {content.Substring(0, Math.Min(200, content.Length))}");
                 return content;
             }
 

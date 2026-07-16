@@ -9,6 +9,7 @@ using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Domain.Settings;
 using Directum360Feedback.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Directum360Feedback.Application.Services;
 
@@ -17,7 +18,8 @@ public class AuthService(
     IRepository<OneTimeCode> codeRepo,
     IEmailService emailService,
     IOptions<JwtSettings> jwtSettings,
-    IConfiguration configuration)
+    IConfiguration configuration,
+    ILogger<AuthService> logger)
     : IAuthService
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
@@ -45,9 +47,19 @@ public class AuthService(
         };
         await codeRepo.AddAsync(oneTimeCode);
         await codeRepo.SaveChangesAsync();
+        
+        logger.LogInformation($"🔑 Code for {email}: {code}");
 
-        // Отправляем код через шаблон
-        await emailService.SendCodeEmailAsync(employee.Email, employee.FullName, code);
+        try
+        {
+            // Отправляем код через шаблон
+            await emailService.SendCodeEmailAsync(employee.Email, employee.FullName, code);
+            logger.LogInformation($"✅ Письмо с кодом отправлено на {email}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning($"⚠️ Не удалось отправить письмо на {email}: {ex.Message}. Код сохранён в БД и доступен в логах.");
+        }
     }
 
     public async Task<AuthResponse> VerifyCodeAsync(string email, string code)
