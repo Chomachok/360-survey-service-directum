@@ -28,7 +28,7 @@ public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailServ
 
             var targetName = assignment.Target.FullName;
 
-            var surveyLink = $"{baseUrl.TrimEnd('/')}/survey/{assignment.Token}";
+            var surveyLink = $"{baseUrl.TrimEnd('/')}/login?redirect={Uri.EscapeDataString($"/survey/{assignment.Token}")}";
 
             // Загружаем HTML-шаблон из файла
             var htmlBody = await GetHtmlTemplateAsync("InviteEmail.html");

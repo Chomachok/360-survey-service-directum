@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { sendCode, verifyCode } from '../api/auth'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon } from 'lucide-react'
@@ -7,11 +8,25 @@ import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { theme, toggleTheme } = useTheme()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Получаем URL для редиректа после логина
+  const redirectPath = searchParams.get('redirect') || location.state?.from?.pathname || '/'
+
+  // Если пользователь уже авторизован, сразу редиректим
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      // Редирект на нужный путь
+      navigate(redirectPath, { replace: true })
+    }
+  }, [navigate, redirectPath])
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,11 +60,9 @@ export default function LoginPage() {
       localStorage.setItem('userEmail', response.email)
       localStorage.setItem('isAdmin', String(response.isAdmin))
       toast.success('Вход выполнен успешно')
-      if (response.isAdmin) {
-        navigate('/')
-      } else {
-        navigate('/user')
-      }
+
+      // После логина редирект на сохранённый путь
+      navigate(redirectPath, { replace: true })
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Неверный код')
     } finally {
@@ -59,17 +72,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 relative">
-      {/* Кнопка переключения темы */}
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Переключить тему"
       >
-        {theme === 'light' ? (
-          <Moon size={24} className="text-gray-700" />
-        ) : (
-          <Sun size={24} className="text-yellow-400" />
-        )}
+        {theme === 'light' ? <Moon size={24} className="text-gray-600" /> : <Sun size={24} className="text-yellow-400" />}
       </button>
 
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 animate-fadeInUp">
