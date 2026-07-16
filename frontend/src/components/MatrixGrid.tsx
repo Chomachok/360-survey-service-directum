@@ -30,6 +30,22 @@ interface SurveyMatrixProps {
   isMutating: boolean;
 }
 
+// Утилита для разбивки ФИО на 3 строки
+const formatNameToLines = (fullName: string) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length >= 3) {
+    return (
+      <>
+        <div>{parts[0]}</div>
+        <div>{parts[1]}</div>
+        <div>{parts.slice(2).join(' ')}</div>
+      </>
+    );
+  }
+  // Если слов меньше 3, просто выводим как есть, но с переносом
+  return <div className="leading-tight">{fullName}</div>;
+};
+
 export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   data,
   employees,
@@ -39,14 +55,12 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   onCopyLink,
   isMutating,
 }) => {
-  // Состояния для режимов добавления
-  const [addingMode, setAddingMode] = useState<{ type: 'row' | 'col'; id?: number } | null>(null);
+  const [addingMode, setAddingMode] = useState<{ type: 'col' | 'row' } | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
 
-  // Преобразование плоского списка в структуру матрицы
   const { subjects, respondents, matrixMap } = useMemo(() => {
-    const subjectSet = new Map<number, string>(); // Кандидаты (столбцы)
-    const respondentSet = new Map<number, string>(); // Эксперты (строки)
+    const subjectSet = new Map<number, string>();
+    const respondentSet = new Map<number, string>();
     const map = new Map<string, MatrixItem>();
 
     data.forEach((item) => {
@@ -62,7 +76,6 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     };
   }, [data]);
 
-  // Статистика
   const stats = useMemo(() => {
     const total = subjects.length * respondents.length;
     const evaluated = Array.from(matrixMap.values()).filter(i => i.completed).length;
@@ -70,28 +83,21 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     return { total, evaluated, percentage };
   }, [subjects, respondents, matrixMap]);
 
-  // Фильтрация доступных сотрудников (исключаем уже добавленных)
   const availableSubjects = employees.filter(e => !subjects.some(s => s.id === e.value));
   const availableRespondents = employees.filter(e => !respondents.some(r => r.id === e.value));
 
-  // Обработчик подтверждения добавления
   const handleConfirmAdd = () => {
     if (!selectedEmployee || !addingMode) return;
 
     if (addingMode.type === 'col') {
-      // Добавляем столбец (Кандидата). 
-      // Создаем связь с ПЕРВЫМ доступным экспертом, чтобы столбец появился визуально.
-      // Если экспертов нет, добавление невозможно (защита ниже).
       if (respondents.length === 0) {
-        toast.error('Сначала добавьте хотя бы одного эксперта (строку)');
+        toast.error('Сначала добавьте хотя бы одного эксперта');
         return;
       }
       onAdd(respondents[0].id, selectedEmployee.value);
     } else {
-      // Добавляем строку (Эксперта).
-      // Создаем связь с ПЕРВЫМ доступным кандидатом.
       if (subjects.length === 0) {
-        toast.error('Сначала добавьте хотя бы одного кандидата (столбец)');
+        toast.error('Сначала добавьте хотя бы одного кандидата');
         return;
       }
       onAdd(selectedEmployee.value, subjects[0].id);
@@ -106,7 +112,6 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     setSelectedEmployee(null);
   };
 
-  // Удаление всей строки или столбца
   const handleRemoveEntity = (type: 'row' | 'col', id: number, name: string) => {
     if (!confirm(`Удалить ${type === 'row' ? 'эксперта' : 'кандидата'} "${name}" и все его связи?`)) return;
     
@@ -118,9 +123,24 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     });
   };
 
-  // Рендер ячейки добавления (Select + кнопки)
-  const renderAddCell = (options: EmployeeOption[]) => (
-    <div className="flex flex-col gap-2 min-w-[180px] p-2 bg-gray-50 dark:bg-gray-800 rounded border border-dashed border-gray-300 dark:border-gray-600 animate-fadeIn">
+  const handleCellClick = (respId: number, subId: number) => {
+    if (!isDraft) return;
+    const key = `${respId}_${subId}`;
+    const item = matrixMap.get(key);
+
+    if (item) {
+      if (item.completed) {
+        toast.error('Нельзя удалить завершенную оценку');
+        return;
+      }
+      onDelete(item.id, item.evaluatorName, item.targetName);
+    } else {
+      onAdd(respId, subId);
+    }
+  };
+
+  const renderAddForm = (options: EmployeeOption[]) => (
+    <div className="flex flex-col gap-1 min-w-[140px] p-1.5 bg-white dark:bg-gray-800 rounded border border-dashed border-directum-orange/50 shadow-lg animate-fadeIn z-50">
       <Select
         options={options}
         value={selectedEmployee}
@@ -128,23 +148,24 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
         placeholder="Выберите..."
         styles={{
           ...reactSelectStyles,
-          control: (base) => ({ ...base, minHeight: '32px', fontSize: '12px' }),
+          control: (base) => ({ ...base, minHeight: '26px', fontSize: '11px' }),
+          menuPortalTarget: document.body,
         }}
         menuPortalTarget={document.body}
         autoFocus
         openMenuOnFocus
       />
-      <div className="flex gap-1">
+      <div className="flex gap-1 mt-1">
         <button 
           onClick={handleConfirmAdd} 
           disabled={!selectedEmployee || isMutating}
-          className="flex-1 text-xs bg-green-600 text-white rounded px-2 py-1 hover:bg-green-700 disabled:opacity-50"
+          className="flex-1 text-[10px] bg-green-600 text-white rounded px-1 py-0.5 hover:bg-green-700 disabled:opacity-50"
         >
           {isMutating ? '...' : 'OK'}
         </button>
         <button 
           onClick={handleCancelAdd} 
-          className="flex-1 text-xs bg-gray-300 text-gray-700 rounded px-2 py-1 hover:bg-gray-400"
+          className="flex-1 text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded px-1 py-0.5 hover:bg-gray-300 dark:hover:bg-gray-600"
         >
           ✕
         </button>
@@ -153,47 +174,47 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   );
 
   return (
-    <div className="animate-fadeInUp space-y-4">
+    <div className="animate-fadeInUp space-y-2">
       {/* Статистика */}
-      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-md text-sm font-medium border border-blue-100 dark:border-blue-800">
-        <span>Результаты:</span>
-        <span className="font-bold">{stats.evaluated}</span>
-        <span>из</span>
-        <span>{stats.total}</span>
-        <span className="px-2 py-0.5 bg-blue-200 dark:bg-blue-800 rounded-full text-xs">
+      <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded text-xs font-medium border border-blue-100 dark:border-blue-800">
+        <span>📈</span>
+        <span>{stats.evaluated}/{stats.total}</span>
+        <span className="px-1.5 py-0.5 bg-blue-200 dark:bg-blue-800 rounded-full text-[10px]">
           {stats.percentage}%
         </span>
       </div>
 
       {/* Таблица Матрицы */}
       {subjects.length === 0 && respondents.length === 0 ? (
-        <div className="text-center py-16 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
-          <p className="text-lg mb-2 font-medium">Матрица пуста</p>
-          <p className="text-sm max-w-md mx-auto">
-            Нажмите на <span className="text-directum-orange font-bold">+</span> справа от заголовков или снизу, чтобы добавить первых участников.
+        <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
+          <p className="text-sm mb-1 font-medium">Матрица пуста</p>
+          <p className="text-xs max-w-md mx-auto">
+            Нажмите <span className="text-directum-orange font-bold">+</span> чтобы добавить участников
           </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
-          <table className="w-full border-collapse min-w-[700px]">
+          <table className="w-full border-collapse min-w-[400px]">
             <thead>
               <tr className="bg-gray-800 text-white">
                 {/* Угловая ячейка */}
-                <th className="sticky left-0 z-20 bg-gray-800 p-3 border-r border-gray-600 text-left min-w-[180px] text-xs uppercase tracking-wider opacity-80">
-                  Эксперт ↓ \ Кандидат →
+                <th className="sticky left-0 z-20 bg-gray-800 p-1.5 border-r border-gray-600 text-left min-w-[100px] text-[10px] uppercase tracking-wider opacity-80 leading-tight">
+                  Эксперт ↓<br/>Кандидат →
                 </th>
                 
                 {/* Столбцы кандидатов */}
                 {subjects.map(sub => (
-                  <th key={sub.id} className="p-3 border-r border-gray-600 relative group min-w-[140px]">
-                    <div className="pr-6 truncate font-medium text-sm" title={sub.name}>{sub.name}</div>
+                  <th key={sub.id} className="p-1.5 border-r border-gray-600 relative group min-w-[60px] align-top">
+                    <div className="pr-4 truncate font-medium text-[12px] leading-tight text-center" title={sub.name}>
+                      {formatNameToLines(sub.name)}
+                    </div>
                     {isDraft && (
                       <button
                         onClick={() => handleRemoveEntity('col', sub.id, sub.name)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 transition-all p-1 rounded hover:bg-red-500/10"
+                        className="absolute right-0.5 top-0.5 opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 transition-all p-0.5 rounded hover:bg-red-500/10"
                         title="Удалить столбец"
                       >
-                        <X size={14} />
+                        <X size={10} />
                       </button>
                     )}
                   </th>
@@ -201,17 +222,19 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
 
                 {/* Кнопка добавления столбца (+) */}
                 {isDraft && (
-                  <th className="p-2 border-l border-gray-600 w-12 text-center bg-gray-800/50">
+                  <th className="p-1 border-l border-gray-600 w-8 text-center bg-gray-800/50 align-middle relative">
                     {!addingMode ? (
                       <button 
                         onClick={() => setAddingMode({ type: 'col' })}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-directum-orange/20 text-directum-orange hover:bg-directum-orange hover:text-white transition-all mx-auto"
+                        className="w-6 h-6 flex items-center justify-center rounded-full bg-directum-orange/20 text-directum-orange hover:bg-directum-orange hover:text-white transition-all mx-auto"
                         title="Добавить кандидата"
                       >
-                        <Plus size={18} />
+                        <Plus size={14} />
                       </button>
                     ) : addingMode.type === 'col' ? (
-                      renderAddCell(availableSubjects)
+                      <div className="absolute right-0 top-full mt-1 z-50">
+                        {renderAddForm(availableSubjects)}
+                      </div>
                     ) : null}
                   </th>
                 )}
@@ -221,20 +244,13 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
               {respondents.map((resp, idx) => (
                 <tr key={resp.id} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'}>
                   {/* Заголовок строки (Эксперт) */}
-                  <td className="sticky left-0 z-10 bg-inherit p-3 border-r border-b border-gray-200 dark:border-gray-700 font-bold text-gray-800 dark:text-gray-200 group text-sm">
-                    <div className="pr-6 truncate" title={resp.name}>{resp.name}</div>
-                     {isDraft && (
-                      <button
-                        onClick={() => handleRemoveEntity('row', resp.id, resp.name)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-1 rounded hover:bg-red-500/10"
-                        title="Удалить строку"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
+                  <td className="sticky left-0 z-10 bg-inherit p-1.5 border-r border-b border-gray-200 dark:border-gray-700 font-bold text-gray-800 dark:text-gray-200 text-[12px] leading-tight align-top">
+                    <div className="truncate pr-2" title={resp.name}>
+                      {formatNameToLines(resp.name)}
+                    </div>
                   </td>
 
-                  {/* Ячейки пересечения */}
+                  {/* Ячейки пересечения - МАКСИМАЛЬНО КОМПАКТНЫЕ */}
                   {subjects.map(sub => {
                     const key = `${resp.id}_${sub.id}`;
                     const item = matrixMap.get(key);
@@ -244,126 +260,81 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
                     return (
                       <td 
                         key={key} 
-                        className={`border-r border-b border-gray-200 dark:border-gray-700 text-center align-middle transition-colors relative ${
+                        className={`border-r border-b border-gray-200 dark:border-gray-700 text-center align-middle transition-colors relative cursor-pointer select-none h-9 ${
                           isEvaluated 
-                            ? 'bg-green-50 dark:bg-green-900/20' 
+                            ? 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30' 
                             : hasLink 
-                              ? 'bg-yellow-50 dark:bg-yellow-900/10' 
+                              ? 'bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20' 
                               : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
+                        onClick={() => handleCellClick(resp.id, sub.id)}
+                        title={isDraft ? (hasLink ? 'Нажмите, чтобы удалить связь' : 'Нажмите, чтобы создать связь') : ''}
                       >
-                        <div className="flex flex-col items-center justify-center h-full w-full py-3 gap-1">
-                          {/* Индикатор статуса */}
-                          <div className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${
+                        <div className="flex items-center justify-center h-full w-full pointer-events-none">
+                          {/* Визуальный индикатор (квадрат) */}
+                          <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-all ${
                             isEvaluated 
                               ? 'bg-green-600 border-green-600 text-white shadow-sm' 
                               : hasLink
                                 ? 'border-yellow-400 bg-white dark:bg-gray-800'
                                 : 'border-transparent'
                           }`}>
-                            {isEvaluated && <Check size={14} strokeWidth={3} />}
-                            {hasLink && !isEvaluated && <div className="w-2 h-2 rounded-full bg-yellow-400" />}
+                            {isEvaluated && <Check size={9} strokeWidth={3} />}
+                            {hasLink && !isEvaluated && <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
                           </div>
-                          
-                          {/* Текст статуса */}
-                          <span className={`text-[10px] font-medium ${
-                            isEvaluated ? 'text-green-700 dark:text-green-400' : hasLink ? 'text-yellow-600 dark:text-yellow-500' : 'text-transparent'
-                          }`}>
-                            {isEvaluated ? 'Оценил' : hasLink ? 'Ожидает' : ''}
-                          </span>
-
-                          {/* Действия при наведении (если есть связь) */}
-                          {hasLink && (
-                            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/5 dark:bg-black/20 opacity-0 hover:opacity-100 transition-opacity backdrop-blur-[1px]">
-                              {!isEvaluated && (
-                                <button
-                                  onClick={() => onCopyLink(item!.token)}
-                                  className="p-1.5 bg-white dark:bg-gray-800 rounded-full text-directum-orange shadow-sm hover:scale-110 transition-transform"
-                                  title="Копировать ссылку"
-                                >
-                                  <LinkIcon size={12} />
-                                </button>
-                              )}
-                              {isDraft && !isEvaluated && (
-                                <button
-                                  onClick={() => onDelete(item!.id, item!.evaluatorName, item!.targetName)}
-                                  className="p-1.5 bg-white dark:bg-gray-800 rounded-full text-red-500 shadow-sm hover:scale-110 transition-transform"
-                                  title="Удалить связь"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
-                            </div>
-                          )}
                         </div>
+
+                        {/* Действия при наведении */}
+                        {hasLink && !isEvaluated && isDraft && (
+                          <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/5 dark:bg-black/20 opacity-0 hover:opacity-100 transition-opacity backdrop-blur-[1px] pointer-events-auto">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onCopyLink(item!.token); }}
+                              className="p-0.5 bg-white dark:bg-gray-800 rounded-full text-directum-orange shadow-sm hover:scale-110 transition-transform"
+                              title="Копировать ссылку"
+                            >
+                              <LinkIcon size={9} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onDelete(item!.id, item!.evaluatorName, item!.targetName); }}
+                              className="p-0.5 bg-white dark:bg-gray-800 rounded-full text-red-500 shadow-sm hover:scale-110 transition-transform"
+                              title="Удалить связь"
+                            >
+                              <Trash2 size={9} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     );
                   })}
-
-                  {/* Кнопка добавления строки (+) */}
-                  {isDraft && (
-                    <td className="border-b border-gray-200 dark:border-gray-700 p-2 text-center bg-gray-50/50 dark:bg-gray-800/30">
-                       {!addingMode ? (
-                        <button 
-                          onClick={() => setAddingMode({ type: 'row', id: resp.id })}
-                          className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-directum-orange hover:bg-directum-orange/10 transition-all mx-auto opacity-50 hover:opacity-100"
-                          title="Добавить кандидата для этого эксперта"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      ) : addingMode.type === 'row' && addingMode.id === resp.id ? (
-                        <div className="min-w-[160px]">
-                           <Select
-                            options={employees.filter(e => !subjects.some(s => s.id === e.value) && e.value !== resp.id)}
-                            value={selectedEmployee}
-                            onChange={(opt) => setSelectedEmployee(opt)}
-                            placeholder="Кого добавить?"
-                            styles={{
-                              ...reactSelectStyles,
-                              control: (base) => ({ ...base, minHeight: '32px', fontSize: '12px' }),
-                            }}
-                            menuPortalTarget={document.body}
-                            autoFocus
-                            openMenuOnFocus
-                          />
-                          <div className="flex gap-1 mt-1 justify-center">
-                             <button 
-                              onClick={handleConfirmAdd} 
-                              disabled={!selectedEmployee || isMutating}
-                              className="text-xs bg-green-600 text-white rounded px-2 py-1 hover:bg-green-700 disabled:opacity-50"
-                            >
-                              OK
-                            </button>
-                            <button onClick={handleCancelAdd} className="text-xs bg-gray-300 text-gray-700 rounded px-2 py-1 hover:bg-gray-400">✕</button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </td>
-                  )}
+                  
+                  {/* Пустая ячейка под кнопкой "+" */}
+                  {isDraft && <td className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 h-9"></td>}
                 </tr>
               ))}
 
               {/* Строка добавления нового эксперта (внизу) */}
               {isDraft && (
                 <tr>
-                  <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 p-2 border-t border-r border-gray-200 dark:border-gray-700">
+                  <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 p-1 border-t border-r border-gray-200 dark:border-gray-700 relative">
                      {!addingMode ? (
                       <button 
                         onClick={() => setAddingMode({ type: 'row' })}
-                        className="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-500 hover:text-directum-orange transition-colors border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-directum-orange/50 hover:bg-directum-orange/5"
+                        className="w-full flex items-center justify-center gap-1 py-1.5 text-[10px] text-gray-500 hover:text-directum-orange transition-colors border border-dashed border-gray-300 dark:border-gray-700 rounded hover:border-directum-orange/50 hover:bg-directum-orange/5"
                       >
-                        <Plus size={16} />
+                        <Plus size={12} />
                         <span>Добавить эксперта</span>
                       </button>
-                     ) : addingMode.type === 'row' && !addingMode.id ? (
-                        renderAddCell(availableRespondents)
+                     ) : addingMode.type === 'row' ? (
+                        <div className="absolute left-0 bottom-full mb-1 z-50 w-full">
+                          {renderAddForm(availableRespondents)}
+                        </div>
                      ) : null}
                   </td>
                   {/* Пустые ячейки под столбцами */}
                   {subjects.map(sub => (
-                    <td key={`empty-${sub.id}`} className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30"></td>
+                    <td key={`empty-${sub.id}`} className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 h-9"></td>
                   ))}
-                  {isDraft && <td className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30"></td>}
+                  {isDraft && <td className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 h-9"></td>}
                 </tr>
               )}
             </tbody>
@@ -372,7 +343,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
       )}
 
       {!isDraft && (
-        <div className="text-xs text-gray-500 italic text-right mt-2">
+        <div className="text-[10px] text-gray-500 italic text-right mt-1">
           * Режим просмотра. Изменения доступны только в статусе «Черновик».
         </div>
       )}
