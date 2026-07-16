@@ -86,6 +86,13 @@ export default function Matrix() {
     ? templateOptions.find(opt => opt.value === selectedTemplateId)
     : null
 
+  const selectedTemplateObj = selectedTemplateId
+    ? templates?.find(t => t.id === selectedTemplateId)
+    : null
+
+  // шаблон с зашитыми оцениваемыми применяется сразу ко всем им, без ручного выбора
+  const templateHasOwnTargets = (selectedTemplateObj?.targets.length ?? 0) > 0
+
   // Находим имя целевого сотрудника для отображения
   const targetEmployee = employees?.find(e => e.id === targetId)
 
@@ -116,13 +123,17 @@ export default function Matrix() {
   })
 
   const applyTemplateMutation = useMutation({
-    mutationFn: (data: { templateId: number; targetId: number }) =>
+    mutationFn: (data: { templateId: number; targetIds?: number[] }) =>
       applyRespondentTemplate(surveyId, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setIsApplyingTemplate(false)
       setSelectedTemplateId(null)
-      toast.success('Шаблон матрицы успешно применён!')
+      toast.success(
+        result.skipped > 0
+          ? `Шаблон применён: добавлено ${result.created}, пропущено (уже было) ${result.skipped}`
+          : 'Шаблон матрицы успешно применён!',
+      )
     },
     onError: (error: any) => {
       console.error('Ошибка применения шаблона:', error)
@@ -152,12 +163,15 @@ export default function Matrix() {
       toast.error('Выберите шаблон матрицы')
       return
     }
-    if (!targetId) {
+    if (!templateHasOwnTargets && !targetId) {
       toast.error('Сначала выберите сотрудника, которого оценивают')
       return
     }
     setIsApplyingTemplate(true)
-    applyTemplateMutation.mutate({ templateId: selectedTemplateId, targetId: Number(targetId) })
+    applyTemplateMutation.mutate({
+      templateId: selectedTemplateId,
+      targetIds: templateHasOwnTargets ? undefined : [Number(targetId)],
+    })
   }
 
   const handleEvaluatorChange = (option: any) => {
