@@ -232,92 +232,88 @@ export default function Matrix() {
             {/* Блок применения шаблона */}
             
             {fillMode === 'template' && (
-              <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">            
-                <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                      Шаблон матрицы
-                    </label>
-                    <Select
-                      options={templateOptions}
-                      value={selectedTemplate}
-                      onChange={handleTemplateChange}
-                      placeholder="Выберите шаблон"
-                      isClearable
-                      isSearchable
-                      styles={reactSelectStyles}
-                      menuPortalTarget={document.body}
-                      menuPosition="fixed"
-                      isDisabled={!isDraft}
-                    />
-                  </div>
-                  <button
-                    onClick={handleApplyTemplate}
-                    className="btn-primary flex items-center space-x-2"
-                    disabled={isApplyingTemplate || !selectedTemplateId || !targetId}
-                  >
-                    <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
-                    <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
-                  </button>
-                  <span className="text-xs text-gray-500">
-                    {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
-                  </span>
+              <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                    Шаблон матрицы
+                  </label>
+                  <Select
+                    options={templateOptions}
+                    value={selectedTemplate}
+                    onChange={handleTemplateChange}
+                    placeholder="Выберите шаблон"
+                    isClearable
+                    isSearchable
+                    styles={reactSelectStyles}
+                    menuPortalTarget={document.body}
+                    menuPosition="fixed"
+                    isDisabled={!isDraft}
+                  />
                 </div>
+                <button
+                  onClick={handleApplyTemplate}
+                  className="btn-primary flex items-center space-x-2"
+                  disabled={isApplyingTemplate || !selectedTemplateId || !targetId}
+                >
+                  <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
+                  <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
+                </button>
+                <span className="text-xs text-gray-500">
+                  {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
+                </span>
               </div>
             )}
 
             {/* Ручное добавление */}
             {fillMode === 'manual' && (
               <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
-                <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
-                  <div className="flex-1 min-w-[150px]">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                      Кого оценивают
-                    </label>
-                    <Select
-                      options={targetOptions}
-                      value={selectedTarget}
-                      onChange={handleTargetChange}
-                      placeholder="Выберите сотрудника"
-                      isClearable
-                      isSearchable
-                      styles={reactSelectStyles}
-                      menuPortalTarget={document.body}
-                      menuPosition="fixed"
-                      isDisabled={!isDraft}
-                    />
-                  </div>
-                  
-                  <div className="flex-1 min-w-[150px]">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                      Кто оценивает
-                    </label>
-                    <Select
-                      options={evaluatorOptions}
-                      value={selectedEvaluator}
-                      onChange={handleEvaluatorChange}
-                      placeholder="Выберите сотрудника"
-                      isClearable
-                      isSearchable
-                      styles={reactSelectStyles}
-                      menuPortalTarget={document.body}
-                      menuPosition="fixed"
-                      isDisabled={!isDraft || !targetId}
-                    />
-                  </div>
-                  
-                  <div className="flex items-end">
-                    <button
-                      onClick={handleAdd}
-                      className="btn-primary flex items-center space-x-2"
-                      disabled={addMutation.isPending || !evaluatorId || !targetId}
-                    >
-                      <Plus size={18} />
-                      <span>Добавить</span>
-                    </button>
-                  </div>
+                <div className="flex-1 min-w-[150px]">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                    Кого оценивают
+                  </label>
+                  <Select
+                    options={targetOptions}
+                    value={selectedTarget}
+                    onChange={handleTargetChange}
+                    placeholder="Выберите сотрудника"
+                    isClearable
+                    isSearchable
+                    styles={reactSelectStyles}
+                    menuPortalTarget={document.body}
+                    menuPosition="fixed"
+                    isDisabled={!isDraft}
+                  />
                 </div>
-            </div>
+                
+                <div className="flex-1 min-w-[150px]">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                    Кто оценивает
+                  </label>
+                  <Select
+                    options={evaluatorOptions}
+                    value={selectedEvaluator}
+                    onChange={handleEvaluatorChange}
+                    placeholder="Выберите сотрудника"
+                    isClearable
+                    isSearchable
+                    styles={reactSelectStyles}
+                    menuPortalTarget={document.body}
+                    menuPosition="fixed"
+                    isDisabled={!isDraft || !targetId}
+                  />
+                </div>
+                
+                <div className="flex items-end">
+                  <button
+                    onClick={handleAdd}
+                    className="btn-primary flex items-center space-x-2"
+                    disabled={addMutation.isPending || !evaluatorId || !targetId}
+                  >
+                    <Plus size={18} />
+                    <span>Добавить</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         ) : (
