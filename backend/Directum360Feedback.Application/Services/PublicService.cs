@@ -39,7 +39,6 @@ public class PublicService(
             SurveyId = survey.Id,
             SurveyTitle = survey.Title,
             TargetName = target?.FullName ?? "Unknown",
-            Role = assignment.Role,
             Questions = questions.OrderBy(q => q.Order).Select(q => new PublicQuestionDto
             {
                 Id = q.Id,

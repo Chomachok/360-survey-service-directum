@@ -77,4 +77,32 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
             return BadRequest(new { message = ex.Message });
         }
     }
+    
+    [HttpPut("surveys/{surveyId}/reorder")]
+    public async Task<IActionResult> ReorderQuestions(int surveyId, [FromBody] List<UpdateQuestionOrderDto> updatedOrders)
+    {
+        try
+        {
+            await questionService.UpdateQuestionsOrderAsync(surveyId, updatedOrders);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+    
+    [HttpPost("{questionId}/save-as-template")]
+    public async Task<IActionResult> SaveQuestionAsTemplate(int questionId, [FromBody] SaveQuestionAsTemplateRequest request)
+    {
+        try
+        {
+            var template = await questionService.SaveQuestionAsTemplateAsync(questionId, request.Name);
+            return Ok(template);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

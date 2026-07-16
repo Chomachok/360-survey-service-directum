@@ -5,4 +5,5 @@ namespace Directum360Feedback.Application.Interfaces;
 public interface IEmailService
 {
     Task SendSurveyInviteAsync(SurveyAssignment assignment, string baseUrl);
+    Task SendCodeEmailAsync(string toEmail, string fullName, string code);
 }

@@ -1,21 +1,18 @@
+// src/types/index.ts
+
 export enum SurveyStatus {
   Draft = 'Draft',
   Active = 'Active',
-  Completed = 'Completed'
+  Completed = 'Completed',
 }
 
 export enum QuestionType {
   Text = 'Text',
-  SingleChoice = 'SingleChoice'
+  SingleChoice = 'SingleChoice',
 }
 
-export enum AssessmentRole {
-  SelfAssessment = 'SelfAssessment',
-  Manager = 'Manager',
-  Colleague = 'Colleague'
-}
+// AssessmentRole удалён, так как роли больше нет
 
-// Остальные интерфейсы без изменений
 export interface Survey {
   id: number
   title: string
@@ -25,7 +22,7 @@ export interface Survey {
   endDate: string
   authorId: number
   authorName: string
-  targetId: number
+  targetId?: number
 }
 
 export interface CreateSurveyDto {
@@ -34,8 +31,15 @@ export interface CreateSurveyDto {
   startDate: string
   endDate: string
   authorId: number
-  targetId?: number,
   templateId?: number
+}
+
+export interface UpdateSurveyDto {
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
+  targetId?: number
 }
 
 export interface Question {
@@ -53,6 +57,18 @@ export interface CreateQuestionDto {
   required: boolean
   order: number
   options?: string[]
+}
+
+export interface UpdateQuestionDto {
+  text: string
+  type: QuestionType
+  required: boolean
+  options?: string[]
+}
+
+export interface UpdateQuestionOrderDto {
+  id: number
+  order: number
 }
 
 export interface QuestionTemplate {
@@ -83,16 +99,19 @@ export interface MatrixItem {
   evaluatorName: string
   targetId: number
   targetName: string
-  role: AssessmentRole
   token: string
   completed: boolean
+}
+
+export interface CreateMatrixItemDto {
+  evaluatorId: number
+  targetId: number
 }
 
 export interface PublicSurvey {
   surveyId: number
   surveyTitle: string
   targetName: string
-  role: AssessmentRole
   questions: PublicQuestion[]
 }
 
@@ -110,11 +129,45 @@ export interface AnswerSubmit {
   selectedOption?: string
 }
 
-export interface UpdateQuestionDto {
-  text: string
-  type: QuestionType
-  required: boolean
-  options?: string[]
+export interface ResultDto {
+  surveyId: number
+  surveyTitle: string
+  results: EmployeeResultDto[]
+}
+
+export interface EmployeeResultDto {
+  employeeId: number
+  employeeName: string
+  evaluators: EvaluatorResultDto[]
+}
+
+export interface EvaluatorResultDto {
+  evaluatorId: number
+  evaluatorName: string
+  answers: QuestionAnswerDto[]
+}
+
+export interface QuestionAnswerDto {
+  questionText: string
+  answerText?: string
+  selectedOption?: string
+}
+
+export interface Employee {
+  id: number
+  fullName: string
+  email: string
+}
+
+export interface EmployeeDto {
+  id: number
+  fullName: string
+  email: string
+}
+
+export interface CreateEmployeeDto {
+  fullName: string
+  email: string
 }
 
 export interface SurveyTemplate {
@@ -151,4 +204,39 @@ export interface UpdateSurveyTemplateDto {
   name: string
   description?: string
   questions: CreateTemplateQuestionDto[]
+}
+
+export interface RespondentTemplate {
+  id: number
+  name: string
+  description?: string
+  items: RespondentTemplateItem[]
+}
+
+export interface RespondentTemplateItem {
+  id: number
+  employeeId?: number
+  employeeName?: string
+}
+
+export interface CreateRespondentTemplateDto {
+  name: string
+  description?: string
+  items: CreateRespondentTemplateItemDto[]
+}
+
+export interface CreateRespondentTemplateItemDto {
+  employeeId: number
+}
+
+export interface UpdateRespondentTemplateDto {
+  name: string
+  description?: string
+  items: CreateRespondentTemplateItemDto[]
+}
+
+export interface ApplyRespondentTemplateResult {
+  created: number
+  skipped: number
+  items: MatrixItem[]
 }

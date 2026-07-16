@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createSurvey } from '../api/surveys'
-import { getEmployees } from '../api/employees'
 import { getSurveyTemplates } from '../api/surveyTemplates'
 import { CreateSurveyDto } from '../types'
 import { ArrowLeft } from 'lucide-react'
@@ -16,14 +15,8 @@ export default function SurveyCreate() {
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [targetId, setTargetId] = useState<number | ''>('')
   const [templateId, setTemplateId] = useState<number | ''>('')
   const authorId = 1
-
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: getEmployees,
-  })
 
   const { data: templates } = useQuery({
     queryKey: ['surveyTemplates'],
@@ -34,37 +27,26 @@ export default function SurveyCreate() {
     title?: string
     startDate?: string
     endDate?: string
-    targetId?: string
     general?: string
   }>({})
-
-  const employeeOptions = (employees || []).map(e => ({
-    value: e.id,
-    label: e.fullName,
-  }))
 
   const templateOptions = (templates || []).map(t => ({
     value: t.id,
     label: t.name,
   }))
 
-  const selectedEmployee = targetId
-    ? employeeOptions.find(opt => opt.value === targetId)
-    : null
-
   const selectedTemplate = templateId
     ? templateOptions.find(opt => opt.value === templateId)
     : null
 
   const validate = (): boolean => {
-    const newErrors: { title?: string; startDate?: string; endDate?: string; targetId?: string } = {}
+    const newErrors: { title?: string; startDate?: string; endDate?: string } = {}
     if (!title.trim()) newErrors.title = 'Введите название опроса'
     if (!startDate) newErrors.startDate = 'Выберите дату начала'
     if (!endDate) newErrors.endDate = 'Выберите дату окончания'
     else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
-    if (!targetId) newErrors.targetId = 'Выберите сотрудника, для которого проводится опрос'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -91,7 +73,6 @@ export default function SurveyCreate() {
       startDate,
       endDate,
       authorId,
-      targetId: targetId ? Number(targetId) : undefined,
       templateId: templateId ? Number(templateId) : undefined,
     })
   }
@@ -109,11 +90,6 @@ export default function SurveyCreate() {
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(e.target.value)
     setErrors((prev) => ({ ...prev, endDate: undefined, general: undefined }))
-  }
-
-  const handleTargetIdChange = (option: any) => {
-    setTargetId(option?.value || '')
-    setErrors((prev) => ({ ...prev, targetId: undefined, general: undefined }))
   }
 
   const handleTemplateIdChange = (option: any) => {
@@ -149,8 +125,14 @@ export default function SurveyCreate() {
               onChange={handleTitleChange}
               className={`input-field ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
               placeholder="Например: Оценка эффективности команды"
+              maxLength={250}
             />
             {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+            <div className="flex justify-end mt-1">
+              <span className={`text-sm ${title.length >= 240 ? 'text-red-500' : 'text-gray-400'}`}>
+                {title.length}/250
+              </span>
+            </div>
           </div>
 
           <div className="animate-fadeInUp-delay-2">
@@ -162,25 +144,6 @@ export default function SurveyCreate() {
               rows={3}
               placeholder="Опишите цель и задачи опроса..."
             />
-          </div>
-
-          <div className="animate-fadeInUp-delay-2">
-            <label className="label-field">
-              Сотрудник, про которого проводится опрос <span className="text-red-500">*</span>
-            </label>
-            <Select
-              options={employeeOptions}
-              value={selectedEmployee}
-              onChange={handleTargetIdChange}
-              placeholder="Выберите сотрудника"
-              isClearable
-              isSearchable
-              styles={reactSelectStyles}
-              menuPortalTarget={document.body}
-              menuPosition="fixed"
-              className={errors.targetId ? 'border-red-500 rounded-lg' : ''}
-            />
-            {errors.targetId && <p className="text-red-500 text-sm mt-1">{errors.targetId}</p>}
           </div>
 
           <div className="animate-fadeInUp-delay-2">

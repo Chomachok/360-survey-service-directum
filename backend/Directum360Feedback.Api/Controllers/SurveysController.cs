@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.SurveyTemplateDTOs;
 using Directum360Feedback.Application.Interfaces;
 
 namespace Directum360Feedback.Api.Controllers;
@@ -72,6 +73,20 @@ public class SurveysController(ISurveyService surveyService) : ControllerBase
         {
             var survey = await surveyService.CompleteSurveyAsync(id);
             return Ok(survey);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+    
+    [HttpPost("{id}/save-as-template")]
+    public async Task<IActionResult> SaveAsTemplate(int id, [FromBody] SaveAsTemplateRequest request)
+    {
+        try
+        {
+            var template = await surveyService.SaveSurveyAsTemplateAsync(id, request.Name, request.Description);
+            return Ok(template);
         }
         catch (Exception ex)
         {

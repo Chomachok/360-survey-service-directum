@@ -5,9 +5,35 @@
 @tailwind utilities;
 
 @layer base {
+  /* Палитра для react-select: он рисуется инлайновыми стилями и не видит
+     классы Tailwind, поэтому цвета отдаём ему через переменные. */
+  :root {
+    --rs-bg: #ffffff;
+    --rs-bg-disabled: #f3f4f6;
+    --rs-border: #d1d5db;
+    --rs-border-hover: #9ca3af;
+    --rs-text: #1e2128;
+    --rs-placeholder: #9ca3af;
+    --rs-menu-bg: #ffffff;
+    --rs-option-hover: #fce3a0;
+    --rs-indicator: #6b7280;
+    --rs-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
   html.dark {
     /* нативные контролы (date-инпуты, скроллбары, выпадашки) в тёмной схеме */
     color-scheme: dark;
+
+    --rs-bg: #111827;
+    --rs-bg-disabled: #1f2937;
+    --rs-border: #4b5563;
+    --rs-border-hover: #6b7280;
+    --rs-text: #f3f4f6;
+    --rs-placeholder: #6b7280;
+    --rs-menu-bg: #1f2937;
+    --rs-option-hover: #374151;
+    --rs-indicator: #9ca3af;
+    --rs-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
   }
 
   body {
@@ -60,7 +86,7 @@
     left: 0;
     right: 0;
     top: -8px;
-    bottom: -8px;
+    bottom: -16px;
     z-index: -1;
   }
 
@@ -139,6 +165,13 @@
 .dark .text-blue-600   { color: #93c5fd; }
 .dark .text-yellow-700 { color: #fde68a; }
 .dark .text-red-600    { color: #fca5a5; }
+.dark .text-red-700    { color: #fca5a5; }
+.dark .text-yellow-600 { color: #fcd34d; }
+.dark .bg-yellow-100   { background-color: rgba(234, 179, 8, 0.20); }
+.dark .bg-red-100      { background-color: rgba(239, 68, 68, 0.18); }
+.dark .text-green-800  { color: #86efac; }
+.dark .text-yellow-800 { color: #fde68a; }
+.dark .text-red-800    { color: #fca5a5; }
 
 .dark .hover\:bg-red-50:hover     { background-color: rgba(239, 68, 68, 0.18); }
 .dark .hover\:text-blue-700:hover { color: #bfdbfe; }
@@ -187,6 +220,47 @@
 .animate-blob-a { animation: blobA 26s ease-in-out infinite; will-change: transform; }
 .animate-blob-b { animation: blobB 32s ease-in-out infinite; will-change: transform; }
 .animate-blob-c { animation: blobC 38s ease-in-out infinite; will-change: transform; }
+
+/* летающие двойные галочки */
+@keyframes flyA {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(3vw, -5vh, 0) rotate(180deg); }
+}
+@keyframes flyB {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(-4vw, 4vh, 0) rotate(-180deg); }
+}
+@keyframes flyC {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  33%      { transform: translate3d(-2.5vw, -3vh, 0) rotate(120deg); }
+  66%      { transform: translate3d(2vw, 3.5vh, 0) rotate(240deg); }
+}
+@keyframes flyD {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(2vw, 6vh, 0) rotate(200deg); }
+}
+.animate-fly-a { animation: flyA 34s ease-in-out infinite; will-change: transform; }
+.animate-fly-b { animation: flyB 42s ease-in-out infinite; will-change: transform; }
+.animate-fly-c { animation: flyC 50s ease-in-out infinite; will-change: transform; }
+.animate-fly-d { animation: flyD 38s ease-in-out infinite; will-change: transform; }
+
+/* корги и ёж, неспешно проплывающие через экран */
+@keyframes swimCorgi {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(-34vw, -2.2vh, 0); }
+  50%  { transform: translate3d(-66vw, 1.8vh, 0); }
+  75%  { transform: translate3d(-98vw, -1.6vh, 0); }
+  100% { transform: translate3d(-132vw, 0, 0); }
+}
+@keyframes swimHog {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(32vw, 1.8vh, 0); }
+  50%  { transform: translate3d(62vw, -1.6vh, 0); }
+  75%  { transform: translate3d(92vw, 1.4vh, 0); }
+  100% { transform: translate3d(126vw, 0, 0); }
+}
+.animate-swim-corgi { animation: swimCorgi 80s linear infinite; will-change: transform; }
+.animate-swim-hog   { animation: swimHog 95s linear infinite 8s; will-change: transform; }
 
 /* ============================================================
    Уважаем системную настройку «уменьшить движение»

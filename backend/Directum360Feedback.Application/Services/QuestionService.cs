@@ -157,4 +157,53 @@ public class QuestionService(
             result.Options = JsonSerializer.Deserialize<List<string>>(question.Options);
         return result;
     }
+    
+    public async Task UpdateQuestionsOrderAsync(int surveyId, List<UpdateQuestionOrderDto> updatedOrders)
+    {
+        // Загружаем все вопросы опроса
+        var questions = await questionRepo.FindAsync(q => q.SurveyId == surveyId);
+        if (!questions.Any())
+            throw new Exception("Вопросы для данного опроса не найдены");
+
+        // Проверяем, что все ID из запроса принадлежат этому опросу
+        var questionIds = questions.Select(q => q.Id).ToHashSet();
+        foreach (var item in updatedOrders)
+        {
+            if (!questionIds.Contains(item.Id))
+                throw new Exception($"Вопрос с ID {item.Id} не принадлежит данному опросу");
+        }
+
+        // Обновляем порядок
+        foreach (var item in updatedOrders)
+        {
+            var question = questions.First(q => q.Id == item.Id);
+            question.Order = item.Order;
+            questionRepo.Update(question);
+        }
+
+        await questionRepo.SaveChangesAsync();
+    }
+    
+    public async Task<QuestionTemplateDto> SaveQuestionAsTemplateAsync(int questionId, string templateName)
+    {
+        var question = await questionRepo.GetByIdAsync(questionId);
+        if (question == null)
+            throw new Exception("Вопрос не найден");
+
+        var template = new QuestionTemplate
+        {
+            Name = templateName,
+            Text = question.Text,
+            Type = question.Type,
+            Options = question.Options
+        };
+
+        await templateRepo.AddAsync(template);
+        await templateRepo.SaveChangesAsync();
+
+        var dto = mapper.Map<QuestionTemplateDto>(template);
+        if (!string.IsNullOrEmpty(template.Options))
+            dto.Options = JsonSerializer.Deserialize<List<string>>(template.Options);
+        return dto;
+    }
 }

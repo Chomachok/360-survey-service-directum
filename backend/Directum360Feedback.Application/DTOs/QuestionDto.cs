@@ -37,3 +37,8 @@ public class CreateQuestionTemplateDto
     public QuestionType Type { get; set; }
     public List<string>? Options { get; set; }
 }
+
+public class SaveQuestionAsTemplateRequest
+{
+    public string Name { get; set; } = string.Empty;
+}

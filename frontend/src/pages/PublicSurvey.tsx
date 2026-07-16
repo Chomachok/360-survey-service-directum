@@ -106,19 +106,12 @@ export default function PublicSurvey() {
     )
   }
 
-  const roleLabels: Record<string, string> = {
-    SelfAssessment: 'Самооценка',
-    Manager: 'Оценка руководителем',
-    Colleague: 'Оценка коллегой',
-  }
-
   return (
     <div className="card animate-fadeInUp mt-4">
       <div className="border-b border-gray-200 pb-4 mb-6">
         <h1 className="text-2xl font-bold text-directum-dark break-words">{survey.surveyTitle}</h1>
         <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
           <span>👤 Оцениваемый: <strong>{survey.targetName}</strong></span>
-          <span>🏷️ Роль: <strong>{roleLabels[survey.role] || survey.role}</strong></span>
         </div>
       </div>
 
