@@ -4,6 +4,7 @@ import { getResults, exportDocx } from '../api/results'
 import { ArrowLeft, Download, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import { EmployeeResultDto, EvaluatorResultDto, QuestionAnswerDto } from '../types'
+import LogoLoader from '../components/LogoLoader'
 
 export default function Results() {
   const { id } = useParams<{ id: string }>()
@@ -37,9 +38,7 @@ export default function Results() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 
