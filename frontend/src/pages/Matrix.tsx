@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
+import LogoLoader from '../components/LogoLoader'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -46,8 +47,6 @@ export default function Matrix() {
     targetName?: string
   }>({ isOpen: false })
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
-  type FillMode = 'manual' | 'template'
-  const [fillMode, setFillMode] = useState<FillMode>('manual')
 
   const isDraft = survey?.status === 'Draft'
 
@@ -84,6 +83,13 @@ export default function Matrix() {
     ? templateOptions.find(opt => opt.value === selectedTemplateId)
     : null
 
+  const selectedTemplateObj = selectedTemplateId
+    ? templates?.find(t => t.id === selectedTemplateId)
+    : null
+
+  // шаблон с зашитыми оцениваемыми применяется сразу ко всем им, без ручного выбора
+  const templateHasOwnTargets = (selectedTemplateObj?.targets.length ?? 0) > 0
+
   // Находим имя целевого сотрудника для отображения
   const targetEmployee = employees?.find(e => e.id === targetId)
 
@@ -114,13 +120,17 @@ export default function Matrix() {
   })
 
   const applyTemplateMutation = useMutation({
-    mutationFn: (data: { templateId: number; targetId: number }) =>
+    mutationFn: (data: { templateId: number; targetIds?: number[] }) =>
       applyRespondentTemplate(surveyId, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setIsApplyingTemplate(false)
       setSelectedTemplateId(null)
-      toast.success('Шаблон матрицы успешно применён!')
+      toast.success(
+        result.skipped > 0
+          ? `Шаблон применён: добавлено ${result.created}, пропущено (уже было) ${result.skipped}`
+          : 'Шаблон матрицы успешно применён!',
+      )
     },
     onError: (error: any) => {
       console.error('Ошибка применения шаблона:', error)
@@ -150,12 +160,15 @@ export default function Matrix() {
       toast.error('Выберите шаблон матрицы')
       return
     }
-    if (!targetId) {
+    if (!templateHasOwnTargets && !targetId) {
       toast.error('Сначала выберите сотрудника, которого оценивают')
       return
     }
     setIsApplyingTemplate(true)
-    applyTemplateMutation.mutate({ templateId: selectedTemplateId, targetId: Number(targetId) })
+    applyTemplateMutation.mutate({
+      templateId: selectedTemplateId,
+      targetIds: templateHasOwnTargets ? undefined : [Number(targetId)],
+    })
   }
 
   const handleEvaluatorChange = (option: any) => {
@@ -183,9 +196,7 @@ export default function Matrix() {
 
   if (surveyLoading || mLoading || templatesLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 
@@ -207,114 +218,91 @@ export default function Matrix() {
 
         {isDraft ? (
           <div className="space-y-4">
-            <div className="flex gap-2 border-b border-gray-200 pb-2">
-              <button
-                onClick={() => setFillMode('manual')}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  fillMode === 'manual'
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-500 hover:text-directum-dark hover:bg-gray-100'
-                }`}
-              >
-                Ручное добавление
-              </button>
-              <button
-                onClick={() => setFillMode('template')}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  fillMode === 'template'
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-500 hover:text-directum-dark hover:bg-gray-100'
-                }`}
-              >
-                Применить шаблон
-              </button>
-            </div>
             {/* Блок применения шаблона */}
-            
-            {fillMode === 'template' && (
-              <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                    Шаблон матрицы
-                  </label>
-                  <Select
-                    options={templateOptions}
-                    value={selectedTemplate}
-                    onChange={handleTemplateChange}
-                    placeholder="Выберите шаблон"
-                    isClearable
-                    isSearchable
-                    styles={reactSelectStyles}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                    isDisabled={!isDraft}
-                  />
-                </div>
-                <button
-                  onClick={handleApplyTemplate}
-                  className="btn-primary flex items-center space-x-2"
-                  disabled={isApplyingTemplate || !selectedTemplateId || !targetId}
-                >
-                  <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
-                  <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
-                </button>
-                <span className="text-xs text-gray-500">
-                  {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
-                </span>
+            <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Шаблон матрицы
+                </label>
+                <Select
+                  options={templateOptions}
+                  value={selectedTemplate}
+                  onChange={handleTemplateChange}
+                  placeholder="Выберите шаблон"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft}
+                />
               </div>
-            )}
+              <button
+                onClick={handleApplyTemplate}
+                className="btn-primary flex items-center space-x-2"
+                disabled={isApplyingTemplate || !selectedTemplateId || (!templateHasOwnTargets && !targetId)}
+              >
+                <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
+                <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
+              </button>
+              <span className="text-xs text-gray-500">
+                {templateHasOwnTargets
+                  ? `У шаблона уже заданы оцениваемые (${selectedTemplateObj?.targets.length}) — они будут добавлены сразу все`
+                  : !targetId
+                    ? 'Сначала выберите сотрудника, которого оценивают'
+                    : ''}
+              </span>
+            </div>
 
             {/* Ручное добавление */}
-            {fillMode === 'manual' && (
-              <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                    Кого оценивают
-                  </label>
-                  <Select
-                    options={targetOptions}
-                    value={selectedTarget}
-                    onChange={handleTargetChange}
-                    placeholder="Выберите сотрудника"
-                    isClearable
-                    isSearchable
-                    styles={reactSelectStyles}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                    isDisabled={!isDraft}
-                  />
-                </div>
-                
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                    Кто оценивает
-                  </label>
-                  <Select
-                    options={evaluatorOptions}
-                    value={selectedEvaluator}
-                    onChange={handleEvaluatorChange}
-                    placeholder="Выберите сотрудника"
-                    isClearable
-                    isSearchable
-                    styles={reactSelectStyles}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                    isDisabled={!isDraft || !targetId}
-                  />
-                </div>
-                
-                <div className="flex items-end">
-                  <button
-                    onClick={handleAdd}
-                    className="btn-primary flex items-center space-x-2"
-                    disabled={addMutation.isPending || !evaluatorId || !targetId}
-                  >
-                    <Plus size={18} />
-                    <span>Добавить</span>
-                  </button>
-                </div>
+            <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Кого оценивают
+                </label>
+                <Select
+                  options={targetOptions}
+                  value={selectedTarget}
+                  onChange={handleTargetChange}
+                  placeholder="Выберите сотрудника"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft}
+                />
               </div>
-            )}
+              
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Кто оценивает
+                </label>
+                <Select
+                  options={evaluatorOptions}
+                  value={selectedEvaluator}
+                  onChange={handleEvaluatorChange}
+                  placeholder="Выберите сотрудника"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  isDisabled={!isDraft || !targetId}
+                />
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={handleAdd}
+                  className="btn-primary flex items-center space-x-2"
+                  disabled={addMutation.isPending || !evaluatorId || !targetId}
+                >
+                  <Plus size={18} />
+                  <span>Добавить</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-700">
