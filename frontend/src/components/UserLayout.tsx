@@ -29,13 +29,6 @@ const UserLayout: React.FC = () => {
                 {userName}
               </span>
               <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 text-gray-600 dark:text-gray-300"
-                title="Выйти"
-              >
-                <LogOut size={20} />
-              </button>
-              <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
                 aria-label="Переключить тему"
@@ -45,6 +38,13 @@ const UserLayout: React.FC = () => {
               <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">
                 {userName.charAt(0).toUpperCase()}
               </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 text-gray-600 dark:text-gray-300"
+                title="Выйти"
+              >
+                <LogOut size={20} />
+              </button>
             </div>
           </div>
         </div>
