@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
-import { MatrixGrid } from '../components/MatrixGrid'
+import { SurveyMatrix } from '../components/MatrixGrid'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -389,15 +389,14 @@ export default function Matrix() {
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Матрица оценок
                 </h3>
-                <MatrixGrid 
-                  data={matrix || []} 
-                  employees={evaluatorOptions || []}
-                  isDraft={isDraft}
-                  onDelete={handleDeleteClick}
-                  onCopyLink={handleCopyLink}
-                  onAdd={(evaluatorId, targetId) => addMutation.mutate({ evaluatorId, targetId })}
-                  isAdding={addMutation.isPending}
-                />
+               <SurveyMatrix
+    data={matrix || []}
+    employees={evaluatorOptions || []}
+    isDraft={isDraft}
+    onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
+    onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
+    isMutating={addMutation.isPending || deleteMutation.isPending}
+  />
               </div>
             )}
           </div>
