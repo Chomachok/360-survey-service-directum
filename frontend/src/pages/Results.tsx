@@ -10,15 +10,16 @@ export default function Results() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const surveyId = parseInt(id!)
+
   const [expandedEmployees, setExpandedEmployees] = useState<Set<number>>(new Set())
-  const [expandedEvaluators, setExpandedEvaluators] = useState<Set<string>>(new Set())
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set())
 
   const { data, isLoading } = useQuery({
     queryKey: ['results', surveyId],
     queryFn: () => getResults(surveyId),
   })
 
-  const handleExport = () => {
+  const handleExportDocx = () => {
     exportDocx(surveyId)
   }
 
@@ -29,17 +30,15 @@ export default function Results() {
     setExpandedEmployees(newSet)
   }
 
-  const toggleEvaluator = (key: string) => {
-    const newSet = new Set(expandedEvaluators)
+  const toggleQuestion = (key: string) => {
+    const newSet = new Set(expandedQuestions)
     if (newSet.has(key)) newSet.delete(key)
     else newSet.add(key)
-    setExpandedEvaluators(newSet)
+    setExpandedQuestions(newSet)
   }
 
   if (isLoading) {
-    return (
-      <LogoLoader />
-    )
+    return <LogoLoader />
   }
 
   if (!data || data.results.length === 0) {
@@ -76,17 +75,35 @@ export default function Results() {
           <h1 className="text-2xl font-bold text-directum-dark">Результаты опроса</h1>
           <p className="text-gray-500 break-words overflow-hidden">{data.surveyTitle}</p>
         </div>
-        <button onClick={handleExport} className="btn-primary flex items-center space-x-2">
+        <button onClick={handleExportDocx} className="btn-primary flex items-center space-x-2">
           <Download size={18} />
           <span>Экспорт DOCX</span>
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {data.results.map((employee: EmployeeResultDto) => {
           const isEmployeeExpanded = expandedEmployees.has(employee.employeeId)
+
+          // Группируем ответы по вопросам для этого сотрудника
+          const questionAnswers = new Map<string, { evaluatorName: string; answer: string }[]>()
+
+          employee.evaluators.forEach((evaluator: EvaluatorResultDto) => {
+            evaluator.answers.forEach((qa: QuestionAnswerDto) => {
+              if (!questionAnswers.has(qa.questionText)) {
+                questionAnswers.set(qa.questionText, [])
+              }
+              const answerText = qa.answerText || qa.selectedOption || 'Нет ответа'
+              questionAnswers.get(qa.questionText)!.push({
+                evaluatorName: evaluator.evaluatorName,
+                answer: answerText,
+              })
+            })
+          })
+
           return (
             <div key={employee.employeeId} className="card animate-fadeInUp">
+              {/* Заголовок сотрудника (кликабельный) */}
               <div
                 className="flex items-center justify-between cursor-pointer"
                 onClick={() => toggleEmployee(employee.employeeId)}
@@ -96,10 +113,10 @@ export default function Results() {
                     {employee.employeeName.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-directum-dark">{employee.employeeName}</h3>
-                    <span className="text-sm text-gray-500">
+                    <h3 className="text-xl font-semibold text-directum-dark">{employee.employeeName}</h3>
+                    <p className="text-sm text-gray-500">
                       {employee.evaluators.length} оценщиков
-                    </span>
+                    </p>
                   </div>
                 </div>
                 <div className="text-gray-400">
@@ -107,38 +124,35 @@ export default function Results() {
                 </div>
               </div>
 
+              {/* Вопросы сотрудника (видны только если сотрудник развернут) */}
               {isEmployeeExpanded && (
                 <div className="mt-4 space-y-4">
-                  {employee.evaluators.map((evaluator: EvaluatorResultDto) => {
-                    const key = `${employee.employeeId}-${evaluator.evaluatorId}`
-                    const isEvaluatorExpanded = expandedEvaluators.has(key)
+                  {Array.from(questionAnswers.entries()).map(([questionText, answers]) => {
+                    const questionKey = `${employee.employeeId}-${questionText}`
+                    const isQuestionExpanded = expandedQuestions.has(questionKey)
+
                     return (
-                      <div key={key} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <div key={questionText} className="border-l-2 border-directum-orange pl-4">
+                        {/* Заголовок вопроса (кликабельный) */}
                         <div
                           className="flex items-center justify-between cursor-pointer"
-                          onClick={() => toggleEvaluator(key)}
+                          onClick={() => toggleQuestion(questionKey)}
                         >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold text-sm">
-                              {evaluator.evaluatorName.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-medium text-directum-dark">{evaluator.evaluatorName}</span>
-                          </div>
+                          <h4 className="text-base font-semibold text-directum-orange">
+                            {questionText}
+                          </h4>
                           <div className="text-gray-400">
-                            {isEvaluatorExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            {isQuestionExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                           </div>
                         </div>
 
-                        {isEvaluatorExpanded && (
-                          <div className="mt-3 space-y-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
-                            {evaluator.answers.map((qa: QuestionAnswerDto, idx: number) => (
+                        {/* Ответы на вопрос (видны только если вопрос развернут) */}
+                        {isQuestionExpanded && (
+                          <div className="mt-2 space-y-1">
+                            {answers.map((item, idx) => (
                               <div key={idx} className="text-sm">
-                                <div className="text-gray-600 dark:text-gray-400">
-                                  {qa.questionText}
-                                </div>
-                                <div className="font-medium text-directum-dark">
-                                  {qa.answerText || qa.selectedOption || '—'}
-                                </div>
+                                <span className="font-medium text-directum-dark">{item.evaluatorName}:</span>
+                                <span className="text-gray-700 dark:text-gray-300 ml-1">{item.answer}</span>
                               </div>
                             ))}
                           </div>
