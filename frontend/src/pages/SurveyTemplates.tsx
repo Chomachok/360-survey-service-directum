@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyTemplates, createSurveyTemplate, updateSurveyTemplate, deleteSurveyTemplate } from '../api/surveyTemplates'
-import { useState } from 'react'
+import { useState, useRef } from 'react' // убрали useEffect
 import { QuestionType, CreateSurveyTemplateDto, CreateTemplateQuestionDto } from '../types'
 import { Plus, Copy, Edit, Trash2, X, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
+
+const generateTempId = () => Math.random().toString(36).substring(2) + Date.now().toString(36)
 
 export default function SurveyTemplates() {
   const queryClient = useQueryClient()
@@ -13,11 +15,11 @@ export default function SurveyTemplates() {
     queryFn: getSurveyTemplates,
   })
 
-  // Создание
-  const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [questions, setQuestions] = useState<CreateTemplateQuestionDto[]>([])
+  // Состояния для формы создания
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createDescription, setCreateDescription] = useState('')
+  const [createQuestions, setCreateQuestions] = useState<CreateTemplateQuestionDto[]>([])
   const [createErrors, setCreateErrors] = useState<{ name?: string; questions?: string }>({})
 
   // Редактирование
@@ -35,21 +37,52 @@ export default function SurveyTemplates() {
   // Удаление
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id?: number; name?: string }>({ isOpen: false })
 
-  // ----- Мутации -----
+  // Реф для предотвращения двойного нажатия
+  const isCreatingRef = useRef(false)
+
+  // Сброс формы создания
+  const resetCreateForm = () => {
+    setCreateName('')
+    setCreateDescription('')
+    setCreateQuestions([])
+    setCreateErrors({})
+  }
+
+  // Открытие формы создания
+  const openCreateForm = () => {
+    resetCreateForm()
+    setIsCreateFormOpen(true)
+  }
+
+  const closeCreateForm = () => {
+    resetCreateForm()
+    setIsCreateFormOpen(false)
+    isCreatingRef.current = false
+  }
+
+  // Мутации
   const createMutation = useMutation({
-    mutationFn: (dto: CreateSurveyTemplateDto) => createSurveyTemplate(dto),
+    mutationFn: (dto: CreateSurveyTemplateDto) => {
+      // Удаляем временные ID перед отправкой
+      const cleanQuestions = dto.questions.map(({ tempId, ...rest }) => rest)
+      return createSurveyTemplate({ ...dto, questions: cleanQuestions })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['surveyTemplates'] })
-      resetCreateForm()
+      closeCreateForm()
       toast.success('Шаблон опроса создан')
     },
     onError: (error: any) => {
       toast.error(error.message || 'Ошибка создания')
+      isCreatingRef.current = false
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: number; dto: any }) => updateSurveyTemplate(id, dto),
+    mutationFn: ({ id, dto }: { id: number; dto: any }) => {
+      const cleanQuestions = dto.questions.map(({ tempId, ...rest }: any) => rest)
+      return updateSurveyTemplate(id, { ...dto, questions: cleanQuestions })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['surveyTemplates'] })
       setEditingTemplate(null)
@@ -72,79 +105,79 @@ export default function SurveyTemplates() {
     },
   })
 
-  const resetCreateForm = () => {
-    setName('')
-    setDescription('')
-    setQuestions([])
-    setShowForm(false)
-    setCreateErrors({})
-  }
-
+  // Обработчик отправки формы создания
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) {
+    if (isCreatingRef.current) return
+    if (!createName.trim()) {
       setCreateErrors({ name: 'Введите название' })
       return
     }
-    if (questions.length === 0) {
+    if (createQuestions.length === 0) {
       setCreateErrors({ questions: 'Добавьте хотя бы один вопрос' })
       return
     }
-    // Проверяем, что для SingleChoice есть варианты
-    for (const q of questions) {
+    for (const q of createQuestions) {
       if (q.type === QuestionType.SingleChoice && (!q.options || q.options.length < 2)) {
         toast.error('Для вопроса с выбором добавьте минимум 2 варианта')
         return
       }
     }
-    createMutation.mutate({ name, description, questions })
+    isCreatingRef.current = true
+    createMutation.mutate({ name: createName, description: createDescription, questions: createQuestions })
   }
 
-  // ----- Функции для работы с вопросами (создание) -----
+  // ----- Функции для работы с вопросами в форме создания -----
   const addQuestionToCreate = () => {
-    setQuestions([
-      ...questions,
-      { text: '', type: QuestionType.Text, required: false, order: questions.length + 1, options: [] },
+    setCreateQuestions([
+      ...createQuestions,
+      {
+        tempId: generateTempId(),
+        text: '',
+        type: QuestionType.Text,
+        required: false,
+        order: createQuestions.length + 1,
+        options: [],
+      },
     ])
     setCreateErrors({})
   }
 
   const removeQuestionFromCreate = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index))
+    setCreateQuestions(createQuestions.filter((_, i) => i !== index))
     setCreateErrors({})
   }
 
   const updateQuestionInCreate = (index: number, field: keyof CreateTemplateQuestionDto, value: any) => {
-    const updated = [...questions]
+    const updated = [...createQuestions]
     updated[index] = { ...updated[index], [field]: value }
-    setQuestions(updated)
+    setCreateQuestions(updated)
     setCreateErrors({})
   }
 
-  // Функции для работы с вариантами (создание)
   const addOptionToCreate = (qIndex: number) => {
-    const updated = [...questions]
+    const updated = [...createQuestions]
     const q = updated[qIndex]
     if (!q.options) q.options = []
     q.options.push('')
-    setQuestions(updated)
+    setCreateQuestions(updated)
   }
 
   const removeOptionFromCreate = (qIndex: number, optIndex: number) => {
-    const updated = [...questions]
+    const updated = [...createQuestions]
     const q = updated[qIndex]
     if (q.options) {
       q.options = q.options.filter((_, i) => i !== optIndex)
-      setQuestions(updated)
+      setCreateQuestions(updated)
     }
   }
 
   const updateOptionInCreate = (qIndex: number, optIndex: number, value: string) => {
-    const updated = [...questions]
+    const updated = [...createQuestions]
     const q = updated[qIndex]
     if (q.options && q.options[optIndex] !== undefined) {
       q.options[optIndex] = value
-      setQuestions(updated)
+      setCreateQuestions(updated)
     }
   }
 
@@ -155,6 +188,7 @@ export default function SurveyTemplates() {
       name: template.name,
       description: template.description || '',
       questions: template.questions.map((q: any) => ({
+        tempId: generateTempId(),
         text: q.text,
         type: q.type,
         required: q.required,
@@ -197,7 +231,14 @@ export default function SurveyTemplates() {
       ...editingTemplate,
       questions: [
         ...editingTemplate.questions,
-        { text: '', type: QuestionType.Text, required: false, order: editingTemplate.questions.length + 1, options: [] },
+        {
+          tempId: generateTempId(),
+          text: '',
+          type: QuestionType.Text,
+          required: false,
+          order: editingTemplate.questions.length + 1,
+          options: [],
+        },
       ],
     })
     setEditErrors({})
@@ -253,23 +294,29 @@ export default function SurveyTemplates() {
     setViewingTemplate(template)
   }
 
-  if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-directum-orange"></div></div>
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-directum-orange border-t-transparent" />
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6 animate-fadeInUp">
+      <div className="animate-fadeInUp mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-directum-dark">Шаблоны опросов</h1>
-          <p className="text-gray-500 mt-1">Создавайте готовые наборы вопросов для быстрого запуска опросов</p>
+          <p className="mt-1 text-gray-500">Создавайте готовые наборы вопросов для быстрого запуска опросов</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center space-x-2">
+        <button onClick={openCreateForm} className="btn-primary flex items-center space-x-2">
           <Plus size={20} />
-          <span>{showForm ? 'Отменить' : 'Создать шаблон'}</span>
+          <span>Создать шаблон</span>
         </button>
       </div>
 
       {/* Форма создания */}
-      {showForm && (
+      {isCreateFormOpen && (
         <div className="card mb-6 animate-fadeInUp">
           <h2 className="text-xl font-semibold text-directum-dark mb-4">Новый шаблон опроса</h2>
           <form onSubmit={handleCreateSubmit} className="space-y-4">
@@ -277,8 +324,8 @@ export default function SurveyTemplates() {
               <label className="label-field">Название *</label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => { setName(e.target.value); setCreateErrors({}) }}
+                value={createName}
+                onChange={(e) => { setCreateName(e.target.value); setCreateErrors({}) }}
                 className={`input-field ${createErrors.name ? 'border-red-500' : ''}`}
               />
               {createErrors.name && <p className="text-red-500 text-sm">{createErrors.name}</p>}
@@ -286,16 +333,16 @@ export default function SurveyTemplates() {
             <div>
               <label className="label-field">Описание</label>
               <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
                 className="input-field resize-none"
                 rows={2}
               />
             </div>
             <div>
               <label className="label-field">Вопросы *</label>
-              {questions.map((q, idx) => (
-                <div key={idx} className="flex flex-col gap-2 p-3 border rounded-lg mb-2 bg-gray-50">
+              {createQuestions.map((q, idx) => (
+                <div key={q.tempId || idx} className="flex flex-col gap-2 p-3 border rounded-lg mb-2 bg-gray-50">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Вопрос #{idx + 1}</span>
                     <button type="button" onClick={() => removeQuestionFromCreate(idx)} className="text-red-500 hover:text-red-700">
@@ -364,9 +411,18 @@ export default function SurveyTemplates() {
                 <Plus size={16} /> Добавить вопрос
               </button>
             </div>
-            <button type="submit" className="btn-primary" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Создание...' : 'Сохранить'}
-            </button>
+            <div className="flex space-x-3 pt-4 border-t border-gray-100">
+              <button
+                type="submit"
+                className="btn-primary flex-1"
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? 'Создание...' : 'Сохранить'}
+              </button>
+              <button type="button" onClick={closeCreateForm} className="btn-secondary flex-1">
+                Отмена
+              </button>
+            </div>
           </form>
         </div>
       )}
@@ -376,28 +432,32 @@ export default function SurveyTemplates() {
         <div className="card text-center py-12">
           <Copy size={48} className="text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500">Шаблонов опросов пока нет</p>
-          <button onClick={() => setShowForm(true)} className="btn-primary inline-block mt-4">
+          <button onClick={openCreateForm} className="btn-primary inline-block mt-4">
             Создать первый шаблон
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {templates?.map((t) => (
-            <div key={t.id} className="card hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold text-directum-dark">{t.name}</h3>
-                  {t.description && <p className="text-sm text-gray-500">{t.description}</p>}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {templates?.map((t, index) => (
+            <div
+              key={t.id}
+              className="card animate-fadeInUp"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+              <div className="flex items-start justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-directum-dark">{t.name}</h3>
+                  {t.description && <p className="mt-1 text-sm text-gray-500">{t.description}</p>}
                   <p className="text-xs text-gray-400 mt-1">{t.questions.length} вопросов</p>
                 </div>
-                <div className="flex space-x-1">
-                  <button onClick={() => handleViewClick(t)} className="text-gray-500 hover:text-blue-500 p-1" title="Просмотр">
+                <div className="ml-3 flex shrink-0 items-center space-x-1">
+                  <button onClick={() => handleViewClick(t)} className="p-1 text-gray-400 transition-colors hover:text-blue-500" title="Просмотр">
                     <Eye size={18} />
                   </button>
-                  <button onClick={() => handleEditClick(t)} className="text-blue-500 hover:text-blue-700 p-1" title="Редактировать">
+                  <button onClick={() => handleEditClick(t)} className="p-1 text-gray-400 transition-colors hover:text-directum-orange" title="Редактировать">
                     <Edit size={18} />
                   </button>
-                  <button onClick={() => setDeleteModal({ isOpen: true, id: t.id, name: t.name })} className="text-gray-400 hover:text-red-500 p-1" title="Удалить">
+                  <button onClick={() => setDeleteModal({ isOpen: true, id: t.id, name: t.name })} className="p-1 text-gray-400 transition-colors hover:text-red-500" title="Удалить">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -438,7 +498,7 @@ export default function SurveyTemplates() {
               <div>
                 <label className="label-field">Вопросы</label>
                 {editingTemplate.questions.map((q, idx) => (
-                  <div key={idx} className="flex flex-col gap-2 p-3 border rounded-lg mb-2 bg-gray-50">
+                  <div key={q.tempId || idx} className="flex flex-col gap-2 p-3 border rounded-lg mb-2 bg-gray-50">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">Вопрос #{idx + 1}</span>
                       <button type="button" onClick={() => removeQuestionFromEdit(idx)} className="text-red-500 hover:text-red-700">
@@ -570,7 +630,7 @@ export default function SurveyTemplates() {
         onClose={() => setDeleteModal({ isOpen: false })}
         onConfirm={() => deleteModal.id && deleteMutation.mutate(deleteModal.id)}
         title="Удаление шаблона"
-        message={`Вы уверены, что хотите удалить шаблон "${deleteModal.name}"?`}
+        message={`Удалить шаблон «${deleteModal.name}»? Уже созданные матрицы опросов это не затронет.`}
         confirmText="Удалить"
         type="danger"
         isLoading={deleteMutation.isPending}
