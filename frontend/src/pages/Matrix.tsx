@@ -330,8 +330,8 @@ export default function Matrix() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
                           <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
@@ -344,8 +344,8 @@ export default function Matrix() {
                             className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
                             style={{ animationDelay: `${index * 100}ms` }}
                           >
-                            <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                             <td className="py-3 px-4 text-sm">{item.targetName}</td>
+                            <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
                             <td className="py-3 px-4">
                               <button
                                 onClick={() => handleCopyLink(item.token)}
@@ -389,11 +389,14 @@ export default function Matrix() {
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Матрица оценок
                 </h3>
-                <MatrixGrid
-                  data={matrix || []}
+                <MatrixGrid 
+                  data={matrix || []} 
+                  employees={evaluatorOptions || []}
                   isDraft={isDraft}
                   onDelete={handleDeleteClick}
                   onCopyLink={handleCopyLink}
+                  onAdd={(evaluatorId, targetId) => addMutation.mutate({ evaluatorId, targetId })}
+                  isAdding={addMutation.isPending}
                 />
               </div>
             )}

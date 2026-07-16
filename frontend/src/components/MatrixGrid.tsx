@@ -87,6 +87,9 @@ export function MatrixGrid({
 
   // Фильтруем сотрудников, которые еще не участвуют в текущей операции добавления
   const getFilteredOptions = () => {
+    // 1. Защита: если сотрудники еще не загрузились, возвращаем пустой массив
+    if (!employees) return []
+    
     if (!addingMode) return employees
     
     if (addingMode.type === 'row') {
