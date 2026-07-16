@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Pencil, Users, X, UserCheck } from 'lucide-react'
+import { Plus, Trash2, Pencil, Users, X, UserCheck, Target } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Select from 'react-select'
+import { reactSelectStyles } from '../styles/reactSelectStyles'
 import {
   getRespondentTemplates,
   createRespondentTemplate,
@@ -11,6 +13,7 @@ import {
 import { getEmployees } from '../api/employees'
 import type { RespondentTemplate, CreateRespondentTemplateItemDto } from '../types'
 import { ConfirmModal } from '../components/ConfirmModal'
+import LogoLoader from '../components/LogoLoader'
 
 /** пустая строка состава по умолчанию */
 const emptyItem = (): CreateRespondentTemplateItemDto => ({
@@ -36,6 +39,7 @@ export default function RespondentTemplates() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [items, setItems] = useState<CreateRespondentTemplateItemDto[]>([emptyItem()])
+  const [targetIds, setTargetIds] = useState<number[]>([])
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id?: number; name?: string }>({
     isOpen: false,
@@ -46,6 +50,7 @@ export default function RespondentTemplates() {
     setName('')
     setDescription('')
     setItems([emptyItem()])
+    setTargetIds([])
   }
 
   const openCreate = () => {
@@ -62,6 +67,7 @@ export default function RespondentTemplates() {
         ? t.items.map((i) => ({ employeeId: i.employeeId ?? -1 }))
         : [emptyItem()],
     )
+    setTargetIds(t.targets.map((tg) => tg.employeeId))
     setEditorOpen(true)
   }
 
@@ -79,6 +85,7 @@ export default function RespondentTemplates() {
         items: items.map((i) => ({
           employeeId: i.employeeId,
         })),
+        targetEmployeeIds: targetIds,
       }
       return editingId ? updateRespondentTemplate(editingId, dto) : createRespondentTemplate(dto)
     },
@@ -118,12 +125,10 @@ export default function RespondentTemplates() {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
   }
 
+  const targetSelectOptions = (employees || []).map((e) => ({ value: e.id, label: e.fullName }))
+
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-directum-orange border-t-transparent" />
-      </div>
-    )
+    return <LogoLoader />
   }
 
   return (
@@ -132,7 +137,9 @@ export default function RespondentTemplates() {
         <div>
           <h1 className="text-3xl font-bold text-directum-dark">Шаблоны респондентов</h1>
           <p className="mt-1 text-gray-500">
-            Заранее описанный состав оценивающих. Один шаблон подходит любому оцениваемому.
+            Заранее описанный состав оценивающих. Шаблон можно оставить универсальным
+            (оцениваемый выбирается при применении) или сразу привязать к одному
+            или нескольким оцениваемым.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center space-x-2">
@@ -193,6 +200,25 @@ export default function RespondentTemplates() {
                   </div>
                 ))}
               </div>
+
+              {t.targets.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                    <Target size={13} />
+                    Оцениваемые ({t.targets.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {t.targets.map((target) => (
+                      <span
+                        key={target.id}
+                        className="rounded-full bg-directum-orange/10 px-2.5 py-1 text-xs text-directum-orange"
+                      >
+                        {target.employeeName}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <p className="mt-3 text-xs text-gray-400">
                 Респондентов: {t.items.length}
@@ -295,6 +321,29 @@ export default function RespondentTemplates() {
                     Один сотрудник не может быть добавлен дважды
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label className="label-field">Кого оценивают (необязательно)</label>
+                <Select
+                  isMulti
+                  options={targetSelectOptions}
+                  value={targetSelectOptions.filter((opt) => targetIds.includes(opt.value))}
+                  onChange={(selected) =>
+                    setTargetIds((selected as { value: number }[]).map((opt) => opt.value))
+                  }
+                  placeholder="Не выбрано — шаблон универсальный"
+                  isClearable
+                  isSearchable
+                  styles={reactSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                />
+                <p className="mt-2 text-xs text-gray-400">
+                  {targetIds.length === 0
+                    ? 'Если никого не выбрать, шаблон останется универсальным — оцениваемый будет выбираться вручную при применении.'
+                    : `При применении шаблон сразу создаст связи для всех выбранных (${targetIds.length}) — состав оценивающих один и тот же для каждого.`}
+                </p>
               </div>
             </div>
 

@@ -17,10 +17,16 @@ export const updateRespondentTemplate = (id: number, dto: UpdateRespondentTempla
 
 export const deleteRespondentTemplate = (id: number) => api.delete(`/respondent-templates/${id}`)
 
-// Теперь принимает targetId
-export const applyRespondentTemplate = (surveyId: number, dto: { templateId: number; targetId: number }) =>
+// Применяет шаблон к опросу. Если у шаблона заданы свои оцениваемые — targetIds можно не передавать.
+export const applyRespondentTemplate = (
+  surveyId: number,
+  dto: { templateId: number; targetIds?: number[] },
+) =>
   api
-    .post<ApplyRespondentTemplateResult>(`/surveys/${surveyId}/matrix/apply-template`, dto)
+    .post<ApplyRespondentTemplateResult>(`/surveys/${surveyId}/matrix/apply-template`, {
+      templateId: dto.templateId,
+      targetIds: dto.targetIds ?? [],
+    })
     .then((res) => res.data)
 
 export const createTemplateFromSurvey = (dto: {

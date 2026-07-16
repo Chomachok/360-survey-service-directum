@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // --- Шаблоны респондентов ---
     public DbSet<RespondentTemplate> RespondentTemplates { get; set; }
     public DbSet<RespondentTemplateItem> RespondentTemplateItems { get; set; }
+    public DbSet<RespondentTemplateTarget> RespondentTemplateTargets { get; set; }
     public DbSet<SurveyTemplate> SurveyTemplates { get; set; }
     public DbSet<SurveyTemplateQuestion> SurveyTemplateQuestions { get; set; }
     public DbSet<OneTimeCode> OneTimeCodes { get; set; }
@@ -329,6 +330,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany()
             .HasForeignKey(i => i.EmployeeId)
             .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Оцениваемые, зашитые в шаблон (могут отсутствовать — тогда шаблон универсальный)
+        modelBuilder.Entity<RespondentTemplateTarget>()
+            .HasOne(t => t.Template)
+            .WithMany(t => t.Targets)
+            .HasForeignKey(t => t.TemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RespondentTemplateTarget>()
+            .HasOne(t => t.Employee)
+            .WithMany()
+            .HasForeignKey(t => t.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<RespondentTemplate>().HasData(
