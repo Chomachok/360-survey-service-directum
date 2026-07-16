@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
+import { MatrixGrid } from '../components/MatrixGrid'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -46,7 +47,7 @@ export default function Matrix() {
     targetName?: string
   }>({ isOpen: false })
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
-  type FillMode = 'manual' | 'template'
+  type FillMode = 'manual' | 'matrix'
   const [fillMode, setFillMode] = useState<FillMode>('manual')
 
   const isDraft = survey?.status === 'Draft'
@@ -205,34 +206,7 @@ export default function Matrix() {
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
-        {isDraft ? (
-          <div className="space-y-4">
-            <div className="flex gap-2 border-b border-gray-200 pb-2">
-              <button
-                onClick={() => setFillMode('manual')}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  fillMode === 'manual'
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-500 hover:text-directum-dark hover:bg-gray-100'
-                }`}
-              >
-                Ручное добавление
-              </button>
-              <button
-                onClick={() => setFillMode('template')}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  fillMode === 'template'
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-500 hover:text-directum-dark hover:bg-gray-100'
-                }`}
-              >
-                Применить шаблон
-              </button>
-            </div>
-            {/* Блок применения шаблона */}
-            
-            {fillMode === 'template' && (
-              <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex-1 min-w-[200px]">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                     Шаблон матрицы
@@ -261,6 +235,48 @@ export default function Matrix() {
                 <span className="text-xs text-gray-500">
                   {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
                 </span>
+              </div>
+
+        {isDraft ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-4 py-2 border-b border-gray-200 pb-3">
+                <span className="text-sm text-gray-500">Отображение:</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-medium ${fillMode === 'manual' ? 'text-gray-800' : 'text-gray-400'}`}>
+                    Список
+                  </span>
+                  <button
+                    onClick={() => setFillMode(fillMode === 'matrix' ? 'manual' : 'matrix')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      fillMode === 'matrix' ? 'bg-directum-orange' : 'bg-gray-300'
+                    }`}
+                    role="switch"
+                    aria-checked={fillMode === 'matrix'}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        fillMode === 'matrix' ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
+                    Матрица
+                  </span>
+                </div>
+              </div>
+            {/* Блок применения шаблона */}
+            
+            {fillMode === 'matrix' && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Матрица оценок
+                </h3>
+                <MatrixGrid
+                  data={matrix || []}
+                  isDraft={isDraft}
+                  onDelete={handleDeleteClick}
+                  onCopyLink={handleCopyLink}
+                />
               </div>
             )}
 
