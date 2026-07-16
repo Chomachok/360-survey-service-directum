@@ -5,6 +5,7 @@ import { sendCode, verifyCode } from '../api/auth'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon } from 'lucide-react'
 import toast from 'react-hot-toast'
+import AnimatedBackground from '../components/AnimatedBackground'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -71,7 +72,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 relative">
+    <div className="min-h-screen flex items-center justify-center relative">
+      <AnimatedBackground />
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -80,7 +82,7 @@ export default function LoginPage() {
         {theme === 'light' ? <Moon size={24} className="text-gray-600" /> : <Sun size={24} className="text-yellow-400" />}
       </button>
 
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 animate-fadeInUp">
+      <div className="max-w-md w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-lg p-8 animate-fadeInUp">
         <div className="text-center mb-8">
           <img src="/directum-logo.svg" alt="Directum" className="h-12 mx-auto" />
           <h2 className="mt-4 text-2xl font-bold text-directum-dark dark:text-white">

@@ -3,6 +3,7 @@ import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon, LogOut, ClipboardList } from 'lucide-react'
 import Directum360Logo from './Directum360Logo'
+import AnimatedBackground from './AnimatedBackground'
 
 const UserLayout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -19,8 +20,9 @@ const UserLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0 shadow-sm">
+    <div className="min-h-screen flex flex-col">
+      <AnimatedBackground />
+      <header className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/user" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
@@ -60,7 +62,7 @@ const UserLayout: React.FC = () => {
         </div>
       </header>
 
-      <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
+      <div className="md:hidden bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">
             {userName.charAt(0).toUpperCase()}
@@ -80,7 +82,7 @@ const UserLayout: React.FC = () => {
         <Outlet />
       </main>
 
-      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 mt-auto">
+      <footer className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 flex-shrink-0 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             © {new Date().getFullYear()} Directum360 Feedback Service. Все права защищены.
