@@ -390,13 +390,14 @@ export default function Matrix() {
                   Матрица оценок
                 </h3>
                <SurveyMatrix
-    data={matrix || []}
-    employees={evaluatorOptions || []}
-    isDraft={isDraft}
-    onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
-    onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
-    isMutating={addMutation.isPending || deleteMutation.isPending}
-  />
+                data={matrix || []}
+                employees={evaluatorOptions || []}
+                isDraft={isDraft}
+                onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
+                onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
+                onCopyLink={handleCopyLink}
+                isMutating={addMutation.isPending || deleteMutation.isPending}
+              />
               </div>
             )}
           </div>
