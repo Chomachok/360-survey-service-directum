@@ -98,80 +98,137 @@ public class ResultService(
     }
 
     public async Task<byte[]> ExportDocxAsync(int surveyId)
-{
-    var results = await GetSurveyResultsAsync(surveyId);
-    using var stream = new MemoryStream();
-    using (var wordDoc = WordprocessingDocument.Create(stream, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
     {
-        var mainPart = wordDoc.AddMainDocumentPart();
-        mainPart.Document = new Document();
-        var body = new Body();
-
-        // Заголовок
-        var title = new Paragraph(new Run(new Text($"Результаты опроса: {results.SurveyTitle}")));
-        title.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
-        body.Append(title);
-        body.Append(new Paragraph(new Run(new Text(" "))));
-
-        // Сбор всех ответов по вопросам
-        var questionAnswers = new Dictionary<string, List<(string EvaluatorName, string Answer)>>();
-
-        foreach (var emp in results.Results)
+        var results = await GetSurveyResultsAsync(surveyId);
+        using var stream = new MemoryStream();
+        using (var wordDoc = WordprocessingDocument.Create(stream, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
         {
-            foreach (var evaluator in emp.Evaluators)
-            {
-                foreach (var qa in evaluator.Answers)
-                {
-                    if (!questionAnswers.ContainsKey(qa.QuestionText))
-                        questionAnswers[qa.QuestionText] = new List<(string, string)>();
+            var mainPart = wordDoc.AddMainDocumentPart();
+            mainPart.Document = new Document();
+            var body = new Body();
 
-                    var answerText = qa.AnswerText ?? qa.SelectedOption ?? "Нет ответа";
-                    questionAnswers[qa.QuestionText].Add((evaluator.EvaluatorName, answerText));
+            // Цвета Directum (без #)
+            const string orange = "FF8600";
+            const string darkGray = "1E2128";
+
+            // Заголовок (оранжевый, жирный, 20pt)
+            var titlePara = new Paragraph();
+            var titleRun = new Run(new Text($"Результаты опроса: {results.SurveyTitle}"));
+            titleRun.RunProperties = new RunProperties(
+                new Bold(),
+                new FontSize { Val = "40" },
+                new Color { Val = orange }
+            );
+            titlePara.Append(titleRun);
+            titlePara.ParagraphProperties = new ParagraphProperties(
+                new Justification { Val = JustificationValues.Center },
+                new SpacingBetweenLines { After = "240" } // отступ после заголовка
+            );
+            body.Append(titlePara);
+
+            // Оранжевая разделительная линия
+            var linePara = new Paragraph();
+            var lineRun = new Run(new Text(new string('_', 80)));
+            lineRun.RunProperties = new RunProperties(
+                new Color { Val = orange },
+                new FontSize { Val = "20" }
+            );
+            linePara.Append(lineRun);
+            linePara.ParagraphProperties = new ParagraphProperties(
+                new Justification { Val = JustificationValues.Center }
+            );
+            body.Append(linePara);
+            body.Append(new Paragraph(new Run(new Text(" "))));
+
+            // Сбор всех ответов по вопросам
+            var questionAnswers = new Dictionary<string, List<(string EvaluatorName, string Answer)>>();
+
+            foreach (var emp in results.Results)
+            {
+                foreach (var evaluator in emp.Evaluators)
+                {
+                    foreach (var qa in evaluator.Answers)
+                    {
+                        if (!questionAnswers.ContainsKey(qa.QuestionText))
+                            questionAnswers[qa.QuestionText] = new List<(string, string)>();
+
+                        var answerText = qa.AnswerText ?? qa.SelectedOption ?? "Нет ответа";
+                        questionAnswers[qa.QuestionText].Add((evaluator.EvaluatorName, answerText));
+                    }
                 }
             }
-        }
 
-        // Вывод вопросов и ответов
-        foreach (var kvp in questionAnswers)
-        {
-            var questionText = kvp.Key;
-            var answers = kvp.Value;
-
-            // Вопрос (жирный, 12pt)
-            var qPara = new Paragraph();
-            var qRun = new Run(new Text(questionText));
-            qRun.RunProperties = new RunProperties(
-                new Bold(),
-                new FontSize { Val = "24" }
-            );
-            qPara.Append(qRun);
-            body.Append(qPara);
-
-            // Ответы
-            foreach (var (evaluatorName, answer) in answers)
+            // Вывод вопросов и ответов
+            foreach (var kvp in questionAnswers)
             {
-                var aPara = new Paragraph();
-                var aRun = new Run(new Text($"    {evaluatorName}: {answer}"));
-                aRun.RunProperties = new RunProperties(
-                    new FontSize { Val = "22" }
+                var questionText = kvp.Key;
+                var answers = kvp.Value;
+
+                // Вопрос (тёмно-серый, жирный, 12pt)
+                var qPara = new Paragraph();
+                var qRun = new Run(new Text(questionText));
+                qRun.RunProperties = new RunProperties(
+                    new Bold(),
+                    new FontSize { Val = "24" },
+                    new Color { Val = darkGray }
                 );
-                aPara.Append(aRun);
-                body.Append(aPara);
+                qPara.Append(qRun);
+                qPara.ParagraphProperties = new ParagraphProperties(
+                    new SpacingBetweenLines { After = "120" }
+                );
+                body.Append(qPara);
+
+                // Ответы
+                foreach (var (evaluatorName, answer) in answers)
+                {
+                    var aPara = new Paragraph();
+                    var aRun = new Run(new Text($"    {evaluatorName}: {answer}"));
+                    aRun.RunProperties = new RunProperties(
+                        new FontSize { Val = "22" },
+                        new Color { Val = darkGray }
+                    );
+                    aPara.Append(aRun);
+                    aPara.ParagraphProperties = new ParagraphProperties(
+                        new SpacingBetweenLines { After = "60" }
+                    );
+                    body.Append(aPara);
+                }
+
+                body.Append(new Paragraph(new Run(new Text(" ")))); // пустая строка между вопросами
             }
 
-            body.Append(new Paragraph(new Run(new Text(" ")))); // пустая строка между вопросами
+            if (questionAnswers.Count == 0)
+            {
+                var emptyPara = new Paragraph();
+                var emptyRun = new Run(new Text("Нет данных для отображения."));
+                emptyRun.RunProperties = new RunProperties(
+                    new FontSize { Val = "24" },
+                    new Color { Val = darkGray }
+                );
+                emptyPara.Append(emptyRun);
+                body.Append(emptyPara);
+            }
+
+            // Подвал (дата и бренд)
+            var footerPara = new Paragraph();
+            footerPara.ParagraphProperties = new ParagraphProperties(
+                new Justification { Val = JustificationValues.Center },
+                new SpacingBetweenLines { Before = "240" }
+            );
+            var footerRun = new Run(new Text($"Сформировано: {DateTime.Now:dd.MM.yyyy HH:mm}  |  Directum360 Feedback Service"));
+            footerRun.RunProperties = new RunProperties(
+                new FontSize { Val = "18" },
+                new Color { Val = darkGray },
+                new Italic()
+            );
+            footerPara.Append(footerRun);
+            body.Append(footerPara);
+
+            mainPart.Document.Body = body;
+            mainPart.Document.Save();
         }
 
-        if (questionAnswers.Count == 0)
-        {
-            body.Append(new Paragraph(new Run(new Text("Нет данных для отображения."))));
-        }
-
-        mainPart.Document.Body = body;
-        mainPart.Document.Save();
+        stream.Position = 0;
+        return stream.ToArray();
     }
-
-    stream.Position = 0;
-    return stream.ToArray();
-}
 }
