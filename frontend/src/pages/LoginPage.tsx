@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { sendCode, verifyCode } from '../api/auth'
+import { useTheme } from '../contexts/ThemeContext'
+import { Sun, Moon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { theme, toggleTheme } = useTheme()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'email' | 'code'>('email')
@@ -39,9 +42,14 @@ export default function LoginPage() {
       const response = await verifyCode(email, code)
       localStorage.setItem('authToken', response.token)
       localStorage.setItem('userName', response.fullName)
+      localStorage.setItem('userEmail', response.email)
       localStorage.setItem('isAdmin', String(response.isAdmin))
       toast.success('Вход выполнен успешно')
-      navigate('/')
+      if (response.isAdmin) {
+        navigate('/')
+      } else {
+        navigate('/user')
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Неверный код')
     } finally {
@@ -50,7 +58,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 relative">
+      {/* Кнопка переключения темы */}
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        aria-label="Переключить тему"
+      >
+        {theme === 'light' ? (
+          <Moon size={24} className="text-gray-700" />
+        ) : (
+          <Sun size={24} className="text-yellow-400" />
+        )}
+      </button>
+
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 animate-fadeInUp">
         <div className="text-center mb-8">
           <img src="/directum-logo.svg" alt="Directum" className="h-12 mx-auto" />
