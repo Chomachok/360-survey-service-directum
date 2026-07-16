@@ -47,8 +47,8 @@ export default function Matrix() {
     targetName?: string
   }>({ isOpen: false })
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
-  type FillMode = 'manual' | 'matrix'
-  const [fillMode, setFillMode] = useState<FillMode>('manual')
+  type FillMode = 'list' | 'matrix'
+  const [fillMode, setFillMode] = useState<FillMode>('matrix')
 
   const isDraft = survey?.status === 'Draft'
 
@@ -239,33 +239,151 @@ export default function Matrix() {
 
         {isDraft ? (
           <div className="space-y-4">
+            {/* Переключатель */}
             <div className="flex flex-wrap items-center gap-4 py-2 border-b border-gray-200 pb-3">
-                <span className="text-sm text-gray-500">Отображение:</span>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-medium ${fillMode === 'manual' ? 'text-gray-800' : 'text-gray-400'}`}>
-                    Список
-                  </span>
-                  <button
-                    onClick={() => setFillMode(fillMode === 'matrix' ? 'manual' : 'matrix')}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      fillMode === 'matrix' ? 'bg-directum-orange' : 'bg-gray-300'
+              <span className="text-sm text-gray-500">Отображение:</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${fillMode === 'list' ? 'text-gray-800' : 'text-gray-400'}`}>
+                  Список
+                </span>
+                <button
+                  onClick={() => setFillMode(fillMode === 'matrix' ? 'list' : 'matrix')}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    fillMode === 'matrix' ? 'bg-directum-orange' : 'bg-gray-300'
+                  }`}
+                  role="switch"
+                  aria-checked={fillMode === 'matrix'}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      fillMode === 'matrix' ? 'translate-x-6' : 'translate-x-1'
                     }`}
-                    role="switch"
-                    aria-checked={fillMode === 'matrix'}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        fillMode === 'matrix' ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
-                    Матрица
-                  </span>
-                </div>
+                  />
+                </button>
+                <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
+                  Матрица
+                </span>
               </div>
-            {/* Блок применения шаблона */}
-            
+            </div>
+
+            {/* Режим списка */}
+            {fillMode === 'list' && (
+              <>
+                {/* Форма добавления */}
+                <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                      Кого оценивают
+                    </label>
+                    <Select
+                      options={targetOptions}
+                      value={selectedTarget}
+                      onChange={handleTargetChange}
+                      placeholder="Выберите сотрудника"
+                      isClearable
+                      isSearchable
+                      styles={reactSelectStyles}
+                      menuPortalTarget={document.body}
+                      menuPosition="fixed"
+                      isDisabled={!isDraft}
+                    />
+                  </div>
+                  
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                      Кто оценивает
+                    </label>
+                    <Select
+                      options={evaluatorOptions}
+                      value={selectedEvaluator}
+                      onChange={handleEvaluatorChange}
+                      placeholder="Выберите сотрудника"
+                      isClearable
+                      isSearchable
+                      styles={reactSelectStyles}
+                      menuPortalTarget={document.body}
+                      menuPosition="fixed"
+                      isDisabled={!isDraft || !targetId}
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleAdd}
+                      className="btn-primary flex items-center space-x-2"
+                      disabled={addMutation.isPending || !evaluatorId || !targetId}
+                    >
+                      <Plus size={18} />
+                      <span>Добавить</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Таблица (список) */}
+                {matrix?.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Матрица пуста</p>
+                    <p className="text-sm">Добавьте связи с помощью формы выше</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto animate-fadeInUp">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
+                          <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matrix?.map((item, index) => (
+                          <tr
+                            key={item.id}
+                            className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
+                            style={{ animationDelay: `${index * 100}ms` }}
+                          >
+                            <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
+                            <td className="py-3 px-4 text-sm">{item.targetName}</td>
+                            <td className="py-3 px-4">
+                              <button
+                                onClick={() => handleCopyLink(item.token)}
+                                className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
+                              >
+                                <Link size={14} className="group-hover:animate-pulse" />
+                                <span>Копировать ссылку</span>
+                              </button>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                item.completed
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {item.completed ? 'Завершено' : 'Ожидает'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <button
+                                onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
+                                className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                                title="Удалить связь"
+                                disabled={deleteMutation.isPending || !isDraft || item.completed}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Режим матрицы */}
             {fillMode === 'matrix' && (
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -279,129 +397,12 @@ export default function Matrix() {
                 />
               </div>
             )}
-
-            {/* Ручное добавление */}
-            {fillMode === 'manual' && (
-              <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                    Кого оценивают
-                  </label>
-                  <Select
-                    options={targetOptions}
-                    value={selectedTarget}
-                    onChange={handleTargetChange}
-                    placeholder="Выберите сотрудника"
-                    isClearable
-                    isSearchable
-                    styles={reactSelectStyles}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                    isDisabled={!isDraft}
-                  />
-                </div>
-                
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                    Кто оценивает
-                  </label>
-                  <Select
-                    options={evaluatorOptions}
-                    value={selectedEvaluator}
-                    onChange={handleEvaluatorChange}
-                    placeholder="Выберите сотрудника"
-                    isClearable
-                    isSearchable
-                    styles={reactSelectStyles}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                    isDisabled={!isDraft || !targetId}
-                  />
-                </div>
-                
-                <div className="flex items-end">
-                  <button
-                    onClick={handleAdd}
-                    className="btn-primary flex items-center space-x-2"
-                    disabled={addMutation.isPending || !evaluatorId || !targetId}
-                  >
-                    <Plus size={18} />
-                    <span>Добавить</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-700">
             ⚠️ Добавление участников доступно только для опросов в статусе «Черновик».
             <br />
             Текущий статус: <strong>{survey?.status === 'Active' ? 'Активен' : 'Завершён'}</strong>
-          </div>
-        )}
-
-        {matrix?.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 animate-fadeInUp">
-            <p>Матрица пуста</p>
-            <p className="text-sm">
-              {isDraft && targetId
-                ? 'Добавьте связи между сотрудниками с помощью формы выше или примените шаблон'
-                : 'Связи не добавлены'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto animate-fadeInUp">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
-                </tr>
-              </thead>
-              <tbody>
-                {matrix?.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
-                    <td className="py-3 px-4 text-sm">{item.targetName}</td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handleCopyLink(item.token)}
-                        className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
-                      >
-                        <Link size={14} className="group-hover:animate-pulse" />
-                        <span>Копировать ссылку</span>
-                      </button>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        item.completed
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {item.completed ? 'Завершено' : 'Ожидает'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                        title="Удалить связь"
-                        disabled={deleteMutation.isPending || !isDraft || item.completed}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </div>
