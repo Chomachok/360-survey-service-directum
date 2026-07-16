@@ -3,6 +3,7 @@ import { Plus, X, Check, Link as LinkIcon, Trash2 } from 'lucide-react';
 import Select from 'react-select';
 import { reactSelectStyles } from '../styles/reactSelectStyles';
 import toast from 'react-hot-toast';
+import { UseMutationResult } from '@tanstack/react-query';
 
 // Типы данных
 interface MatrixItem {
@@ -28,6 +29,7 @@ interface SurveyMatrixProps {
   onDelete: (id: number, evaluatorName: string, targetName: string) => void;
   onCopyLink: (token: string) => void;
   isMutating: boolean;
+  deleteMutation: { mutateAsync: (id: number) => Promise<unknown> };
 }
 
 // Утилита для разбивки ФИО на 3 строки
@@ -54,6 +56,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   onDelete,
   onCopyLink,
   isMutating,
+  deleteMutation,
 }) => {
   const [addingMode, setAddingMode] = useState<{ type: 'col' | 'row' } | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
@@ -112,16 +115,27 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     setSelectedEmployee(null);
   };
 
-  const handleRemoveEntity = (type: 'row' | 'col', id: number, name: string) => {
+ const handleRemoveEntity = async (type: 'row' | 'col', id: number, name: string) => {
     if (!confirm(`Удалить ${type === 'row' ? 'эксперта' : 'кандидата'} "${name}" и все его связи?`)) return;
     
-    data.forEach(item => {
-      if ((type === 'row' && item.evaluatorId === id) || 
-          (type === 'col' && item.targetId === id)) {
-        onDelete(item.id, item.evaluatorName, item.targetName);
+    // Собираем ВСЕ связи, подлежащие удалению
+    const itemsToRemove = data.filter(item => 
+      (type === 'row' && item.evaluatorId === id) || 
+      (type === 'col' && item.targetId === id)
+    );
+
+    // Удаляем последовательно, ожидая завершения каждой мутации
+    for (const item of itemsToRemove) {
+      try {
+        await deleteMutation.mutateAsync(item.id);
+      } catch (error) {
+        console.error(`Ошибка при удалении связи ${item.id}:`, error);
+        toast.error('Не удалось удалить часть связей');
+        break; // Прерываем цикл при ошибке
       }
-    });
+    }
   };
+
 
   const handleCellClick = (respId: number, subId: number) => {
     if (!isDraft) return;

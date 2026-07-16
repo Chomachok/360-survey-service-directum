@@ -397,6 +397,7 @@ export default function Matrix() {
                 onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
                 onCopyLink={handleCopyLink}
                 isMutating={addMutation.isPending || deleteMutation.isPending}
+                deleteMutation={deleteMutation}
               />
               </div>
             )}
