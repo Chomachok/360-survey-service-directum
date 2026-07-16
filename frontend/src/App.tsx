@@ -14,7 +14,6 @@ import UserDashboard from './pages/UserDashboard'
 import LoginPage from './pages/LoginPage'
 import Layout from './components/Layout'
 import UserLayout from './components/UserLayout'
-import PublicLayout from './components/PublicLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
 import UserRoute from './components/UserRoute'
@@ -26,6 +25,13 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
 
         <Route element={<ProtectedRoute />}>
+          <Route element={<UserRoute />}>
+            <Route element={<UserLayout />}>
+              <Route path="/user" element={<UserDashboard />} />
+              <Route path="/survey/:token" element={<PublicSurvey />} />
+            </Route>
+          </Route>
+
           <Route element={<AdminRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Dashboard />} />
@@ -40,16 +46,6 @@ function App() {
               <Route path="/import" element={<ImportEmployees />} />
             </Route>
           </Route>
-
-          <Route element={<UserRoute />}>
-            <Route element={<UserLayout />}>
-              <Route path="/user" element={<UserDashboard />} />
-            </Route>
-          </Route>
-        </Route>
-
-        <Route element={<PublicLayout />}>
-          <Route path="/survey/:token" element={<PublicSurvey />} />
         </Route>
       </Routes>
     </BrowserRouter>
