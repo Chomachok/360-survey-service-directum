@@ -11,6 +11,7 @@ namespace Directum360Feedback.Application.Services;
 public class RespondentTemplateService(
     IRepository<RespondentTemplate> templateRepo,
     IRepository<RespondentTemplateItem> itemRepo,
+    IRepository<RespondentTemplateTarget> targetRepo,
     IRepository<Employee> employeeRepo,
     IRepository<Survey> surveyRepo,
     IRepository<SurveyAssignment> assignmentRepo,
@@ -21,7 +22,7 @@ public class RespondentTemplateService(
 
     public async Task<IEnumerable<RespondentTemplateDto>> GetAllAsync()
     {
-        var templates = await templateRepo.FindAsync(t => true, t => t.Items);
+        var templates = await templateRepo.FindAsync(t => true, t => t.Items, t => t.Targets);
         var employees = (await employeeRepo.GetAllAsync()).ToDictionary(e => e.Id, e => e.FullName);
 
         return templates
@@ -42,6 +43,7 @@ public class RespondentTemplateService(
     public async Task<RespondentTemplateDto> CreateAsync(CreateRespondentTemplateDto dto)
     {
         await ValidateAsync(dto.Name, dto.Items);
+        var targetIds = await ValidateTargetsAsync(dto.TargetEmployeeIds);
 
         var template = new RespondentTemplate
         {
@@ -51,6 +53,12 @@ public class RespondentTemplateService(
                 .Select(i => new RespondentTemplateItem
                 {
                     EmployeeId = i.EmployeeId
+                })
+                .ToList(),
+            Targets = targetIds
+                .Select(id => new RespondentTemplateTarget
+                {
+                    EmployeeId = id
                 })
                 .ToList()
         };
@@ -65,6 +73,7 @@ public class RespondentTemplateService(
     {
         var template = await LoadWithItemsAsync(id);
         await ValidateAsync(dto.Name, dto.Items);
+        var targetIds = await ValidateTargetsAsync(dto.TargetEmployeeIds);
 
         template.Name = dto.Name.Trim();
         template.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
@@ -82,6 +91,22 @@ public class RespondentTemplateService(
             {
                 TemplateId = template.Id,
                 EmployeeId = i.EmployeeId,
+            });
+        }
+
+        // Перезаписываем оцениваемых целиком
+        foreach (var old in template.Targets.ToList())
+        {
+            template.Targets.Remove(old);
+            targetRepo.Delete(old);
+        }
+
+        foreach (var employeeId in targetIds)
+        {
+            template.Targets.Add(new RespondentTemplateTarget
+            {
+                TemplateId = template.Id,
+                EmployeeId = employeeId,
             });
         }
 
@@ -109,13 +134,28 @@ public class RespondentTemplateService(
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе «Черновик»");
 
-        var target = await employeeRepo.GetByIdAsync(dto.TargetId)
-                     ?? throw new Exception("Оцениваемый сотрудник не найден");
-
         var template = await LoadWithItemsAsync(dto.TemplateId);
 
         if (template.Items.Count == 0)
             throw new Exception("Шаблон пуст — добавьте в него хотя бы одного респондента");
+
+        // Приоритет: явно переданные TargetIds > оцениваемые, зашитые в шаблон.
+        var targetIds = (dto.TargetIds.Count > 0
+                ? dto.TargetIds
+                : template.Targets.Select(t => t.EmployeeId))
+            .Distinct()
+            .ToList();
+
+        if (targetIds.Count == 0)
+            throw new Exception("Не указан оцениваемый: выберите сотрудника вручную или задайте оцениваемых в самом шаблоне");
+
+        var targets = new List<Employee>();
+        foreach (var targetId in targetIds)
+        {
+            var target = await employeeRepo.GetByIdAsync(targetId)
+                         ?? throw new Exception($"Оцениваемый сотрудник (id={targetId}) не найден");
+            targets.Add(target);
+        }
 
         // уже существующие связи этого опроса (EvaluatorId, TargetId)
         var existing = (await assignmentRepo.FindAsync(a => a.SurveyId == surveyId))
@@ -124,43 +164,46 @@ public class RespondentTemplateService(
 
         var result = new ApplyRespondentTemplateResultDto();
 
-        foreach (var item in template.Items)
+        foreach (var target in targets)
         {
-            if (item.EmployeeId is null)
-                throw new Exception($"Шаблон «{template.Name}» повреждён: у респондента не указан сотрудник");
-
-            var evaluatorId = item.EmployeeId.Value;
-
-            var key = (evaluatorId, target.Id);
-            if (existing.Contains(key))
+            foreach (var item in template.Items)
             {
-                result.Skipped++;
-                continue;
+                if (item.EmployeeId is null)
+                    throw new Exception($"Шаблон «{template.Name}» повреждён: у респондента не указан сотрудник");
+
+                var evaluatorId = item.EmployeeId.Value;
+
+                var key = (evaluatorId, target.Id);
+                if (existing.Contains(key))
+                {
+                    result.Skipped++;
+                    continue;
+                }
+
+                var assignment = new SurveyAssignment
+                {
+                    SurveyId = surveyId,
+                    EvaluatorId = evaluatorId,
+                    TargetId = target.Id,
+                    Token = Guid.NewGuid().ToString(),
+                    InviteSent = false
+                };
+
+                await assignmentRepo.AddAsync(assignment);
+                result.Items.Add(new MatrixItemDto
+                {
+                    EvaluatorId = evaluatorId,
+                    TargetId = target.Id,
+                    TargetName = target.FullName,
+                    EvaluatorName = evaluatorId == target.Id
+                        ? target.FullName
+                        : (await employeeRepo.GetByIdAsync(evaluatorId))?.FullName ?? "Unknown",
+                    Token = assignment.Token,
+                    Completed = false
+                });
+                result.Created++;
+                existing.Add(key);
             }
-
-            var assignment = new SurveyAssignment
-            {
-                SurveyId = surveyId,
-                EvaluatorId = evaluatorId,
-                TargetId = target.Id,
-                Token = Guid.NewGuid().ToString(),
-                InviteSent = false
-            };
-
-            await assignmentRepo.AddAsync(assignment);
-            result.Items.Add(new MatrixItemDto
-            {
-                EvaluatorId = evaluatorId,
-                TargetId = target.Id,
-                TargetName = target.FullName,
-                EvaluatorName = evaluatorId == target.Id
-                    ? target.FullName
-                    : (await employeeRepo.GetByIdAsync(evaluatorId))?.FullName ?? "Unknown",
-                Token = assignment.Token,
-                Completed = false
-            });
-            result.Created++;
-            existing.Add(key);
         }
 
         if (result.Created > 0)
@@ -213,7 +256,7 @@ public class RespondentTemplateService(
 
     private async Task<RespondentTemplate> LoadWithItemsAsync(int id)
     {
-        var template = (await templateRepo.FindAsync(t => t.Id == id, t => t.Items)).FirstOrDefault();
+        var template = (await templateRepo.FindAsync(t => t.Id == id, t => t.Items, t => t.Targets)).FirstOrDefault();
         return template ?? throw new Exception("Шаблон респондентов не найден");
     }
 
@@ -243,6 +286,20 @@ public class RespondentTemplateService(
             throw new Exception("В шаблоне есть повторяющийся респондент");
     }
 
+    /// <summary>Проверяет и нормализует список оцениваемых, зашитых в шаблон (может быть пустым).</summary>
+    private async Task<List<int>> ValidateTargetsAsync(List<int> targetEmployeeIds)
+    {
+        var ids = targetEmployeeIds.Distinct().ToList();
+
+        foreach (var id in ids)
+        {
+            if (await employeeRepo.GetByIdAsync(id) is null)
+                throw new Exception($"Оцениваемый сотрудник с id={id} не найден");
+        }
+
+        return ids;
+    }
+
     private RespondentTemplateDto ToDto(RespondentTemplate t, IReadOnlyDictionary<int, string> employees)
     {
         var dto = mapper.Map<RespondentTemplateDto>(t);
@@ -256,6 +313,15 @@ public class RespondentTemplateService(
                     : employees.TryGetValue(i.EmployeeId.Value, out var n) ? n : "Unknown"
             })
             .OrderBy(i => i.EmployeeName)
+            .ToList();
+        dto.Targets = t.Targets
+            .Select(target => new RespondentTemplateTargetDto
+            {
+                Id = target.Id,
+                EmployeeId = target.EmployeeId,
+                EmployeeName = employees.TryGetValue(target.EmployeeId, out var n) ? n : "Unknown"
+            })
+            .OrderBy(target => target.EmployeeName)
             .ToList();
         return dto;
     }

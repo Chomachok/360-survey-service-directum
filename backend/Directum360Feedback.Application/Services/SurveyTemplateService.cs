@@ -32,7 +32,6 @@ public class SurveyTemplateService(
                     }
                     catch
                     {
-                        // Если JSON невалиден, оставляем null
                         qDto.Options = null;
                     }
                 }
@@ -70,23 +69,44 @@ public class SurveyTemplateService(
 
     public async Task<SurveyTemplateDto> CreateAsync(CreateSurveyTemplateDto dto)
     {
+        // Создаём шаблон
         var template = mapper.Map<SurveyTemplate>(dto);
-        await templateRepo.AddAsync(template);
-        await templateRepo.SaveChangesAsync();
 
+        // Добавляем вопросы в коллекцию шаблона
         foreach (var qDto in dto.Questions.OrderBy(q => q.Order))
         {
             var question = mapper.Map<SurveyTemplateQuestion>(qDto);
-            question.SurveyTemplateId = template.Id;
             if (qDto.Options != null && qDto.Options.Any())
                 question.Options = JsonSerializer.Serialize(qDto.Options);
             else
                 question.Options = null;
-            await questionRepo.AddAsync(question);
+            template.Questions.Add(question);
         }
-        await questionRepo.SaveChangesAsync();
 
-        return await GetByIdAsync(template.Id) ?? throw new Exception("Failed to create template");
+        // Сохраняем шаблон вместе с вопросами
+        await templateRepo.AddAsync(template);
+        await templateRepo.SaveChangesAsync();
+
+        // Формируем DTO для ответа
+        var result = mapper.Map<SurveyTemplateDto>(template);
+        result.Questions = template.Questions.OrderBy(q => q.Order).Select(q =>
+        {
+            var qDto = mapper.Map<TemplateQuestionDto>(q);
+            if (!string.IsNullOrEmpty(q.Options))
+            {
+                try
+                {
+                    qDto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+                }
+                catch
+                {
+                    qDto.Options = null;
+                }
+            }
+            return qDto;
+        }).ToList();
+
+        return result;
     }
 
     public async Task<SurveyTemplateDto> UpdateAsync(int id, UpdateSurveyTemplateDto dto)
@@ -96,8 +116,6 @@ public class SurveyTemplateService(
 
         template.Name = dto.Name;
         template.Description = dto.Description;
-        templateRepo.Update(template);
-        await templateRepo.SaveChangesAsync();
 
         // Удаляем старые вопросы
         var oldQuestions = await questionRepo.FindAsync(q => q.SurveyTemplateId == id);
@@ -105,7 +123,7 @@ public class SurveyTemplateService(
             questionRepo.Delete(q);
         await questionRepo.SaveChangesAsync();
 
-        // Добавляем новые
+        // Добавляем новые вопросы
         foreach (var qDto in dto.Questions.OrderBy(q => q.Order))
         {
             var question = mapper.Map<SurveyTemplateQuestion>(qDto);

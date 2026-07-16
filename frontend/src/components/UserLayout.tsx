@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useNavigate, Outlet } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, LogOut, User, ClipboardList } from 'lucide-react'
+import { Sun, Moon, LogOut, ClipboardList } from 'lucide-react'
 import Directum360Logo from './Directum360Logo'
 
 const UserLayout: React.FC = () => {
@@ -23,40 +23,31 @@ const UserLayout: React.FC = () => {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Логотип */}
             <Link to="/user" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <Directum360Logo size={42} />
+              <span className="text-sm text-gray-400 hidden sm:inline-block ml-1">| Личный кабинет</span>
             </Link>
 
-            {/* Правая часть */}
             <div className="flex items-center space-x-3">
-              {/* Имя пользователя */}
               <div className="hidden md:flex flex-col items-end">
-                <span className="text-sm text-gray-700 dark:text-gray-300 hidden sm:block">
+                <span className="text-sm font-medium text-directum-dark dark:text-white">
                   {userName}
                 </span>
                 <span className="text-xs text-gray-400">{userEmail}</span>
               </div>
 
-              {/* Переключатель темы */}
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
                 aria-label="Переключить тему"
               >
-                {theme === 'light' ? (
-                  <Moon size={20} className="text-gray-600" />
-                ) : (
-                  <Sun size={20} className="text-yellow-400" />
-                )}
+                {theme === 'light' ? <Moon size={20} className="text-gray-600" /> : <Sun size={20} className="text-yellow-400" />}
               </button>
 
-              {/* Аватар */}
-              <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-9 h-9 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm shadow-md">
                 {userName.charAt(0).toUpperCase()}
               </div>
 
-              {/* Кнопка выхода */}
               <button
                 onClick={handleLogout}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 text-gray-600 dark:text-gray-300"
@@ -69,7 +60,6 @@ const UserLayout: React.FC = () => {
         </div>
       </header>
 
-      {/* Мобильная информация о пользователе */}
       <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">

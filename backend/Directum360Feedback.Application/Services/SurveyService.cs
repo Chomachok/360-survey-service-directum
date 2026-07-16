@@ -293,7 +293,7 @@ public class SurveyService(
     public async Task<IEnumerable<UserSurveyDto>> GetUserSurveysAsync(int userId)
     {
         var assignments = await assignmentRepo.FindAsync(
-            a => a.EvaluatorId == userId,
+            a => a.EvaluatorId == userId && a.Survey.Status == SurveyStatus.Active,
             a => a.Survey,
             a => a.Target
         );

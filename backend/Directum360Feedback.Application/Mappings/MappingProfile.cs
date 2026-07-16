@@ -23,11 +23,19 @@ public class MappingProfile : Profile
         CreateMap<CreateMatrixItemDto, SurveyAssignment>();
         CreateMap<Employee, EmployeeDto>();
 
-        CreateMap<SurveyTemplate, SurveyTemplateDto>();
+        CreateMap<SurveyTemplate, SurveyTemplateDto>()
+            .ForMember(dest => dest.Questions, opt => opt.Ignore()); // заполняем вручную в сервисе
+
         CreateMap<SurveyTemplateQuestion, TemplateQuestionDto>()
-            .ForMember(dest => dest.Options, opt => opt.Ignore());
-        CreateMap<CreateSurveyTemplateDto, SurveyTemplate>();
-        CreateMap<CreateTemplateQuestionDto, SurveyTemplateQuestion>();
-        CreateMap<UpdateSurveyTemplateDto, SurveyTemplate>();
+            .ForMember(dest => dest.Options, opt => opt.Ignore()); // десериализуем в сервисе
+
+        CreateMap<CreateSurveyTemplateDto, SurveyTemplate>()
+            .ForMember(dest => dest.Questions, opt => opt.Ignore()); // добавляем отдельно
+
+        CreateMap<CreateTemplateQuestionDto, SurveyTemplateQuestion>()
+            .ForMember(dest => dest.Options, opt => opt.Ignore()); // сериализуем в сервисе
+
+        CreateMap<UpdateSurveyTemplateDto, SurveyTemplate>()
+            .ForMember(dest => dest.Questions, opt => opt.Ignore());
     }
 }
