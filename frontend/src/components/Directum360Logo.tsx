@@ -64,6 +64,8 @@ interface Props {
   /** длительность полного оборота, сек */
   duration?: number
   className?: string
+  /** крутить постоянно (для индикатора загрузки), а не только при наведении */
+  spinning?: boolean
 }
 
 const Directum360Logo: React.FC<Props> = ({
@@ -71,6 +73,7 @@ const Directum360Logo: React.FC<Props> = ({
   withWordmark = true,
   duration = 14,
   className = '',
+  spinning = false,
 }) => {
   // если у пользователя включено «уменьшить движение» — не крутим
   const reduceMotion =
@@ -91,10 +94,21 @@ const Directum360Logo: React.FC<Props> = ({
       >
         {!reduceMotion && (
           <style>{`
+            .d360-logo .d360-mark {
+              transform-origin: 60px 60px;
+              transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .d360-logo:hover .d360-mark {
+              transform: scale(1.1);
+            }
             .d360-logo .d360-orbit {
               transform-origin: 60px 60px;
-              animation: d360-spin ${dur} linear infinite;
-              animation-play-state: paused;
+              animation: ${
+                spinning
+                  ? `d360-spin ${dur} linear infinite`
+                  : `d360-spin-spring ${dur} cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite`
+              };
+              animation-play-state: ${spinning ? 'running' : 'paused'};
             }
             .d360-logo:hover .d360-orbit {
               animation-play-state: running;
@@ -102,6 +116,15 @@ const Directum360Logo: React.FC<Props> = ({
             @keyframes d360-spin {
               from { transform: rotate(0deg); }
               to { transform: rotate(360deg); }
+            }
+            /* пружинное вращение: разгон, лёгкий перелёт за 360° и отскок назад к точной отметке */
+            @keyframes d360-spin-spring {
+              0%   { transform: rotate(0deg); }
+              58%  { transform: rotate(330deg); }
+              74%  { transform: rotate(392deg); }
+              86%  { transform: rotate(340deg); }
+              94%  { transform: rotate(368deg); }
+              100% { transform: rotate(360deg); }
             }
           `}</style>
         )}
@@ -113,65 +136,67 @@ const Directum360Logo: React.FC<Props> = ({
           </radialGradient>
         </defs>
 
-        {/* пульсирующее свечение — «живой» фон под знаком */}
-        <circle cx="60" cy="60" r="52" fill="url(#d360-glow)">
-          {!reduceMotion && (
-            <>
+        <g className="d360-mark">
+          {/* пульсирующее свечение — «живой» фон под знаком */}
+          <circle cx="60" cy="60" r="52" fill="url(#d360-glow)">
+            {!reduceMotion && (
+              <>
+                <animate
+                  attributeName="opacity"
+                  values="0.55;1;0.55"
+                  dur="4s"
+                  repeatCount="indefinite"
+                />
+                <animate attributeName="r" values="46;54;46" dur="4s" repeatCount="indefinite" />
+              </>
+            )}
+          </circle>
+
+          {/* орбита */}
+          <circle
+            cx="60"
+            cy="60"
+            r={R}
+            fill="none"
+            stroke={ORANGE}
+            strokeOpacity="0.25"
+            strokeWidth="1.6"
+            strokeDasharray="3 6"
+            strokeLinecap="round"
+          >
+            {!reduceMotion && (
               <animate
-                attributeName="opacity"
-                values="0.55;1;0.55"
-                dur="4s"
+                attributeName="stroke-dashoffset"
+                from="0"
+                to="18"
+                dur="2.5s"
                 repeatCount="indefinite"
               />
-              <animate attributeName="r" values="46;54;46" dur="4s" repeatCount="indefinite" />
-            </>
-          )}
-        </circle>
+            )}
+          </circle>
 
-        {/* орбита */}
-        <circle
-          cx="60"
-          cy="60"
-          r={R}
-          fill="none"
-          stroke={ORANGE}
-          strokeOpacity="0.25"
-          strokeWidth="1.6"
-          strokeDasharray="3 6"
-          strokeLinecap="round"
-        >
-          {!reduceMotion && (
-            <animate
-              attributeName="stroke-dashoffset"
-              from="0"
-              to="18"
-              dur="2.5s"
-              repeatCount="indefinite"
-            />
-          )}
-        </circle>
+          {/* «360» — currentColor, белеет в тёмной теме */}
+          <text
+            x="60"
+            y="61"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontFamily="'Golos Text', Inter, system-ui, sans-serif"
+            fontWeight="700"
+            fontSize="30"
+            letterSpacing="-0.5"
+            fill="currentColor"
+          >
+            360
+          </text>
 
-        {/* «360» — currentColor, белеет в тёмной теме */}
-        <text
-          x="60"
-          y="61"
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontFamily="'Golos Text', Inter, system-ui, sans-serif"
-          fontWeight="700"
-          fontSize="30"
-          letterSpacing="-0.5"
-          fill="currentColor"
-        >
-          360
-        </text>
-
-        {/* орбита с двумя двойными знаками, всегда остриём на «360»; вращается только при hover */}
-        <g className={reduceMotion ? '' : 'd360-orbit'}>
-          {/* снизу: разворот 60° -> остриё вверх, на центр */}
-          <DoubleCheck x={60} y={60 + R} rotate={60} />
-          {/* сверху: разворот 240° -> остриё вниз, на центр */}
-          <DoubleCheck x={60} y={60 - R} rotate={240} />
+          {/* орбита с двумя двойными знаками, всегда остриём на «360»; вращается только при hover */}
+          <g className={reduceMotion ? '' : 'd360-orbit'}>
+            {/* снизу: разворот 60° -> остриё вверх, на центр */}
+            <DoubleCheck x={60} y={60 + R} rotate={60} />
+            {/* сверху: разворот 240° -> остриё вниз, на центр */}
+            <DoubleCheck x={60} y={60 - R} rotate={240} />
+          </g>
         </g>
       </svg>
 
