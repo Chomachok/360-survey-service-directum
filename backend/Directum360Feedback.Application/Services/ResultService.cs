@@ -5,6 +5,7 @@ using Directum360Feedback.Infrastructure.Repositories;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Directum360Feedback.Application.DTOs.ResultDTOs;
+using DocumentFormat.OpenXml;
 using Bold = DocumentFormat.OpenXml.Wordprocessing.Bold;
 using Document = DocumentFormat.OpenXml.Wordprocessing.Document;
 using FontSize = DocumentFormat.OpenXml.Wordprocessing.FontSize;
@@ -101,51 +102,49 @@ public class ResultService(
     {
         var results = await GetSurveyResultsAsync(surveyId);
         using var stream = new MemoryStream();
-        using (var wordDoc = WordprocessingDocument.Create(stream, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
+        using (var wordDoc = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
         {
             var mainPart = wordDoc.AddMainDocumentPart();
             mainPart.Document = new Document();
             var body = new Body();
 
-            // Цвета Directum (без #)
             const string orange = "FF8600";
             const string darkGray = "1E2128";
 
-            // Заголовок (оранжевый, жирный, 20pt)
+            // Заголовок
             var titlePara = new Paragraph();
             var titleRun = new Run(new Text($"Результаты опроса: {results.SurveyTitle}"));
             titleRun.RunProperties = new RunProperties(
                 new Bold(),
-                new FontSize { Val = "40" },
-                new Color { Val = orange }
+                new FontSize { Val = "36" },
+                new Color() { Val = orange }
             );
             titlePara.Append(titleRun);
             titlePara.ParagraphProperties = new ParagraphProperties(
-                new Justification { Val = JustificationValues.Center },
-                new SpacingBetweenLines { After = "240" } // отступ после заголовка
-            );
-            body.Append(titlePara);
-
-            // Оранжевая разделительная линия
-            var linePara = new Paragraph();
-            var lineRun = new Run(new Text(new string('_', 80)));
-            lineRun.RunProperties = new RunProperties(
-                new Color { Val = orange },
-                new FontSize { Val = "20" }
-            );
-            linePara.Append(lineRun);
-            linePara.ParagraphProperties = new ParagraphProperties(
                 new Justification { Val = JustificationValues.Center }
             );
-            body.Append(linePara);
+            body.Append(titlePara);
             body.Append(new Paragraph(new Run(new Text(" "))));
 
-            // Сбор всех ответов по вопросам
-            var questionAnswers = new Dictionary<string, List<(string EvaluatorName, string Answer)>>();
-
-            foreach (var emp in results.Results)
+            // Проходим по каждому оцениваемому сотруднику
+            foreach (var employee in results.Results)
             {
-                foreach (var evaluator in emp.Evaluators)
+                // Имя сотрудника (жирный, тёмно-серый, 14pt)
+                var empPara = new Paragraph();
+                var empRun = new Run(new Text($"Оцениваемый: {employee.EmployeeName}"));
+                empRun.RunProperties = new RunProperties(
+                    new Bold(),
+                    new FontSize { Val = "28" },
+                    new Color() { Val = darkGray }
+                );
+                empPara.Append(empRun);
+                body.Append(empPara);
+                body.Append(new Paragraph(new Run(new Text(" "))));
+
+                // Группируем ответы по вопросам для этого сотрудника
+                var questionAnswers = new Dictionary<string, List<(string EvaluatorName, string Answer)>>();
+
+                foreach (var evaluator in employee.Evaluators)
                 {
                     foreach (var qa in evaluator.Answers)
                     {
@@ -156,69 +155,59 @@ public class ResultService(
                         questionAnswers[qa.QuestionText].Add((evaluator.EvaluatorName, answerText));
                     }
                 }
-            }
 
-            // Вывод вопросов и ответов
-            foreach (var kvp in questionAnswers)
-            {
-                var questionText = kvp.Key;
-                var answers = kvp.Value;
-
-                // Вопрос (тёмно-серый, жирный, 12pt)
-                var qPara = new Paragraph();
-                var qRun = new Run(new Text(questionText));
-                qRun.RunProperties = new RunProperties(
-                    new Bold(),
-                    new FontSize { Val = "24" },
-                    new Color { Val = darkGray }
-                );
-                qPara.Append(qRun);
-                qPara.ParagraphProperties = new ParagraphProperties(
-                    new SpacingBetweenLines { After = "120" }
-                );
-                body.Append(qPara);
-
-                // Ответы
-                foreach (var (evaluatorName, answer) in answers)
+                // Выводим вопросы и ответы
+                foreach (var kvp in questionAnswers)
                 {
-                    var aPara = new Paragraph();
-                    var aRun = new Run(new Text($"    {evaluatorName}: {answer}"));
-                    aRun.RunProperties = new RunProperties(
-                        new FontSize { Val = "22" },
-                        new Color { Val = darkGray }
+                    var questionText = kvp.Key;
+                    var answers = kvp.Value;
+
+                    // Вопрос (оранжевый, жирный, 12pt)
+                    var qPara = new Paragraph();
+                    var qRun = new Run(new Text(questionText));
+                    qRun.RunProperties = new RunProperties(
+                        new Bold(),
+                        new FontSize { Val = "24" },
+                        new Color() { Val = orange }
                     );
-                    aPara.Append(aRun);
-                    aPara.ParagraphProperties = new ParagraphProperties(
-                        new SpacingBetweenLines { After = "60" }
-                    );
-                    body.Append(aPara);
+                    qPara.Append(qRun);
+                    body.Append(qPara);
+
+                    // Ответы (тёмно-серый, 11pt)
+                    foreach (var (evaluatorName, answer) in answers)
+                    {
+                        var aPara = new Paragraph();
+                        var aRun = new Run(new Text($"    {evaluatorName}: {answer}"));
+                        aRun.RunProperties = new RunProperties(
+                            new FontSize { Val = "22" },
+                            new Color() { Val = darkGray }
+                        );
+                        aPara.Append(aRun);
+                        body.Append(aPara);
+                    }
+
+                    body.Append(new Paragraph(new Run(new Text(" "))));
                 }
 
-                body.Append(new Paragraph(new Run(new Text(" ")))); // пустая строка между вопросами
+                // Разделитель между сотрудниками
+                body.Append(new Paragraph(new Run(new Text("---"))));
+                body.Append(new Paragraph(new Run(new Text(" "))));
             }
 
-            if (questionAnswers.Count == 0)
+            if (results.Results.Count == 0)
             {
-                var emptyPara = new Paragraph();
-                var emptyRun = new Run(new Text("Нет данных для отображения."));
-                emptyRun.RunProperties = new RunProperties(
-                    new FontSize { Val = "24" },
-                    new Color { Val = darkGray }
-                );
-                emptyPara.Append(emptyRun);
-                body.Append(emptyPara);
+                body.Append(new Paragraph(new Run(new Text("Нет данных для отображения."))));
             }
 
-            // Подвал (дата и бренд)
+            // Подвал
             var footerPara = new Paragraph();
             footerPara.ParagraphProperties = new ParagraphProperties(
-                new Justification { Val = JustificationValues.Center },
-                new SpacingBetweenLines { Before = "240" }
+                new Justification { Val = JustificationValues.Center }
             );
             var footerRun = new Run(new Text($"Сформировано: {DateTime.Now:dd.MM.yyyy HH:mm}  |  Directum360 Feedback Service"));
             footerRun.RunProperties = new RunProperties(
                 new FontSize { Val = "18" },
-                new Color { Val = darkGray },
+                new Color() { Val = darkGray },
                 new Italic()
             );
             footerPara.Append(footerRun);
