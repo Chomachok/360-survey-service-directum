@@ -1,176 +1,139 @@
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import { useMemo } from 'react'
+import { Check, Link, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
-// 1. ТИПЫ
-interface Subject {
-  id: string;
-  name: string;
+// Типы должны соответствовать тому, что приходит из getMatrix
+interface MatrixItem {
+  id: number
+  evaluatorId: number
+  evaluatorName: string
+  targetId: number
+  targetName: string
+  token: string
+  completed: boolean
 }
 
-interface Criterion {
-  id: string;
-  name: string;
+interface MatrixGridProps {
+  data: MatrixItem[]
+  isDraft: boolean
+  onDelete: (id: number, evaluatorName: string, targetName: string) => void
+  onCopyLink: (token: string) => void
 }
 
-type AnswersMap = Record<string, string>;
+export function MatrixGrid({ data, isDraft, onDelete, onCopyLink }: MatrixGridProps) {
+  // Трансформируем плоский список в структуру для отображения
+  const { targets, evaluators, matrixMap } = useMemo(() => {
+    const targetSet = new Map<number, string>()
+    const evaluatorSet = new Map<number, string>()
+    const map = new Map<string, MatrixItem>()
 
-const SurveyMatrix: React.FC = () => {
-  // 2. СТЕЙТЫ
-  const [subjects, setSubjects] = useState<Subject[]>([
-    { id: 'sub1', name: 'Кандидат А (Иван)' },
-    { id: 'sub2', name: 'Кандидат Б (Мария)' },
-  ]);
-  
-  const criteria: Criterion[] = [
-    { id: 'crit1', name: 'Профессионализм' },
-    { id: 'crit2', name: 'Коммуникабельность' },
-    { id: 'crit3', name: 'Опыт работы' }
-  ];
+    if (!data) return { targets: [], evaluators: [], matrixMap: map }
 
-  const [answers, setAnswers] = useState<AnswersMap>({});
-  const [newSubjectName, setNewSubjectName] = useState<string>('');
+    data.forEach((item) => {
+      targetSet.set(item.targetId, item.targetName)
+      evaluatorSet.set(item.evaluatorId, item.evaluatorName)
+      // Ключ для быстрого поиска: "targetId-evaluatorId"
+      map.set(`${item.targetId}-${item.evaluatorId}`, item)
+    })
 
-  // 3. ЗАГРУЗКА ИЗ LOCALSTORAGE
-  useEffect(() => {
-    try {
-      const savedDraft = localStorage.getItem('survey_matrix_draft');
-      if (savedDraft) {
-        const parsed = JSON.parse(savedDraft);
-        // Восстанавливаем и ответы, и список субъектов если они сохранялись
-        if (parsed.answers) setAnswers(parsed.answers);
-        if (parsed.subjects) setSubjects(parsed.subjects);
-      }
-    } catch (error) {
-      console.error('Ошибка чтения черновика:', error);
-    }
-  }, []);
+    // Сортируем для стабильного отображения
+    const targets = Array.from(targetSet.entries()).map(([id, name]) => ({ id, name }))
+    const evaluators = Array.from(evaluatorSet.entries()).map(([id, name]) => ({ id, name }))
 
-  // 4. ДОБАВЛЕНИЕ НОВОГО СУБЪЕКТА
-  const handleAddSubject = (): void => {
-    const trimmed = newSubjectName.trim();
-    if (!trimmed) return;
+    return { targets, evaluators, matrixMap: map }
+  }, [data])
 
-    const newSubject: Subject = {
-      id: `sub_${Date.now()}`, // Уникальный ID на основе времени
-      name: trimmed
-    };
-
-    setSubjects(prev => [...prev, newSubject]);
-    setNewSubjectName('');
-  };
-
-  // Обработка Enter в поле ввода
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddSubject();
-    }
-  };
-
-  // 5. ОБНОВЛЕНИЕ ОТВЕТОВ
-  const handleChange = (critId: string, subId: string, value: string): void => {
-    const key = `${critId}_${subId}`;
-    setAnswers(prev => ({ ...prev, [key]: value }));
-  };
-
-  // 6. СОХРАНЕНИЕ И ЭКСПОРТ
-  const handleSubmit = (): void => {
-    // Сохраняем и ответы, и текущий список субъектов
-    const draftData = { answers, subjects };
-    localStorage.setItem('survey_matrix_draft', JSON.stringify(draftData));
-    
-    console.log('MOCK API отправка:', draftData);
-    
-    const blob = new Blob([JSON.stringify(draftData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `survey_results_${new Date().toISOString()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    alert('Данные сохранены и скачаны!');
-  };
+  if (!data || data.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+        <p>Матрица пуста. Добавьте связи выше или примените шаблон.</p>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h2>Матрица оценки</h2>
-
-      {/* БЛОК ДОБАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯ */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <input
-          type="text"
-          placeholder="Имя нового кандидата..."
-          value={newSubjectName}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setNewSubjectName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '250px' }}
-        />
-        <button
-          onClick={handleAddSubject}
-          disabled={!newSubjectName.trim()}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            cursor: newSubjectName.trim() ? 'pointer' : 'not-allowed',
-            backgroundColor: newSubjectName.trim() ? '#28a745' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px'
-          }}
-        >
-          + Добавить кандидата
-        </button>
-      </div>
-      
-      <div style={{ overflowX: 'auto' }}>
-        <table border={1} cellPadding={10} style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <thead style={{ backgroundColor: '#f4f4f4' }}>
-            <tr>
-              <th>Критерий \ Объект</th>
-              {subjects.map(sub => (
-                <th key={sub.id}>{sub.name}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {criteria.map(crit => (
-              <tr key={crit.id}>
-                <td style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>{crit.name}</td>
-                {subjects.map(sub => {
-                  const key = `${crit.id}_${sub.id}`;
-                  return (
-                    <td key={key} style={{ textAlign: 'center' }}>
-                      <select 
-                        value={answers[key] || ''} 
-                        onChange={(e: ChangeEvent<HTMLSelectElement>) => handleChange(crit.id, sub.id, e.target.value)}
-                        style={{ padding: '5px', width: '100px' }}
-                      >
-                        <option value="">-- Выбрать --</option>
-                        <option value="1">1 (Плохо)</option>
-                        <option value="2">2</option>
-                        <option value="3">3 (Удовл.)</option>
-                        <option value="4">4</option>
-                        <option value="5">5 (Отлично)</option>
-                      </select>
-                    </td>
-                  );
-                })}
-              </tr>
+    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 animate-fadeInUp">
+      <table className="w-full border-collapse min-w-[800px]">
+        <thead>
+          <tr>
+            {/* Верхний левый угол */}
+            <th className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-900 p-3 border-b border-r border-gray-300 dark:border-gray-600">
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider text-center">
+                Оцениваемый ↓ / Оценивающий →
+              </div>
+            </th>
+            
+            {/* Заголовки столбцов (Оценивающие) */}
+            {evaluators.map((ev) => (
+              <th 
+                key={ev.id} 
+                className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-r border-gray-200 dark:border-gray-700 min-w-[140px]"
+              >
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center truncate" title={ev.name}>
+                  {ev.name}
+                </div>
+              </th>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {/* Строки (Оцениваемые) */}
+          {targets.map((target) => (
+            <tr key={target.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+              {/* Заголовок строки */}
+              <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 p-3 border-b border-r border-gray-200 dark:border-gray-700 font-medium text-sm text-gray-800 dark:text-gray-200">
+                {target.name}
+              </td>
 
-      <button 
-        onClick={handleSubmit} 
-        style={{ marginTop: '20px', padding: '10px 20px', fontSize: '16px', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
-      >
-        Сохранить результаты
-      </button>
+              {/* Ячейки матрицы */}
+              {evaluators.map((evaluator) => {
+                const key = `${target.id}-${evaluator.id}`
+                const item = matrixMap.get(key)
+                const isSelf = target.id === evaluator.id
+
+                return (
+                  <td 
+                    key={key} 
+                    className={`border-b border-r border-gray-100 dark:border-gray-800 p-2 text-center align-middle ${
+                      isSelf ? 'bg-gray-100/50 dark:bg-gray-800/50' : ''
+                    }`}
+                  >
+                    {isSelf ? (
+                      <span className="text-xs text-gray-400 italic">—</span>
+                    ) : item ? (
+                      <div className="flex items-center justify-center gap-1 group">
+                        {item.completed ? (
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" title="Завершено">
+                            <Check size={14} strokeWidth={3} />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => onCopyLink(item.token)}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-directum-orange/10 text-directum-orange hover:bg-directum-orange hover:text-white transition-all duration-200"
+                            title="Копировать ссылку"
+                          >
+                            <Link size={12} />
+                          </button>
+                        )}
+                        
+                        {isDraft && !item.completed && (
+                          <button
+                            onClick={() => onDelete(item.id, evaluator.name, target.name)}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+                            title="Удалить связь"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
-  );
-};
-
-export default SurveyMatrix;
+  )
+}
