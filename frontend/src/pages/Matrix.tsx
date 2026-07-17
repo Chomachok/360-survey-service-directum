@@ -129,11 +129,13 @@ export default function Matrix() {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setIsApplyingTemplate(false)
       setSelectedTemplateId(null)
-      toast.success(
-        result.skipped > 0
+      const message = 
+        result.created === 0 && result.skipped > 0
+          ? `Все связи уже существуют (пропущено ${result.skipped})`
+          : result.skipped > 0
           ? `Шаблон применён: добавлено ${result.created}, пропущено (уже было) ${result.skipped}`
-          : 'Шаблон матрицы успешно применён!',
-      )
+          : `Шаблон матрицы успешно применён! Добавлено ${result.created} связей`
+      toast.success(message)
     },
     onError: (error: any) => {
       console.error('Ошибка применения шаблона:', error)
@@ -168,9 +170,11 @@ export default function Matrix() {
       return
     }
     setIsApplyingTemplate(true)
+    // Если шаблон имеет собственных оцениваемых, не передаём targetIds
+    // Если шаблон универсальный, передаём выбранного оцениваемого
     applyTemplateMutation.mutate({
       templateId: selectedTemplateId,
-      targetIds: templateHasOwnTargets ? undefined : [Number(targetId)],
+      targetIds: templateHasOwnTargets ? [] : [Number(targetId)],
     })
   }
 
@@ -220,32 +224,38 @@ export default function Matrix() {
         </p>
 
         <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                    Шаблон матрицы
-                  </label>
-                  <Select
-                    options={templateOptions}
-                    value={selectedTemplate}
-                    onChange={handleTemplateChange}
-                    placeholder="Выберите шаблон"
-                    isClearable
-                    isSearchable
-                    styles={reactSelectStyles}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                    isDisabled={!isDraft}
-                  />
-                </div>
-                <button
-                  onClick={handleAdd}
-                  className="btn-primary flex items-center space-x-2"
-                  disabled={addMutation.isPending || !evaluatorId || !targetId}
-                >
-                  <Plus size={18} />
-                  <span>Добавить</span>
-                </button>
-              </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Шаблон матрицы
+            </label>
+            <Select
+              options={templateOptions}
+              value={selectedTemplate}
+              onChange={handleTemplateChange}
+              placeholder="Выберите шаблон"
+              isClearable
+              isSearchable
+              styles={reactSelectStyles}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              isDisabled={!isDraft}
+            />
+            {selectedTemplateObj && templateHasOwnTargets && (
+              <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                💡 Шаблон содержит {selectedTemplateObj.targets.length} оцениваемых. 
+                Применится ко всем им.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleApplyTemplate}
+            disabled={applyTemplateMutation.isPending || !selectedTemplateId || (!templateHasOwnTargets && !targetId)}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={18} className={applyTemplateMutation.isPending ? 'animate-spin' : ''} />
+            <span>{applyTemplateMutation.isPending ? 'Применение...' : 'Применить'}</span>
+          </button>
+        </div>
 
         {isDraft ? (
           <div className="space-y-4">
@@ -333,7 +343,7 @@ export default function Matrix() {
                 {matrix?.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <p>Матрица пуста</p>
-                    <p className="text-sm">Добавьте связи с помощью формы выше</p>
+                    <p className="text-sm">Добавьте связи с помощью формы выше или примените шаблон</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto animate-fadeInUp">
@@ -400,15 +410,15 @@ export default function Matrix() {
                   Матрица оценок
                 </h3>
                <SurveyMatrix
-                data={matrix || []}
-                employees={evaluatorOptions || []}
-                isDraft={isDraft}
-                onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
-                onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
-                onCopyLink={handleCopyLink}
-                isMutating={addMutation.isPending || deleteMutation.isPending}
-                deleteMutation={deleteMutation}
-              />
+                 data={matrix || []}
+                 employees={evaluatorOptions || []}
+                 isDraft={isDraft}
+                 onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
+                 onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
+                 onCopyLink={handleCopyLink}
+                 isMutating={addMutation.isPending || deleteMutation.isPending}
+                 deleteMutation={deleteMutation}
+               />
               </div>
             )}
           </div>

@@ -16,4 +16,10 @@ public class RespondentTemplate : BaseEntity
     public string? Description { get; set; }
     public ICollection<RespondentTemplateItem> Items { get; set; } = new List<RespondentTemplateItem>();
     public ICollection<RespondentTemplateTarget> Targets { get; set; } = new List<RespondentTemplateTarget>();
+
+    /// <summary>
+    /// Явные связи «кто кого оценивает» внутри шаблона (частичная матрица).
+    /// Пусто — действует старое поведение: каждый из Items оценивает каждого из Targets.
+    /// </summary>
+    public ICollection<RespondentTemplateLink> Links { get; set; } = new List<RespondentTemplateLink>();
 }

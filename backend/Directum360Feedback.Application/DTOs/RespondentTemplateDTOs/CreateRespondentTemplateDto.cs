@@ -12,4 +12,9 @@ public class CreateRespondentTemplateDto
     /// и его применение создаст связи для каждого из них.
     /// </summary>
     public List<int> TargetEmployeeIds { get; set; } = new();
+    /// <summary>
+    /// Необязательно. Явные связи «кто кого оценивает» из Items/TargetEmployeeIds.
+    /// Пусто — каждый из Items оценивает каждого из TargetEmployeeIds (старое поведение).
+    /// </summary>
+    public List<RespondentTemplateLinkDto> Links { get; set; } = new();
 }
