@@ -240,9 +240,9 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
           <table className="w-full min-w-[480px] border-collapse">
             <thead>
-              <tr className="bg-directum-dark text-white">
+              <tr className="bg-white dark:bg-gray-900 bg-gray-50/70 dark:bg-gray-800/40">
                 {/* Угловая ячейка */}
-                <th className="sticky left-0 z-20 min-w-[140px] border-r border-white/10 bg-directum-dark p-3 text-left text-[11px] font-semibold uppercase leading-tight tracking-wide opacity-90">
+                <th className="sticky left-0 z-20 min-w-[140px] border-r border-white/10 bg-directum-dark p-3 text-left text-[11px] font-semibold uppercase leading-tight tracking-wide opacity-90 bg-white dark:bg-gray-900 bg-gray-50/70 dark:bg-gray-800/40">
                   {rowLabel}
                   <br />↓ &nbsp;/&nbsp; {colLabel} →
                 </th>
