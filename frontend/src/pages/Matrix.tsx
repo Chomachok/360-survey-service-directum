@@ -13,6 +13,7 @@ import { reactSelectStyles } from '../styles/reactSelectStyles'
 import { SurveyMatrix } from '../components/MatrixGrid'
 import LogoLoader from '../components/LogoLoader'
 
+
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -49,7 +50,29 @@ export default function Matrix() {
   }>({ isOpen: false })
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
   type FillMode = 'list' | 'matrix'
-  const [fillMode, setFillMode] = useState<FillMode>('list')
+  const [fillMode, setFillMode] = useState<FillMode>('matrix')
+  type SortField = 'targetName' | 'evaluatorName'
+  type SortOrder = 'asc' | 'desc'
+  const [sortBy, setSortBy] = useState<SortField>('targetName')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+
+ const sortedMatrix = useMemo(() => {
+    if (!matrix) return []
+    return [...matrix].sort((a, b) => {
+      const field = sortBy
+      const comparison = (a[field] || '').localeCompare(b[field] || '', 'ru', { sensitivity: 'base' })
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+  }, [matrix, sortBy, sortOrder])
+
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  } 
 
   const isDraft = survey?.status === 'Draft'
 
@@ -350,15 +373,35 @@ export default function Matrix() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
+                          <th 
+  className="text-left py-3 px-4 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none transition-colors"
+  onClick={() => handleSort('targetName')}
+>
+  <div className="flex items-center gap-1">
+    <span>Оцениваемый</span>
+    {sortBy === 'targetName' && (
+      sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+    )}
+  </div>
+</th>
+<th 
+  className="text-left py-3 px-4 text-sm font-medium text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none transition-colors"
+  onClick={() => handleSort('evaluatorName')}
+>
+  <div className="flex items-center gap-1">
+    <span>Оценивает</span>
+    {sortBy === 'evaluatorName' && (
+      sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+    )}
+  </div>
+</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
                           <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {matrix?.map((item, index) => (
+                        {sortedMatrix.map((item, index) => (
                           <tr
                             key={item.id}
                             className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
@@ -479,7 +522,7 @@ export default function Matrix() {
                             </tr>
                           </thead>
                           <tbody>
-                            {matrix?.map((item, index) => (
+                            {sortedMatrix.map((item, index) => (
                               <tr
                                 key={item.id}
                                 className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"

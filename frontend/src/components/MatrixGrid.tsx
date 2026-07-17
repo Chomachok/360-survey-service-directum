@@ -226,18 +226,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
       )}
 
       {/* Таблица Матрицы */}
-      {subjects.length === 0 && respondents.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 py-14 text-center dark:border-gray-700 dark:bg-gray-800/30">
-          <p className="mb-1 text-sm font-medium text-gray-500">Матрица пуста</p>
-          <p className="mx-auto max-w-md text-xs text-gray-400">
-            {!isDraft ? (
-              'Здесь пока нечего показать'
-            ) : (
-              <>Нажмите <span className="font-bold text-directum-orange">+</span> чтобы добавить участников</>
-            )}
-          </p>
-        </div>
-      ) : (
+      
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
           <table className="w-full min-w-[480px] border-collapse">
             <thead>
@@ -414,7 +403,6 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
             </tbody>
           </table>
         </div>
-      )}
 
       {!isTemplate && !isDraft && (
         <div className="mt-1 text-right text-[11px] italic text-gray-500">
