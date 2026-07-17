@@ -213,13 +213,14 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
           </span>
         </div>
       ) : (
-        <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-          <span>Пройдено</span>
+        <div className="inline-flex items-center gap-2 rounded-full border border-directum-orange/20 bg-directum-orange/10 px-3 py-1.5 text-xs font-medium text-directum-orange">
+          <Boxes size={14} />
           <span>
-            {stats.evaluated}/{stats.total}
+            {respondents.length} {respondents.length === 1 ? 'респондент' : 'респондентов'} ×{' '}
+            {subjects.length} {subjects.length === 1 ? 'оцениваемый' : 'оцениваемых'}
           </span>
-          <span className="rounded-full bg-blue-200 px-2 py-0.5 text-[11px] dark:bg-blue-800">
-            {stats.percentage}%
+          <span className="rounded-full bg-directum-orange/20 px-2 py-0.5 text-[11px]">
+            {stats.configured} {stats.configured === 1 ? 'связь' : 'связей'}
           </span>
         </div>
       )}

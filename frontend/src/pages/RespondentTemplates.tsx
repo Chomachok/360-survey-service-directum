@@ -291,17 +291,6 @@ export default function RespondentTemplates() {
               <List size={15} />
               Список
             </button>
-            <button
-              onClick={() => setPageView('matrix')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
-                pageView === 'matrix'
-                  ? 'bg-directum-orange text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-              }`}
-            >
-              <Grid3x3 size={15} />
-              Матрица
-            </button>
           </div>
         </div>
       )}
@@ -511,18 +500,6 @@ export default function RespondentTemplates() {
                   >
                     <List size={15} />
                     Список
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditorView('matrix')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
-                      editorView === 'matrix'
-                        ? 'bg-directum-orange text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <Grid3x3 size={15} />
-                    Матрица
                   </button>
                 </div>
               </div>
