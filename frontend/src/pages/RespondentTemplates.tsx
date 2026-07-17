@@ -172,19 +172,30 @@ export default function RespondentTemplates() {
     }
   }
 
-  const handleMatrixDelete = (evaluatorId: number, targetId: number) => {
-    // В режиме редактирования матрицы удаляем строку или столбец целиком
-    // Удаляем оценивающего, если его нет в других местах
-    const hasOtherTargets = targetRows.filter((t) => t.employeeId !== targetId).length > 0
-    if (!hasOtherTargets) {
-      setItems((prev) => prev.filter((i) => i.employeeId !== evaluatorId))
-    }
-    // Удаляем оцениваемого, если его нет в других оценивающих
-    const hasOtherEvaluators = items.filter((i) => i.employeeId !== evaluatorId).length > 0
-    if (!hasOtherEvaluators) {
-      setTargetRows((prev) => prev.filter((t) => t.employeeId !== targetId))
-    }
+  const handleMatrixDelete = (id: number, evaluator: string, targetName: string) => {
+  // Находим элемент по id
+  const itemToDelete = editorPreviewData.find(item => item.id === id);
+  
+  if (!itemToDelete) return;
+  
+  const { evaluatorId, targetId } = itemToDelete;
+  
+  // В режиме редактирования матрицы удаляем строку или столбец целиком
+  // Удаляем оценивающего, если его нет в других местах
+  const hasOtherTargets = targetRows.filter((t) => t.employeeId !== targetId).length > 0;
+  if (!hasOtherTargets) {
+    setItems((prev) => prev.filter((i) => i.employeeId !== evaluatorId));
   }
+  
+  // Удаляем оцениваемого, если его нет в других оценивающих
+  const hasOtherEvaluators = items.filter((i) => i.employeeId !== evaluatorId).length > 0;
+  if (!hasOtherEvaluators) {
+    setTargetRows((prev) => prev.filter((t) => t.employeeId !== targetId));
+  }
+  
+  // Также удаляем саму связь из editorPreviewData
+  // (здесь должна быть логика обновления editorPreviewData)
+};
 
   // ---------- превью-матрица в редакторе (строится «на лету» из текущих полей формы) ----------
   const editorPreviewData = useMemo(() => {
