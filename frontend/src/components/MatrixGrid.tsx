@@ -154,7 +154,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     const item = matrixMap.get(key);
 
     if (item) {
-      if (item.completed) {
+      if (!isTemplate && item.completed) {
         toast.error('Нельзя удалить завершенную оценку');
         return;
       }
