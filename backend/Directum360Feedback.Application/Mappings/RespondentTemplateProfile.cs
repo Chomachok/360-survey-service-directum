@@ -17,6 +17,7 @@ public class RespondentTemplateProfile : Profile
         // Items и Targets заполняем вручную в сервисе — нужны имена сотрудников и подпись «Сам оцениваемый»
         CreateMap<RespondentTemplate, RespondentTemplateDto>()
             .ForMember(dest => dest.Items, opt => opt.Ignore())
-            .ForMember(dest => dest.Targets, opt => opt.Ignore());
+            .ForMember(dest => dest.Targets, opt => opt.Ignore())
+            .ForMember(dest => dest.Links, opt => opt.Ignore());
     }
 }
