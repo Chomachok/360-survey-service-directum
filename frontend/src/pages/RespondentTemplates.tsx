@@ -276,25 +276,6 @@ export default function RespondentTemplates() {
         </button>
       </div>
 
-      {templates && templates.length > 0 && (
-        <div className="animate-fadeInUp mb-6 flex items-center gap-2 border-b border-gray-200 pb-3 dark:border-gray-700">
-          <span className="text-sm text-gray-500">Отображение:</span>
-          <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setPageView('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
-                pageView === 'list'
-                  ? 'bg-directum-orange text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-              }`}
-            >
-              <List size={15} />
-              Список
-            </button>
-          </div>
-        </div>
-      )}
-
       {templates?.length === 0 ? (
         <div className="card animate-fadeInUp py-12 text-center">
           <Boxes size={48} className="mx-auto mb-4 text-gray-300" />
@@ -483,25 +464,6 @@ export default function RespondentTemplates() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Кратко, для чего этот состав"
                 />
-              </div>
-
-              {/* Переключатель список / матрица */}
-              <div className="flex items-center gap-2 border-b border-gray-200 pb-3 dark:border-gray-700">
-                <span className="text-sm text-gray-500">Состав группы:</span>
-                <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => setEditorView('list')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
-                      editorView === 'list'
-                        ? 'bg-directum-orange text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <List size={15} />
-                    Список
-                  </button>
-                </div>
               </div>
 
               {editorView === 'list' ? (

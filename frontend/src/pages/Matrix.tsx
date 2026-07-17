@@ -49,7 +49,7 @@ export default function Matrix() {
   }>({ isOpen: false })
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
   type FillMode = 'list' | 'matrix'
-  const [fillMode, setFillMode] = useState<FillMode>('matrix')
+  const [fillMode, setFillMode] = useState<FillMode>('list')
 
   const isDraft = survey?.status === 'Draft'
 
