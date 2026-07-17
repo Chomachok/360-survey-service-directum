@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Pencil, X, UserCheck, Target, Boxes, List, Grid3x3 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -173,18 +173,10 @@ export default function RespondentTemplates() {
   }
 
   const handleMatrixDelete = (evaluatorId: number, targetId: number) => {
-    // В режиме редактирования матрицы удаляем строку или столбец целиком
-    // Удаляем оценивающего, если его нет в других местах
-    const hasOtherTargets = targetRows.filter((t) => t.employeeId !== targetId).length > 0
-    if (!hasOtherTargets) {
-      setItems((prev) => prev.filter((i) => i.employeeId !== evaluatorId))
-    }
-    // Удаляем оцениваемого, если его нет в других оценивающих
-    const hasOtherEvaluators = items.filter((i) => i.employeeId !== evaluatorId).length > 0
-    if (!hasOtherEvaluators) {
-      setTargetRows((prev) => prev.filter((t) => t.employeeId !== targetId))
-    }
-  }
+    setItems(prev => prev.filter(i => i.employeeId !== evaluatorId));
+    setTargetRows(prev => prev.filter(t => t.employeeId !== targetId));
+  };
+  
 
   // ---------- превью-матрица в редакторе (строится «на лету» из текущих полей формы) ----------
   const editorPreviewData = useMemo(() => {
@@ -236,6 +228,25 @@ export default function RespondentTemplates() {
   if (isLoading) {
     return <LogoLoader />
   }
+
+  // ... остальные хуки (useState, useQuery и т.д.)
+
+  // ---------- deleteMock для матрицы в редакторе ----------
+  const deleteMock = useMemo(() => ({
+    mutateAsync: async (id: number) => {
+      const item = editorPreviewData.find(d => d.id === id);
+      if (!item) return;
+      handleMatrixDelete(item.evaluatorId, item.targetId);
+    }
+  }), [editorPreviewData, handleMatrixDelete]);
+
+  // Обёртка для onDelete, чтобы клик по ячейке тоже вызывал handleMatrixDelete
+  const onDeleteWrapper = useCallback((id: number, evaluatorName: string, targetName: string) => {
+    const item = editorPreviewData.find(d => d.id === id);
+    if (item) {
+      handleMatrixDelete(item.evaluatorId, item.targetId);
+    }
+  }, [editorPreviewData, handleMatrixDelete]);
 
   return (
     <div>
@@ -412,13 +423,13 @@ export default function RespondentTemplates() {
                   <SurveyMatrix
                     data={preview}
                     employees={[]} 
-                    isDraft={false}
+                    isDraft={true}
                     onAdd={() => {}}
                     onDelete={() => {}}
                     onCopyLink={() => {}}
                     isMutating={false}
                     deleteMutation={{ mutateAsync: async () => {} }}
-                    variant="preview"
+                    variant="template"
                     rowLabel="Оценивает"
                     colLabel="Оценивают"
                   />
@@ -632,10 +643,10 @@ export default function RespondentTemplates() {
                       employees={employees?.map(e => ({ value: e.id, label: e.fullName })) || []}
                       isDraft={true}
                       onAdd={handleMatrixAdd}
-                      onDelete={handleMatrixDelete}
+                      onDelete={onDeleteWrapper}  
                       onCopyLink={() => {}}
                       isMutating={false}
-                      deleteMutation={{ mutateAsync: async () => {} }}
+                      deleteMutation={deleteMock}
                       variant="template"
                       rowLabel="Оценивает"
                       colLabel="Оценивают"
