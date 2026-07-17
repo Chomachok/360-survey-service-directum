@@ -154,7 +154,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     const item = matrixMap.get(key);
 
     if (item) {
-      if (item.completed) {
+      if (!isTemplate && item.completed) {
         toast.error('Нельзя удалить завершенную оценку');
         return;
       }
@@ -213,13 +213,14 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
           </span>
         </div>
       ) : (
-        <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-          <span>Пройдено</span>
+        <div className="inline-flex items-center gap-2 rounded-full border border-directum-orange/20 bg-directum-orange/10 px-3 py-1.5 text-xs font-medium text-directum-orange">
+          <Boxes size={14} />
           <span>
-            {stats.evaluated}/{stats.total}
+            {respondents.length} {respondents.length === 1 ? 'респондент' : 'респондентов'} ×{' '}
+            {subjects.length} {subjects.length === 1 ? 'оцениваемый' : 'оцениваемых'}
           </span>
-          <span className="rounded-full bg-blue-200 px-2 py-0.5 text-[11px] dark:bg-blue-800">
-            {stats.percentage}%
+          <span className="rounded-full bg-directum-orange/20 px-2 py-0.5 text-[11px]">
+            {stats.configured} {stats.configured === 1 ? 'связь' : 'связей'}
           </span>
         </div>
       )}
@@ -229,9 +230,9 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
           <table className="w-full min-w-[480px] border-collapse">
             <thead>
-              <tr className="bg-directum-dark text-white">
+              <tr className="bg-white dark:bg-gray-900 bg-gray-50/70 dark:bg-gray-800/40">
                 {/* Угловая ячейка */}
-                <th className="sticky left-0 z-20 min-w-[140px] border-r border-white/10 bg-directum-dark p-3 text-left text-[11px] font-semibold uppercase leading-tight tracking-wide opacity-90">
+                <th className="sticky left-0 z-20 min-w-[140px] border-r border-white/10 bg-directum-dark p-3 text-left text-[11px] font-semibold uppercase leading-tight tracking-wide opacity-90 bg-white dark:bg-gray-900 bg-gray-50/70 dark:bg-gray-800/40">
                   {rowLabel}
                   <br />↓ &nbsp;/&nbsp; {colLabel} →
                 </th>
