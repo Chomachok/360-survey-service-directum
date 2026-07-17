@@ -187,59 +187,7 @@ export default function RespondentTemplates() {
   // ---------- валидация ----------
   const canSave = name.trim().length > 0 && evaluatorIds.length > 0 && targetIds.length > 0
 
-  const canSave =
-    name.trim().length > 0 &&
-    items.length > 0 &&
-    !missingEmployee &&
-    !duplicateEmployees &&
-    !missingTarget &&
-    !duplicateTargets
-
-  const updateItem = (index: number, patch: Partial<CreateRespondentTemplateItemDto>) => {
-    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
-  }
-
-  const updateTargetRow = (index: number, employeeId: number) => {
-    setTargetRows((prev) => prev.map((t, i) => (i === index ? { employeeId } : t)))
-  }
-
-  const handleMatrixAdd = (evaluatorId: number, targetId: number) => {
-    // Добавляем оценивающего, если его ещё нет
-    if (!items.some((i) => i.employeeId === evaluatorId)) {
-      setItems((prev) => [...prev, { employeeId: evaluatorId }])
-    }
-    // Добавляем оцениваемого, если его ещё нет
-    if (!targetRows.some((t) => t.employeeId === targetId)) {
-      setTargetRows((prev) => [...prev, { employeeId: targetId }])
-    }
-  }
-
-  const handleMatrixDelete = (id: number, evaluator: string, targetName: string) => {
-  // Находим элемент по id
-  const itemToDelete = editorPreviewData.find(item => item.id === id);
-  
-  if (!itemToDelete) return;
-  
-  const { evaluatorId, targetId } = itemToDelete;
-  
-  // В режиме редактирования матрицы удаляем строку или столбец целиком
-  // Удаляем оценивающего, если его нет в других местах
-  const hasOtherTargets = targetRows.filter((t) => t.employeeId !== targetId).length > 0;
-  if (!hasOtherTargets) {
-    setItems((prev) => prev.filter((i) => i.employeeId !== evaluatorId));
-  }
-  
-  // Удаляем оцениваемого, если его нет в других оценивающих
-  const hasOtherEvaluators = items.filter((i) => i.employeeId !== evaluatorId).length > 0;
-  if (!hasOtherEvaluators) {
-    setTargetRows((prev) => prev.filter((t) => t.employeeId !== targetId));
-  }
-  
-  // Также удаляем саму связь из editorPreviewData
-  // (здесь должна быть логика обновления editorPreviewData)
-};
-
-  // ---------- превью-матрица в редакторе (строится «на лету» из текущих полей формы) ----------
+  // ---------- превью-матрица ----------
   const editorPreviewData = useMemo(() => {
     if (links.length === 0) return []
     const uniqueEvaluators = [...new Set(links.map(l => l.evaluatorId))]
