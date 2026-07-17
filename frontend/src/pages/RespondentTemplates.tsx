@@ -26,10 +26,6 @@ const emptyTarget = (): { employeeId: number } => ({
 
 type ViewMode = 'list' | 'matrix'
 
-// заглушки, которые никогда не сработают: превью-матрица всегда read-only
-const noop = () => {}
-const dummyDeleteMutation = { mutateAsync: async () => {} }
-
 export default function RespondentTemplates() {
   const queryClient = useQueryClient()
 
@@ -163,6 +159,31 @@ export default function RespondentTemplates() {
 
   const updateTargetRow = (index: number, employeeId: number) => {
     setTargetRows((prev) => prev.map((t, i) => (i === index ? { employeeId } : t)))
+  }
+
+  const handleMatrixAdd = (evaluatorId: number, targetId: number) => {
+    // Добавляем оценивающего, если его ещё нет
+    if (!items.some((i) => i.employeeId === evaluatorId)) {
+      setItems((prev) => [...prev, { employeeId: evaluatorId }])
+    }
+    // Добавляем оцениваемого, если его ещё нет
+    if (!targetRows.some((t) => t.employeeId === targetId)) {
+      setTargetRows((prev) => [...prev, { employeeId: targetId }])
+    }
+  }
+
+  const handleMatrixDelete = (evaluatorId: number, targetId: number) => {
+    // В режиме редактирования матрицы удаляем строку или столбец целиком
+    // Удаляем оценивающего, если его нет в других местах
+    const hasOtherTargets = targetRows.filter((t) => t.employeeId !== targetId).length > 0
+    if (!hasOtherTargets) {
+      setItems((prev) => prev.filter((i) => i.employeeId !== evaluatorId))
+    }
+    // Удаляем оцениваемого, если его нет в других оценивающих
+    const hasOtherEvaluators = items.filter((i) => i.employeeId !== evaluatorId).length > 0
+    if (!hasOtherEvaluators) {
+      setTargetRows((prev) => prev.filter((t) => t.employeeId !== targetId))
+    }
   }
 
   // ---------- превью-матрица в редакторе (строится «на лету» из текущих полей формы) ----------
@@ -390,13 +411,13 @@ export default function RespondentTemplates() {
                 {preview.length > 0 ? (
                   <SurveyMatrix
                     data={preview}
-                    employees={[]}
+                    employees={[]} 
                     isDraft={false}
-                    onAdd={noop}
-                    onDelete={noop}
-                    onCopyLink={noop}
+                    onAdd={() => {}}
+                    onDelete={() => {}}
+                    onCopyLink={() => {}}
                     isMutating={false}
-                    deleteMutation={dummyDeleteMutation}
+                    deleteMutation={{ mutateAsync: async () => {} }}
                     variant="preview"
                     rowLabel="Оценивает"
                     colLabel="Оценивают"
@@ -526,7 +547,7 @@ export default function RespondentTemplates() {
                             <button
                               onClick={() => setTargetRows((prev) => prev.filter((_, i) => i !== index))}
                               className="p-1 text-gray-400 transition-colors hover:text-red-500"
-                              title="Убрать"
+                              title="Убрат��"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -608,14 +629,14 @@ export default function RespondentTemplates() {
                   {editorPreviewData.length > 0 ? (
                     <SurveyMatrix
                       data={editorPreviewData}
-                      employees={[]}
-                      isDraft={false}
-                      onAdd={noop}
-                      onDelete={noop}
-                      onCopyLink={noop}
+                      employees={employees?.map(e => ({ value: e.id, label: e.fullName })) || []}
+                      isDraft={true}
+                      onAdd={handleMatrixAdd}
+                      onDelete={handleMatrixDelete}
+                      onCopyLink={() => {}}
                       isMutating={false}
-                      deleteMutation={dummyDeleteMutation}
-                      variant="preview"
+                      deleteMutation={{ mutateAsync: async () => {} }}
+                      variant="template"
                       rowLabel="Оценивает"
                       colLabel="Оценивают"
                     />
