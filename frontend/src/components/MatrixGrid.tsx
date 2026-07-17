@@ -13,6 +13,12 @@ interface MatrixItem {
   targetName: string;
   token: string;
   completed: boolean;
+  /**
+   * Только для variant='template': есть ли реальная связь в этой ячейке.
+   * Не указано (undefined) — считается true (так ведёт себя variant='live', где
+   * присутствие элемента в data всегда означает реальное назначение).
+   */
+  linked?: boolean;
 }
 
 interface EmployeeOption {
@@ -25,7 +31,7 @@ interface SurveyMatrixProps {
   employees: EmployeeOption[];
   isDraft: boolean;
   onAdd: (evaluatorId: number, targetId: number) => void;
-  onDelete: (id: number, evaluatorName: string, targetName: string) => void;
+  onDelete: (id: number, evaluatorName: string, targetName: string, evaluatorId?: number, targetId?: number) => void;
   onCopyLink: (token: string) => void;
   isMutating: boolean;
   deleteMutation: { mutateAsync: (id: number) => Promise<unknown> };
@@ -39,6 +45,11 @@ interface SurveyMatrixProps {
   /** Подписи осей */
   rowLabel?: string;
   colLabel?: string;
+  /**
+   * Только для variant='template': удалить строку/столбец целиком (сотрудника из состава).
+   * Если не передан, используется поведение по умолчанию через deleteMutation (как в 'live').
+   */
+  onRemoveEntity?: (type: 'row' | 'col', id: number, name: string) => void;
 }
 
 // Утилита для разбивки ФИО на короткие строки
@@ -68,6 +79,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   variant = 'live',
   rowLabel = 'Оценивает',
   colLabel = 'Оценивают',
+  onRemoveEntity,
 }) => {
   const isTemplate = variant === 'template';
   const [addingMode, setAddingMode] = useState<{ type: 'col' | 'row' } | null>(null);
@@ -95,7 +107,8 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     const total = subjects.length * respondents.length;
     const evaluated = Array.from(matrixMap.values()).filter((i) => i.completed).length;
     const percentage = total > 0 ? Math.round((evaluated / total) * 100) : 0;
-    return { total, evaluated, percentage, configured: matrixMap.size };
+    const configured = Array.from(matrixMap.values()).filter((i) => i.linked !== false).length;
+    return { total, evaluated, percentage, configured };
   }, [subjects, respondents, matrixMap]);
 
   const availableSubjects = employees.filter((e) => !subjects.some((s) => s.id === e.value));
@@ -130,6 +143,11 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
   const handleRemoveEntity = async (type: 'row' | 'col', id: number, name: string) => {
     if (!confirm(`Удалить ${type === 'row' ? 'эксперта' : 'кандидата'} "${name}" и все его связи?`)) return;
 
+    if (isTemplate && onRemoveEntity) {
+      onRemoveEntity(type, id, name);
+      return;
+    }
+
     const itemsToRemove = data.filter(
       (item) => (type === 'row' && item.evaluatorId === id) || (type === 'col' && item.targetId === id),
     );
@@ -152,13 +170,16 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     if (!isDraft) return;
     const key = `${respId}_${subId}`;
     const item = matrixMap.get(key);
+    const cellIsLinked = !!item && item.linked !== false;
 
-    if (item) {
-      if (item.completed) {
+    if (cellIsLinked) {
+      // Блокировка удаления «завершённой оценки» имеет смысл только для реальной
+      // матрицы опроса (variant='live'): в шаблоне ячейка — это просто состав, а не факт прохождения.
+      if (!isTemplate && item!.completed) {
         toast.error('Нельзя удалить завершенную оценку');
         return;
       }
-      onDelete(item.id, item.evaluatorName, item.targetName);
+      onDelete(item!.id, item!.evaluatorName, item!.targetName, item!.evaluatorId, item!.targetId);
     } else {
       onAdd(respId, subId);
     }
@@ -309,7 +330,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
                     const key = `${resp.id}_${sub.id}`;
                     const item = matrixMap.get(key);
                     const isEvaluated = item?.completed === true;
-                    const hasLink = !!item;
+                    const hasLink = !!item && item.linked !== false;
 
                     return (
                       <td
@@ -330,7 +351,7 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
                                 : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
                         onClick={() => handleCellClick(resp.id, sub.id)}
-                        title={isDraft ? (hasLink ? 'Нажмите, чтобы удалить связь' : 'Нажмите, чтобы создать связь') : ''}
+                        title={isDraft ? (hasLink ? 'Нажмите, чтобы убрать связь' : 'Нажмите, чтобы создать связь') : ''}
                       >
                         <div className="pointer-events-none flex h-full w-full items-center justify-center">
                           {isTemplate ? (

@@ -213,6 +213,13 @@ export interface RespondentTemplate {
   items: RespondentTemplateItem[]
   /** Оцениваемые, «зашитые» в шаблон. Пусто — шаблон универсальный (оцениваемый выбирается вручную). */
   targets: RespondentTemplateTarget[]
+  /** Явные связи «кто кого оценивает». Пусто — каждый из items оценивает каждого из targets. */
+  links: RespondentTemplateLinkDto[]
+}
+
+export interface RespondentTemplateLinkDto {
+  evaluatorEmployeeId: number
+  targetEmployeeId: number
 }
 
 export interface RespondentTemplateItem {
@@ -232,6 +239,7 @@ export interface CreateRespondentTemplateDto {
   description?: string
   items: CreateRespondentTemplateItemDto[]
   targetEmployeeIds: number[]
+  links: RespondentTemplateLinkDto[]
 }
 
 export interface CreateRespondentTemplateItemDto {
@@ -243,6 +251,7 @@ export interface UpdateRespondentTemplateDto {
   description?: string
   items: CreateRespondentTemplateItemDto[]
   targetEmployeeIds: number[]
+  links: RespondentTemplateLinkDto[]
 }
 
 export interface ApplyRespondentTemplateResult {
