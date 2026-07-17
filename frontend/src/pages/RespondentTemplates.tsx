@@ -14,16 +14,6 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import LogoLoader from '../components/LogoLoader'
 import { SurveyMatrix } from '../components/MatrixGrid'
 
-/** пустая строка состава по умолчанию */
-const emptyItem = (): CreateRespondentTemplateItemDto => ({
-  employeeId: -1,
-})
-
-/** пустая строка оцениваемого по умолчанию */
-const emptyTarget = (): { employeeId: number } => ({
-  employeeId: -1,
-})
-
 type ViewMode = 'list' | 'matrix'
 
 export default function RespondentTemplates() {
@@ -45,7 +35,7 @@ export default function RespondentTemplates() {
     return map
   }, [employees])
 
-  // ---------- отображение страницы: список групп / общая матрица ----------
+  // ---------- отображение страницы ----------
   const [pageView, setPageView] = useState<ViewMode>('list')
 
   // ---------- состояние редактора ----------
@@ -54,45 +44,111 @@ export default function RespondentTemplates() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [items, setItems] = useState<CreateRespondentTemplateItemDto[]>([emptyItem()])
-  const [targetRows, setTargetRows] = useState<{ employeeId: number }[]>([])
+
+  // ---------- НОВАЯ МОДЕЛЬ: отдельные списки и список связей ----------
+  const [evaluatorIds, setEvaluatorIds] = useState<number[]>([]) // все добавленные оценивающие
+  const [targetIds, setTargetIds] = useState<number[]>([])      // все добавленные оцениваемые
+  const [links, setLinks] = useState<{ evaluatorId: number; targetId: number }[]>([]) // явные связи
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id?: number; name?: string }>({
     isOpen: false,
   })
 
-  const resetEditor = () => {
+  // ---------- функции работы ----------
+  const handleMatrixAdd = useCallback((evaluatorId: number, targetId: number) => {
+    // Добавляем в списки, если их ещё нет
+    if (!evaluatorIds.includes(evaluatorId)) {
+      setEvaluatorIds(prev => [...prev, evaluatorId])
+    }
+    if (!targetIds.includes(targetId)) {
+      setTargetIds(prev => [...prev, targetId])
+    }
+    // Добавляем связь
+    if (!links.some(l => l.evaluatorId === evaluatorId && l.targetId === targetId)) {
+      setLinks(prev => [...prev, { evaluatorId, targetId }])
+    }
+  }, [evaluatorIds, targetIds, links])
+
+  const handleMatrixDelete = useCallback((evaluatorId: number, targetId: number) => {
+    setLinks(prev => prev.filter(l => !(l.evaluatorId === evaluatorId && l.targetId === targetId)))
+  }, [])
+
+  const addEvaluator = useCallback((employeeId: number) => {
+    if (evaluatorIds.includes(employeeId)) {
+      toast.error('Этот сотрудник уже добавлен как оценивающий')
+      return
+    }
+    setEvaluatorIds(prev => [...prev, employeeId])
+    // Если есть оцениваемые, создаём связи со всеми
+    if (targetIds.length > 0) {
+      const newLinks = targetIds.map(targetId => ({ evaluatorId: employeeId, targetId }))
+      setLinks(prev => [...prev, ...newLinks])
+    }
+  }, [evaluatorIds, targetIds])
+
+  const removeEvaluator = useCallback((employeeId: number) => {
+    setEvaluatorIds(prev => prev.filter(id => id !== employeeId))
+    setLinks(prev => prev.filter(l => l.evaluatorId !== employeeId))
+  }, [])
+
+  const addTarget = useCallback((employeeId: number) => {
+    if (targetIds.includes(employeeId)) {
+      toast.error('Этот сотрудник уже добавлен как оцениваемый')
+      return
+    }
+    setTargetIds(prev => [...prev, employeeId])
+    // Если есть оценивающие, создаём связи со всеми
+    if (evaluatorIds.length > 0) {
+      const newLinks = evaluatorIds.map(evaluatorId => ({ evaluatorId, targetId: employeeId }))
+      setLinks(prev => [...prev, ...newLinks])
+    }
+  }, [targetIds, evaluatorIds])
+
+  const removeTarget = useCallback((employeeId: number) => {
+    setTargetIds(prev => prev.filter(id => id !== employeeId))
+    setLinks(prev => prev.filter(l => l.targetId !== employeeId))
+  }, [])
+
+  // ---------- сброс и открытие ----------
+  const resetEditor = useCallback(() => {
     setEditingId(null)
     setName('')
     setDescription('')
-    setItems([emptyItem()])
-    setTargetRows([])
+    setEvaluatorIds([])
+    setTargetIds([])
+    setLinks([])
     setEditorView('list')
-  }
+  }, [])
 
-  const openCreate = () => {
+  const openCreate = useCallback(() => {
     resetEditor()
     setEditorOpen(true)
-  }
+  }, [resetEditor])
 
-  const openEdit = (t: RespondentTemplate) => {
+  const openEdit = useCallback((t: RespondentTemplate) => {
     setEditingId(t.id)
     setName(t.name)
     setDescription(t.description ?? '')
-    setItems(
-      t.items.length
-        ? t.items.map((i) => ({ employeeId: i.employeeId ?? -1 }))
-        : [emptyItem()],
-    )
-    setTargetRows(t.targets.map((tg) => ({ employeeId: tg.employeeId })))
+    const evIds = t.items.map(i => i.employeeId!).filter(id => id != null)
+    const tgIds = t.targets.map(tg => tg.employeeId)
+    setEvaluatorIds(evIds)
+    setTargetIds(tgIds)
+    // Строим декартово произведение
+    const newLinks: { evaluatorId: number; targetId: number }[] = []
+    evIds.forEach(evalId => {
+      tgIds.forEach(tgtId => {
+        newLinks.push({ evaluatorId: evalId, targetId: tgtId })
+      })
+    })
+    setLinks(newLinks)
     setEditorView('list')
     setEditorOpen(true)
-  }
+  }, [])
 
-  const closeEditor = () => {
+  const closeEditor = useCallback(() => {
     setEditorOpen(false)
     resetEditor()
-  }
+  }, [resetEditor])
 
   // ---------- мутации ----------
   const saveMutation = useMutation({
@@ -100,10 +156,8 @@ export default function RespondentTemplates() {
       const dto = {
         name: name.trim(),
         description: description.trim() || undefined,
-        items: items.map((i) => ({
-          employeeId: i.employeeId,
-        })),
-        targetEmployeeIds: targetRows.map((t) => t.employeeId),
+        items: evaluatorIds.map(id => ({ employeeId: id })),
+        targetEmployeeIds: targetIds,
       }
       return editingId ? updateRespondentTemplate(editingId, dto) : createRespondentTemplate(dto)
     },
@@ -130,79 +184,58 @@ export default function RespondentTemplates() {
     },
   })
 
-  // ---------- валидация формы ----------
-  const duplicateEmployees = items
-    .map((i) => i.employeeId)
-    .filter((id) => id !== null && id !== -1)
-    .some((id, index, arr) => arr.indexOf(id) !== index)
+  // ---------- валидация ----------
+  const canSave = name.trim().length > 0 && evaluatorIds.length > 0 && targetIds.length > 0
 
-  const missingEmployee = items.some((i) => i.employeeId === null || i.employeeId === -1)
-
-  const duplicateTargets = targetRows
-    .map((t) => t.employeeId)
-    .filter((id) => id !== -1)
-    .some((id, index, arr) => arr.indexOf(id) !== index)
-
-  const missingTarget = targetRows.some((t) => t.employeeId === -1)
-
-  const canSave =
-    name.trim().length > 0 &&
-    items.length > 0 &&
-    !missingEmployee &&
-    !duplicateEmployees &&
-    !missingTarget &&
-    !duplicateTargets
-
-  const updateItem = (index: number, patch: Partial<CreateRespondentTemplateItemDto>) => {
-    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
-  }
-
-  const updateTargetRow = (index: number, employeeId: number) => {
-    setTargetRows((prev) => prev.map((t, i) => (i === index ? { employeeId } : t)))
-  }
-
-  const handleMatrixAdd = (evaluatorId: number, targetId: number) => {
-    // Добавляем оценивающего, если его ещё нет
-    if (!items.some((i) => i.employeeId === evaluatorId)) {
-      setItems((prev) => [...prev, { employeeId: evaluatorId }])
-    }
-    // Добавляем оцениваемого, если его ещё нет
-    if (!targetRows.some((t) => t.employeeId === targetId)) {
-      setTargetRows((prev) => [...prev, { employeeId: targetId }])
-    }
-  }
-
-  const handleMatrixDelete = (evaluatorId: number, targetId: number) => {
-    setItems(prev => prev.filter(i => i.employeeId !== evaluatorId));
-    setTargetRows(prev => prev.filter(t => t.employeeId !== targetId));
-  };
-  
-
-  // ---------- превью-матрица в редакторе (строится «на лету» из текущих полей формы) ----------
+  // ---------- превью-матрица ----------
   const editorPreviewData = useMemo(() => {
-    const evaluators = items.filter((i) => i.employeeId && i.employeeId !== -1)
-    const targets = targetRows.filter((t) => t.employeeId !== -1)
-    if (evaluators.length === 0 || targets.length === 0) return []
+    if (links.length === 0) return []
+    const uniqueEvaluators = [...new Set(links.map(l => l.evaluatorId))]
+    const uniqueTargets = [...new Set(links.map(l => l.targetId))]
     let idx = 0
     const rows: any[] = []
-    evaluators.forEach((ev) => {
-      targets.forEach((tg) => {
-        idx += 1
-        rows.push({
-          id: idx,
-          evaluatorId: ev.employeeId,
-          evaluatorName: employeeNameById.get(ev.employeeId) || '—',
-          targetId: tg.employeeId,
-          targetName: employeeNameById.get(tg.employeeId) || '—',
-          token: '',
-          completed: true,
-        })
+    uniqueEvaluators.forEach(evalId => {
+      uniqueTargets.forEach(tgtId => {
+        const exists = links.some(l => l.evaluatorId === evalId && l.targetId === tgtId)
+        if (exists) {
+          idx += 1
+          rows.push({
+            id: idx,
+            evaluatorId: evalId,
+            evaluatorName: employeeNameById.get(evalId) || '—',
+            targetId: tgtId,
+            targetName: employeeNameById.get(tgtId) || '—',
+            token: '',
+            completed: true,
+          })
+        }
       })
     })
     return rows
-  }, [items, targetRows, employeeNameById])
+  }, [links, employeeNameById])
 
-  // ---------- превью-матрица для карточки уже сохранённой группы ----------
+  // ---------- deleteMock и onDeleteWrapper ----------
+  const deleteMock = useMemo(() => ({
+    mutateAsync: async (id: number) => {
+      const item = editorPreviewData.find(d => d.id === id)
+      if (!item) return
+      handleMatrixDelete(item.evaluatorId, item.targetId)
+    }
+  }), [editorPreviewData, handleMatrixDelete])
+
+  const onDeleteWrapper = useCallback((id: number, evaluatorName: string, targetName: string) => {
+    const item = editorPreviewData.find(d => d.id === id)
+    if (item) {
+      handleMatrixDelete(item.evaluatorId, item.targetId)
+    }
+  }, [editorPreviewData, handleMatrixDelete])
+
+  // ---------- загрузка ----------
+  if (isLoading) {
+    return <LogoLoader />
+  }
+
+  // ---------- превью для карточек ----------
   const buildSavedPreview = (t: RespondentTemplate) => {
     const evaluators = t.items.filter((i) => i.employeeId != null)
     if (evaluators.length === 0 || t.targets.length === 0) return []
@@ -225,29 +258,7 @@ export default function RespondentTemplates() {
     return rows
   }
 
-  if (isLoading) {
-    return <LogoLoader />
-  }
-
-  // ... остальные хуки (useState, useQuery и т.д.)
-
-  // ---------- deleteMock для матрицы в редакторе ----------
-  const deleteMock = useMemo(() => ({
-    mutateAsync: async (id: number) => {
-      const item = editorPreviewData.find(d => d.id === id);
-      if (!item) return;
-      handleMatrixDelete(item.evaluatorId, item.targetId);
-    }
-  }), [editorPreviewData, handleMatrixDelete]);
-
-  // Обёртка для onDelete, чтобы клик по ячейке тоже вызывал handleMatrixDelete
-  const onDeleteWrapper = useCallback((id: number, evaluatorName: string, targetName: string) => {
-    const item = editorPreviewData.find(d => d.id === id);
-    if (item) {
-      handleMatrixDelete(item.evaluatorId, item.targetId);
-    }
-  }, [editorPreviewData, handleMatrixDelete]);
-
+  // ---------- JSX ----------
   return (
     <div>
       <div className="animate-fadeInUp mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -422,7 +433,7 @@ export default function RespondentTemplates() {
                 {preview.length > 0 ? (
                   <SurveyMatrix
                     data={preview}
-                    employees={[]} 
+                    employees={[]}
                     isDraft={true}
                     onAdd={() => {}}
                     onDelete={() => {}}
@@ -525,53 +536,50 @@ export default function RespondentTemplates() {
                         <Target size={14} className="text-gray-400" />
                         Кого оценивают
                       </label>
-                      <button
-                        onClick={() => setTargetRows((prev) => [...prev, emptyTarget()])}
-                        className="flex items-center gap-1 text-sm text-directum-orange hover:underline"
-                      >
-                        <Plus size={14} />
-                        Добавить оцениваемого
-                      </button>
+                      <div className="flex gap-1">
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const val = Number(e.target.value)
+                            if (val) addTarget(val)
+                            e.target.value = ''
+                          }}
+                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
+                        >
+                          <option value="">+ Добавить</option>
+                          {employees
+                            ?.filter(e => !targetIds.includes(e.id))
+                            .map(e => (
+                              <option key={e.id} value={e.id}>{e.fullName}</option>
+                            ))}
+                        </select>
+                      </div>
                     </div>
 
-                    {targetRows.length === 0 ? (
+                    {targetIds.length === 0 ? (
                       <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-xs italic text-gray-400 dark:bg-gray-700">
-                        Никого не выбрано — группа останется универсальной, оцениваемый будет
-                        выбираться вручную при применении.
+                        Никого не выбрано — группа останется универсальной, оцениваемый будет выбираться вручную.
                       </p>
                     ) : (
                       <div className="space-y-2">
-                        {targetRows.map((row, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <select
-                              value={row.employeeId ?? ''}
-                              onChange={(e) => updateTargetRow(index, Number(e.target.value))}
-                              className="input-field flex-1"
-                            >
-                              <option value="">Выберите сотрудника</option>
-                              {employees?.map((e) => (
-                                <option key={e.id} value={e.id}>
-                                  {e.fullName}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => setTargetRows((prev) => prev.filter((_, i) => i !== index))}
-                              className="p-1 text-gray-400 transition-colors hover:text-red-500"
-                              title="Убрат��"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        ))}
+                        {targetIds.map((id) => {
+                          const name = employeeNameById.get(id) || '—'
+                          return (
+                            <div key={id} className="flex items-center gap-2">
+                              <span className="flex-1 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-700">
+                                {name}
+                              </span>
+                              <button
+                                onClick={() => removeTarget(id)}
+                                className="p-1 text-gray-400 transition-colors hover:text-red-500"
+                                title="Убрать"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )}
-
-                    {missingTarget && (
-                      <p className="mt-2 text-sm text-red-500">Выберите сотрудника в каждой строке или уберите пустую</p>
-                    )}
-                    {duplicateTargets && (
-                      <p className="mt-2 text-sm text-red-500">Один сотрудник не может быть оцениваемым дважды</p>
                     )}
                   </div>
 
@@ -582,57 +590,45 @@ export default function RespondentTemplates() {
                         <UserCheck size={14} className="text-gray-400" />
                         Кто оценивает
                       </label>
-                      <button
-                        onClick={() => setItems((prev) => [...prev, emptyItem()])}
-                        className="flex items-center gap-1 text-sm text-directum-orange hover:underline"
-                      >
-                        <Plus size={14} />
-                        Добавить оценивающего
-                      </button>
+                      <div className="flex gap-1">
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const val = Number(e.target.value)
+                            if (val) addEvaluator(val)
+                            e.target.value = ''
+                          }}
+                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
+                        >
+                          <option value="">+ Добавить</option>
+                          {employees
+                            ?.filter(e => !evaluatorIds.includes(e.id))
+                            .map(e => (
+                              <option key={e.id} value={e.id}>{e.fullName}</option>
+                            ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      {items.map((item, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <select
-                            value={item.employeeId ?? ''}
-                            onChange={(e) =>
-                              updateItem(index, {
-                                employeeId: e.target.value === '' ? -1 : Number(e.target.value),
-                              })
-                            }
-                            className="input-field flex-1"
-                          >
-                            <option value="">Выберите сотрудника</option>
-                            {employees?.map((e) => (
-                              <option key={e.id} value={e.id}>
-                                {e.fullName}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-                            className="p-1 text-gray-400 transition-colors hover:text-red-500 disabled:opacity-30"
-                            title="Убрать"
-                            disabled={items.length === 1}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      ))}
+                      {evaluatorIds.map((id) => {
+                        const name = employeeNameById.get(id) || '—'
+                        return (
+                          <div key={id} className="flex items-center gap-2">
+                            <span className="flex-1 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-700">
+                              {name}
+                            </span>
+                            <button
+                              onClick={() => removeEvaluator(id)}
+                              className="p-1 text-gray-400 transition-colors hover:text-red-500"
+                              title="Убрать"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
-
-                    {missingEmployee && (
-                      <p className="mt-2 text-sm text-red-500">
-                        У каждого респондента должен быть выбран сотрудник
-                      </p>
-                    )}
-                    {duplicateEmployees && (
-                      <p className="mt-2 text-sm text-red-500">
-                        Один сотрудник не может быть добавлен дважды
-                      </p>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -643,7 +639,7 @@ export default function RespondentTemplates() {
                       employees={employees?.map(e => ({ value: e.id, label: e.fullName })) || []}
                       isDraft={true}
                       onAdd={handleMatrixAdd}
-                      onDelete={onDeleteWrapper}  
+                      onDelete={onDeleteWrapper}
                       onCopyLink={() => {}}
                       isMutating={false}
                       deleteMutation={deleteMock}
