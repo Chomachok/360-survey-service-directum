@@ -128,19 +128,33 @@ public class RespondentTemplateService(
 
     public async Task<ApplyRespondentTemplateResultDto> ApplyToSurveyAsync(int surveyId, ApplyRespondentTemplateDto dto)
     {
+        // Валидация опроса
         var survey = await surveyRepo.GetByIdAsync(surveyId)
                      ?? throw new Exception("Опрос не найден");
 
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе «Черновик»");
 
+        // Валидация шаблона
         var template = await LoadWithItemsAsync(dto.TemplateId);
 
         if (template.Items.Count == 0)
-            throw new Exception("Шаблон пуст — добавьте в него хотя бы одного респондента");
+            throw new Exception("Шаблон пуст — добавьте в него хотя бы одного оценивающего");
 
+        // Валидация элементов шаблона
+        foreach (var item in template.Items)
+        {
+            if (item.EmployeeId is null)
+                throw new Exception($"Шаблон «{template.Name}» повреждён: у оценивающего не указан сотрудник");
+
+            var employee = await employeeRepo.GetByIdAsync(item.EmployeeId.Value);
+            if (employee is null)
+                throw new Exception($"Оценивающий сотрудник (id={item.EmployeeId}) не найден в системе");
+        }
+
+        // Определяем целевых сотрудников
         // Приоритет: явно переданные TargetIds > оцениваемые, зашитые в шаблон.
-        var targetIds = (dto.TargetIds.Count > 0
+        var targetIds = (dto.TargetIds?.Count > 0
                 ? dto.TargetIds
                 : template.Targets.Select(t => t.EmployeeId))
             .Distinct()
@@ -149,32 +163,38 @@ public class RespondentTemplateService(
         if (targetIds.Count == 0)
             throw new Exception("Не указан оцениваемый: выберите сотрудника вручную или задайте оцениваемых в самом шаблоне");
 
+        // Валидация целевых сотрудников
         var targets = new List<Employee>();
         foreach (var targetId in targetIds)
         {
             var target = await employeeRepo.GetByIdAsync(targetId)
-                         ?? throw new Exception($"Оцениваемый сотрудник (id={targetId}) не найден");
+                         ?? throw new Exception($"Оцениваемый сотрудник (id={targetId}) не найден в системе");
             targets.Add(target);
         }
 
-        // уже существующие связи этого опроса (EvaluatorId, TargetId)
+        // Получаем существующие связи этого опроса
         var existing = (await assignmentRepo.FindAsync(a => a.SurveyId == surveyId))
             .Select(a => (a.EvaluatorId, a.TargetId))
             .ToHashSet();
 
         var result = new ApplyRespondentTemplateResultDto();
 
+        // Применяем шаблон к каждому целевому сотруднику
         foreach (var target in targets)
         {
             foreach (var item in template.Items)
             {
-                if (item.EmployeeId is null)
-                    throw new Exception($"Шаблон «{template.Name}» повреждён: у респондента не указан сотрудник");
-
-                var evaluatorId = item.EmployeeId.Value;
+                var evaluatorId = item.EmployeeId!.Value;
 
                 var key = (evaluatorId, target.Id);
                 if (existing.Contains(key))
+                {
+                    result.Skipped++;
+                    continue;
+                }
+
+                // Проверяем, что оценивающий не оценивает сам себя
+                if (evaluatorId == target.Id)
                 {
                     result.Skipped++;
                     continue;
@@ -190,14 +210,14 @@ public class RespondentTemplateService(
                 };
 
                 await assignmentRepo.AddAsync(assignment);
+                
+                var evaluatorEmployee = await employeeRepo.GetByIdAsync(evaluatorId);
                 result.Items.Add(new MatrixItemDto
                 {
                     EvaluatorId = evaluatorId,
                     TargetId = target.Id,
                     TargetName = target.FullName,
-                    EvaluatorName = evaluatorId == target.Id
-                        ? target.FullName
-                        : (await employeeRepo.GetByIdAsync(evaluatorId))?.FullName ?? "Unknown",
+                    EvaluatorName = evaluatorEmployee?.FullName ?? "Unknown",
                     Token = assignment.Token,
                     Completed = false
                 });
@@ -262,39 +282,77 @@ public class RespondentTemplateService(
 
     private async Task ValidateAsync(string name, List<CreateRespondentTemplateItemDto> items)
     {
+        // Валидация названия
         if (string.IsNullOrWhiteSpace(name))
             throw new Exception("Укажите название шаблона");
 
-        if (items.Count == 0)
-            throw new Exception("Добавьте в шаблон хотя бы одного респондента");
+        if (name.Length > 255)
+            throw new Exception("Название шаблона не должно быть длиннее 255 символов");
 
+        // Валидация количества элементов
+        if (items.Count == 0)
+            throw new Exception("Добавьте в шаблон хотя бы одного оценивающего");
+
+        // Валидация каждого элемента
         foreach (var item in items)
         {
-            if (item.EmployeeId is null)
-                throw new Exception("У каждого респондента должен быть выбран сотрудник");
+            if (item.EmployeeId is null || item.EmployeeId == -1)
+                throw new Exception("У каждого оценивающего должен быть выбран сотрудник");
 
-            if (await employeeRepo.GetByIdAsync(item.EmployeeId.Value) is null)
-                throw new Exception($"Сотрудник с id={item.EmployeeId} не найден");
+            var employee = await employeeRepo.GetByIdAsync(item.EmployeeId.Value);
+            if (employee is null)
+                throw new Exception($"Сотрудник с id={item.EmployeeId} не найден в системе");
         }
 
-        // Проверка дублирования одного и того же сотрудника в шаблоне
-        var duplicate = items
-            .GroupBy(i => i.EmployeeId)
-            .FirstOrDefault(g => g.Count() > 1);
+        // Проверка на дублирование оценивающих
+        var validIds = items
+            .Where(i => i.EmployeeId.HasValue && i.EmployeeId != -1)
+            .Select(i => i.EmployeeId!.Value)
+            .ToList();
 
-        if (duplicate != null)
-            throw new Exception("В шаблоне есть повторяющийся респондент");
+        var duplicateEvaluators = validIds
+            .GroupBy(id => id)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateEvaluators.Count > 0)
+        {
+            var duplicateNames = string.Join(", ", duplicateEvaluators);
+            throw new Exception($"В шаблоне есть повторяющиеся оценивающие (id: {duplicateNames})");
+        }
     }
 
     /// <summary>Проверяет и нормализует список оцениваемых, зашитых в шаблон (может быть пустым).</summary>
     private async Task<List<int>> ValidateTargetsAsync(List<int> targetEmployeeIds)
     {
-        var ids = targetEmployeeIds.Distinct().ToList();
+        if (targetEmployeeIds == null)
+            return new List<int>();
 
+        var ids = targetEmployeeIds
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        // Валидация каждого целевого сотрудника
         foreach (var id in ids)
         {
-            if (await employeeRepo.GetByIdAsync(id) is null)
-                throw new Exception($"Оцениваемый сотрудник с id={id} не найден");
+            var employee = await employeeRepo.GetByIdAsync(id);
+            if (employee is null)
+                throw new Exception($"Оцениваемый сотрудник с id={id} не найден в системе");
+        }
+
+        // Проверка на дублирование
+        var duplicateTargets = ids
+            .GroupBy(id => id)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateTargets.Count > 0)
+        {
+            var duplicateNames = string.Join(", ", duplicateTargets);
+            throw new Exception($"В списке оцениваемых есть дубликаты (id: {duplicateNames})");
         }
 
         return ids;
