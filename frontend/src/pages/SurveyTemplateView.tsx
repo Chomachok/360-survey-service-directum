@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getSurveyTemplate } from '../api/surveyTemplates'
 import { ArrowLeft, Eye, FileText, ListChecks } from 'lucide-react'
 import { QuestionType } from '../types'
+import LogoLoader from '../components/LogoLoader'
 
 export default function SurveyTemplateView() {
   const { id } = useParams<{ id: string }>()
@@ -17,9 +18,7 @@ export default function SurveyTemplateView() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 

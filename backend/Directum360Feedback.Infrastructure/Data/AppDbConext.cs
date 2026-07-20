@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // --- Шаблоны респондентов ---
     public DbSet<RespondentTemplate> RespondentTemplates { get; set; }
     public DbSet<RespondentTemplateItem> RespondentTemplateItems { get; set; }
+    public DbSet<RespondentTemplateTarget> RespondentTemplateTargets { get; set; }
+    public DbSet<RespondentTemplateLink> RespondentTemplateLinks { get; set; }
     public DbSet<SurveyTemplate> SurveyTemplates { get; set; }
     public DbSet<SurveyTemplateQuestion> SurveyTemplateQuestions { get; set; }
     public DbSet<OneTimeCode> OneTimeCodes { get; set; }
@@ -330,6 +332,43 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(i => i.EmployeeId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Оцениваемые, зашитые в шаблон (могут отсутствовать — тогда шаблон универсальный)
+        modelBuilder.Entity<RespondentTemplateTarget>()
+            .HasOne(t => t.Template)
+            .WithMany(t => t.Targets)
+            .HasForeignKey(t => t.TemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RespondentTemplateTarget>()
+            .HasOne(t => t.Employee)
+            .WithMany()
+            .HasForeignKey(t => t.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Явные связи «кто кого оценивает» внутри шаблона (частичная матрица)
+        modelBuilder.Entity<RespondentTemplateLink>()
+            .HasOne(l => l.Template)
+            .WithMany(t => t.Links)
+            .HasForeignKey(l => l.TemplateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RespondentTemplateLink>()
+            .HasOne(l => l.EvaluatorEmployee)
+            .WithMany()
+            .HasForeignKey(l => l.EvaluatorEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RespondentTemplateLink>()
+            .HasOne(l => l.TargetEmployee)
+            .WithMany()
+            .HasForeignKey(l => l.TargetEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Одна и та же пара «оценивающий/оцениваемый» не может повторяться внутри шаблона
+        modelBuilder.Entity<RespondentTemplateLink>()
+            .HasIndex(l => new { l.TemplateId, l.EvaluatorEmployeeId, l.TargetEmployeeId })
+            .IsUnique();
 
         modelBuilder.Entity<RespondentTemplate>().HasData(
             new RespondentTemplate

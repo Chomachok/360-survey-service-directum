@@ -35,7 +35,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         }
       case 'warning':
         return {
-          button: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
+          button: 'bg-directum-orange text-white shadow-md',
           icon: 'text-yellow-600',
         }
       default:

@@ -10,6 +10,8 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
+import { SurveyMatrix } from '../components/MatrixGrid'
+import LogoLoader from '../components/LogoLoader'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -46,8 +48,8 @@ export default function Matrix() {
     targetName?: string
   }>({ isOpen: false })
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
-  type FillMode = 'manual' | 'template'
-  const [fillMode, setFillMode] = useState<FillMode>('manual')
+  type FillMode = 'list' | 'matrix'
+  const [fillMode, setFillMode] = useState<FillMode>('matrix')
 
   const isDraft = survey?.status === 'Draft'
 
@@ -84,6 +86,13 @@ export default function Matrix() {
     ? templateOptions.find(opt => opt.value === selectedTemplateId)
     : null
 
+  const selectedTemplateObj = selectedTemplateId
+    ? templates?.find(t => t.id === selectedTemplateId)
+    : null
+
+  // шаблон с зашитыми оцениваемыми применяется сразу ко всем им, без ручного выбора
+  const templateHasOwnTargets = (selectedTemplateObj?.targets.length ?? 0) > 0
+
   // Находим имя целевого сотрудника для отображения
   const targetEmployee = employees?.find(e => e.id === targetId)
 
@@ -114,13 +123,19 @@ export default function Matrix() {
   })
 
   const applyTemplateMutation = useMutation({
-    mutationFn: (data: { templateId: number; targetId: number }) =>
+    mutationFn: (data: { templateId: number; targetIds?: number[] }) =>
       applyRespondentTemplate(surveyId, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setIsApplyingTemplate(false)
       setSelectedTemplateId(null)
-      toast.success('Шаблон матрицы успешно применён!')
+      const message = 
+        result.created === 0 && result.skipped > 0
+          ? `Все связи уже существуют (пропущено ${result.skipped})`
+          : result.skipped > 0
+          ? `Шаблон применён: добавлено ${result.created}, пропущено (уже было) ${result.skipped}`
+          : `Шаблон матрицы успешно применён! Добавлено ${result.created} связей`
+      toast.success(message)
     },
     onError: (error: any) => {
       console.error('Ошибка применения шаблона:', error)
@@ -150,12 +165,17 @@ export default function Matrix() {
       toast.error('Выберите шаблон матрицы')
       return
     }
-    if (!targetId) {
+    if (!templateHasOwnTargets && !targetId) {
       toast.error('Сначала выберите сотрудника, которого оценивают')
       return
     }
     setIsApplyingTemplate(true)
-    applyTemplateMutation.mutate({ templateId: selectedTemplateId, targetId: Number(targetId) })
+    // Если шаблон имеет собственных оцениваемых, не передаём targetIds
+    // Если шаблон универсальный, передаём выбранного оцениваемого
+    applyTemplateMutation.mutate({
+      templateId: selectedTemplateId,
+      targetIds: templateHasOwnTargets ? [] : [Number(targetId)],
+    })
   }
 
   const handleEvaluatorChange = (option: any) => {
@@ -183,9 +203,7 @@ export default function Matrix() {
 
   if (surveyLoading || mLoading || templatesLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 
@@ -205,70 +223,73 @@ export default function Matrix() {
           Назначьте, кто кого оценивает в рамках опроса 360 градусов
         </p>
 
+        <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+              Шаблон матрицы
+            </label>
+            <Select
+              options={templateOptions}
+              value={selectedTemplate}
+              onChange={handleTemplateChange}
+              placeholder="Выберите шаблон"
+              isClearable
+              isSearchable
+              styles={reactSelectStyles}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              isDisabled={!isDraft}
+            />
+            {selectedTemplateObj && templateHasOwnTargets && (
+              <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                💡 Шаблон содержит {selectedTemplateObj.targets.length} оцениваемых. 
+                Применится ко всем им.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleApplyTemplate}
+            disabled={applyTemplateMutation.isPending || !selectedTemplateId || (!templateHasOwnTargets && !targetId)}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={18} className={applyTemplateMutation.isPending ? 'animate-spin' : ''} />
+            <span>{applyTemplateMutation.isPending ? 'Применение...' : 'Применить'}</span>
+          </button>
+        </div>
+
         {isDraft ? (
           <div className="space-y-4">
-            <div className="flex gap-2 border-b border-gray-200 pb-2">
-              <button
-                onClick={() => setFillMode('manual')}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  fillMode === 'manual'
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-500 hover:text-directum-dark hover:bg-gray-100'
-                }`}
-              >
-                Ручное добавление
-              </button>
-              <button
-                onClick={() => setFillMode('template')}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  fillMode === 'template'
-                    ? 'bg-directum-orange text-white shadow-md'
-                    : 'text-gray-500 hover:text-directum-dark hover:bg-gray-100'
-                }`}
-              >
-                Применить шаблон
-              </button>
-            </div>
-            {/* Блок применения шаблона */}
-            
-            {fillMode === 'template' && (
-              <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">            
-                <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                      Шаблон матрицы
-                    </label>
-                    <Select
-                      options={templateOptions}
-                      value={selectedTemplate}
-                      onChange={handleTemplateChange}
-                      placeholder="Выберите шаблон"
-                      isClearable
-                      isSearchable
-                      styles={reactSelectStyles}
-                      menuPortalTarget={document.body}
-                      menuPosition="fixed"
-                      isDisabled={!isDraft}
-                    />
-                  </div>
-                  <button
-                    onClick={handleApplyTemplate}
-                    className="btn-primary flex items-center space-x-2"
-                    disabled={isApplyingTemplate || !selectedTemplateId || !targetId}
-                  >
-                    <RefreshCw size={18} className={isApplyingTemplate ? 'animate-spin' : ''} />
-                    <span>{isApplyingTemplate ? 'Применение...' : 'Применить шаблон'}</span>
-                  </button>
-                  <span className="text-xs text-gray-500">
-                    {!targetId ? 'Сначала выберите сотрудника, которого оценивают' : ''}
-                  </span>
-                </div>
+            {/* Переключатель */}
+            <div className="flex flex-wrap items-center gap-4 py-2 border-b border-gray-200 pb-3">
+              <span className="text-sm text-gray-500">Отображение:</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${fillMode === 'list' ? 'text-gray-800' : 'text-gray-400'}`}>
+                  Список
+                </span>
+                <button
+                  onClick={() => setFillMode(fillMode === 'matrix' ? 'list' : 'matrix')}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    fillMode === 'matrix' ? 'bg-directum-orange' : 'bg-gray-300'
+                  }`}
+                  role="switch"
+                  aria-checked={fillMode === 'matrix'}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      fillMode === 'matrix' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
+                  Матрица
+                </span>
               </div>
-            )}
+            </div>
 
-            {/* Ручное добавление */}
-            {fillMode === 'manual' && (
-              <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
+            {/* Режим списка */}
+            {fillMode === 'list' && (
+              <>
+                {/* Форма добавления */}
                 <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
                   <div className="flex-1 min-w-[150px]">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
@@ -305,7 +326,7 @@ export default function Matrix() {
                       isDisabled={!isDraft || !targetId}
                     />
                   </div>
-                  
+
                   <div className="flex items-end">
                     <button
                       onClick={handleAdd}
@@ -317,79 +338,211 @@ export default function Matrix() {
                     </button>
                   </div>
                 </div>
-            </div>
+
+                {/* Таблица (список) */}
+                {matrix?.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Матрица пуста</p>
+                    <p className="text-sm">Добавьте связи с помощью формы выше или примените шаблон</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto animate-fadeInUp">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
+                          <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matrix?.map((item, index) => (
+                          <tr
+                            key={item.id}
+                            className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
+                            style={{ animationDelay: `${index * 100}ms` }}
+                          >
+                            <td className="py-3 px-4 text-sm">{item.targetName}</td>
+                            <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
+                            <td className="py-3 px-4">
+                              <button
+                                onClick={() => handleCopyLink(item.token)}
+                                className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
+                              >
+                                <Link size={14} className="group-hover:animate-pulse" />
+                                <span>Копировать ссылку</span>
+                              </button>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                item.completed
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {item.completed ? 'Завершено' : 'Ожидает'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <button
+                                onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
+                                className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                                title="Удалить связь"
+                                disabled={deleteMutation.isPending || !isDraft || item.completed}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Режим матрицы */}
+            {fillMode === 'matrix' && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Матрица оценок
+                </h3>
+               <SurveyMatrix
+                 data={matrix || []}
+                 employees={evaluatorOptions || []}
+                 isDraft={isDraft}
+                 onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
+                 onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
+                 onCopyLink={handleCopyLink}
+                 isMutating={addMutation.isPending || deleteMutation.isPending}
+                 deleteMutation={deleteMutation}
+               />
+              </div>
             )}
           </div>
         ) : (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-700">
-            ⚠️ Добавление участников доступно только для опросов в статусе «Черновик».
-            <br />
-            Текущий статус: <strong>{survey?.status === 'Active' ? 'Активен' : 'Завершён'}</strong>
-          </div>
-        )}
+          <div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-700">
+              ⚠️ Добавление участников доступно только для опросов в статусе «Черновик».
+              <br />
+              Текущий статус: <strong>{survey?.status === 'Active' ? 'Активен' : 'Завершён'}</strong>
+            </div>
+            <div className="space-y-4">
+                {/* Переключатель */}
+                <div className="flex flex-wrap items-center gap-4 py-2 border-b border-gray-200 pb-3">
+                  <span className="text-sm text-gray-500">Отображение:</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${fillMode === 'list' ? 'text-gray-800' : 'text-gray-400'}`}>
+                      Список
+                    </span>
+                    <button
+                      onClick={() => setFillMode(fillMode === 'matrix' ? 'list' : 'matrix')}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        fillMode === 'matrix' ? 'bg-directum-orange' : 'bg-gray-300'
+                      }`}
+                      role="switch"
+                      aria-checked={fillMode === 'matrix'}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          fillMode === 'matrix' ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
+                      Матрица
+                    </span>
+                  </div>
+                </div>
 
-        {matrix?.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 animate-fadeInUp">
-            <p>Матрица пуста</p>
-            <p className="text-sm">
-              {isDraft && targetId
-                ? 'Добавьте связи между сотрудниками с помощью формы выше или примените шаблон'
-                : 'Связи не добавлены'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto animate-fadeInUp">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
-                </tr>
-              </thead>
-              <tbody>
-                {matrix?.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
-                    <td className="py-3 px-4 text-sm">{item.targetName}</td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handleCopyLink(item.token)}
-                        className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
-                      >
-                        <Link size={14} className="group-hover:animate-pulse" />
-                        <span>Копировать ссылку</span>
-                      </button>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        item.completed
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {item.completed ? 'Завершено' : 'Ожидает'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                        title="Удалить связь"
-                        disabled={deleteMutation.isPending || !isDraft || item.completed}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                {/* Режим списка */}
+                {fillMode === 'list' && (
+                  <>
+                    {/* Таблица (список) */}
+                    {matrix?.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Матрица пуста</p>
+                        <p className="text-sm">Добавьте связи с помощью формы выше</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto animate-fadeInUp">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
+                              <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {matrix?.map((item, index) => (
+                              <tr
+                                key={item.id}
+                                className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors animate-fadeInUp"
+                                style={{ animationDelay: `${index * 100}ms` }}
+                              >
+                                <td className="py-3 px-4 text-sm">{item.targetName}</td>
+                                <td className="py-3 px-4 text-sm">{item.evaluatorName}</td>
+                                <td className="py-3 px-4">
+                                  <button
+                                    onClick={() => handleCopyLink(item.token)}
+                                    className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
+                                  >
+                                    <Link size={14} className="group-hover:animate-pulse" />
+                                    <span>Копировать ссылку</span>
+                                  </button>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    item.completed
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                    {item.completed ? 'Завершено' : 'Ожидает'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <button
+                                    onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                                    title="Удалить связь"
+                                    disabled={deleteMutation.isPending || !isDraft || item.completed}
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Режим матрицы */}
+                {fillMode === 'matrix' && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Матрица оценок
+                    </h3>
+                  <SurveyMatrix
+                    data={matrix || []}
+                    employees={evaluatorOptions || []}
+                    isDraft={isDraft}
+                    onAdd={(evalId, tgtId) => addMutation.mutate({ evaluatorId: evalId, targetId: tgtId })}
+                    onDelete={(id, evName, tgtName) => handleDeleteClick(id, evName, tgtName)}
+                    onCopyLink={handleCopyLink}
+                    isMutating={addMutation.isPending || deleteMutation.isPending}
+                    deleteMutation={deleteMutation}
+                  />
+                  </div>
+                )}
+              </div>
           </div>
         )}
       </div>

@@ -11,6 +11,8 @@ namespace Directum360Feedback.Application.Services;
 public class RespondentTemplateService(
     IRepository<RespondentTemplate> templateRepo,
     IRepository<RespondentTemplateItem> itemRepo,
+    IRepository<RespondentTemplateTarget> targetRepo,
+    IRepository<RespondentTemplateLink> linkRepo,
     IRepository<Employee> employeeRepo,
     IRepository<Survey> surveyRepo,
     IRepository<SurveyAssignment> assignmentRepo,
@@ -21,7 +23,7 @@ public class RespondentTemplateService(
 
     public async Task<IEnumerable<RespondentTemplateDto>> GetAllAsync()
     {
-        var templates = await templateRepo.FindAsync(t => true, t => t.Items);
+        var templates = await templateRepo.FindAsync(t => true, t => t.Items, t => t.Targets, t => t.Links);
         var employees = (await employeeRepo.GetAllAsync()).ToDictionary(e => e.Id, e => e.FullName);
 
         return templates
@@ -42,6 +44,12 @@ public class RespondentTemplateService(
     public async Task<RespondentTemplateDto> CreateAsync(CreateRespondentTemplateDto dto)
     {
         await ValidateAsync(dto.Name, dto.Items);
+        var targetIds = await ValidateTargetsAsync(dto.TargetEmployeeIds);
+        var evaluatorIds = dto.Items
+            .Where(i => i.EmployeeId.HasValue && i.EmployeeId != -1)
+            .Select(i => i.EmployeeId!.Value)
+            .ToList();
+        var links = ValidateLinks(dto.Links, evaluatorIds, targetIds);
 
         var template = new RespondentTemplate
         {
@@ -51,6 +59,19 @@ public class RespondentTemplateService(
                 .Select(i => new RespondentTemplateItem
                 {
                     EmployeeId = i.EmployeeId
+                })
+                .ToList(),
+            Targets = targetIds
+                .Select(id => new RespondentTemplateTarget
+                {
+                    EmployeeId = id
+                })
+                .ToList(),
+            Links = links
+                .Select(l => new RespondentTemplateLink
+                {
+                    EvaluatorEmployeeId = l.EvaluatorEmployeeId,
+                    TargetEmployeeId = l.TargetEmployeeId
                 })
                 .ToList()
         };
@@ -65,6 +86,12 @@ public class RespondentTemplateService(
     {
         var template = await LoadWithItemsAsync(id);
         await ValidateAsync(dto.Name, dto.Items);
+        var targetIds = await ValidateTargetsAsync(dto.TargetEmployeeIds);
+        var evaluatorIds = dto.Items
+            .Where(i => i.EmployeeId.HasValue && i.EmployeeId != -1)
+            .Select(i => i.EmployeeId!.Value)
+            .ToList();
+        var links = ValidateLinks(dto.Links, evaluatorIds, targetIds);
 
         template.Name = dto.Name.Trim();
         template.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
@@ -82,6 +109,39 @@ public class RespondentTemplateService(
             {
                 TemplateId = template.Id,
                 EmployeeId = i.EmployeeId,
+            });
+        }
+
+        // Перезаписываем оцениваемых целиком
+        foreach (var old in template.Targets.ToList())
+        {
+            template.Targets.Remove(old);
+            targetRepo.Delete(old);
+        }
+
+        foreach (var employeeId in targetIds)
+        {
+            template.Targets.Add(new RespondentTemplateTarget
+            {
+                TemplateId = template.Id,
+                EmployeeId = employeeId,
+            });
+        }
+
+        // Перезаписываем связи целиком
+        foreach (var old in template.Links.ToList())
+        {
+            template.Links.Remove(old);
+            linkRepo.Delete(old);
+        }
+
+        foreach (var link in links)
+        {
+            template.Links.Add(new RespondentTemplateLink
+            {
+                TemplateId = template.Id,
+                EvaluatorEmployeeId = link.EvaluatorEmployeeId,
+                TargetEmployeeId = link.TargetEmployeeId,
             });
         }
 
@@ -103,64 +163,112 @@ public class RespondentTemplateService(
 
     public async Task<ApplyRespondentTemplateResultDto> ApplyToSurveyAsync(int surveyId, ApplyRespondentTemplateDto dto)
     {
+        // Валидация опроса
         var survey = await surveyRepo.GetByIdAsync(surveyId)
                      ?? throw new Exception("Опрос не найден");
 
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Добавление участников доступно только для опросов в статусе «Черновик»");
 
-        var target = await employeeRepo.GetByIdAsync(dto.TargetId)
-                     ?? throw new Exception("Оцениваемый сотрудник не найден");
-
+        // Валидация шаблона
         var template = await LoadWithItemsAsync(dto.TemplateId);
 
         if (template.Items.Count == 0)
-            throw new Exception("Шаблон пуст — добавьте в него хотя бы одного респондента");
+            throw new Exception("Шаблон пуст — добавьте в него хотя бы одного оценивающего");
 
-        // уже существующие связи этого опроса (EvaluatorId, TargetId)
+        // Валидация элементов шаблона
+        foreach (var item in template.Items)
+        {
+            if (item.EmployeeId is null)
+                throw new Exception($"Шаблон «{template.Name}» повреждён: у оценивающего не указан сотрудник");
+
+            var employee = await employeeRepo.GetByIdAsync(item.EmployeeId.Value);
+            if (employee is null)
+                throw new Exception($"Оценивающий сотрудник (id={item.EmployeeId}) не найден в системе");
+        }
+
+        // Определяем целевых сотрудников
+        // Приоритет: явно переданные TargetIds > оцениваемые, зашитые в шаблон.
+        var targetIds = (dto.TargetIds?.Count > 0
+                ? dto.TargetIds
+                : template.Targets.Select(t => t.EmployeeId))
+            .Distinct()
+            .ToList();
+
+        if (targetIds.Count == 0)
+            throw new Exception("Не указан оцениваемый: выберите сотрудника вручную или задайте оцениваемых в самом шаблоне");
+
+        // Валидация целевых сотрудников
+        var targets = new List<Employee>();
+        foreach (var targetId in targetIds)
+        {
+            var target = await employeeRepo.GetByIdAsync(targetId)
+                         ?? throw new Exception($"Оцениваемый сотрудник (id={targetId}) не найден в системе");
+            targets.Add(target);
+        }
+
+        // Получаем существующие связи этого опроса
         var existing = (await assignmentRepo.FindAsync(a => a.SurveyId == surveyId))
             .Select(a => (a.EvaluatorId, a.TargetId))
             .ToHashSet();
 
+        // Если используются зашитые в шаблон оцениваемые (TargetIds не переданы явно) и в шаблоне
+        // заданы явные связи — применяем только их (частичная матрица). Иначе — старое поведение:
+        // каждый оценивающий оценивает каждого целевого сотрудника (полный «крест»).
+        var useExplicitLinks = (dto.TargetIds == null || dto.TargetIds.Count == 0) && template.Links.Count > 0;
+        var linksByTarget = useExplicitLinks
+            ? template.Links.GroupBy(l => l.TargetEmployeeId).ToDictionary(g => g.Key, g => g.Select(l => l.EvaluatorEmployeeId).ToList())
+            : null;
+
         var result = new ApplyRespondentTemplateResultDto();
 
-        foreach (var item in template.Items)
+        // Применяем шаблон к каждому целевому сотруднику
+        foreach (var target in targets)
         {
-            if (item.EmployeeId is null)
-                throw new Exception($"Шаблон «{template.Name}» повреждён: у респондента не указан сотрудник");
+            var evaluatorIdsForTarget = useExplicitLinks
+                ? (linksByTarget!.TryGetValue(target.Id, out var linked) ? linked : new List<int>())
+                : template.Items.Select(i => i.EmployeeId!.Value);
 
-            var evaluatorId = item.EmployeeId.Value;
-
-            var key = (evaluatorId, target.Id);
-            if (existing.Contains(key))
+            foreach (var evaluatorId in evaluatorIdsForTarget)
             {
-                result.Skipped++;
-                continue;
+                var key = (evaluatorId, target.Id);
+                if (existing.Contains(key))
+                {
+                    result.Skipped++;
+                    continue;
+                }
+
+                // Проверяем, что оценивающий не оценивает сам себя
+                if (evaluatorId == target.Id)
+                {
+                    result.Skipped++;
+                    continue;
+                }
+
+                var assignment = new SurveyAssignment
+                {
+                    SurveyId = surveyId,
+                    EvaluatorId = evaluatorId,
+                    TargetId = target.Id,
+                    Token = Guid.NewGuid().ToString(),
+                    InviteSent = false
+                };
+
+                await assignmentRepo.AddAsync(assignment);
+                
+                var evaluatorEmployee = await employeeRepo.GetByIdAsync(evaluatorId);
+                result.Items.Add(new MatrixItemDto
+                {
+                    EvaluatorId = evaluatorId,
+                    TargetId = target.Id,
+                    TargetName = target.FullName,
+                    EvaluatorName = evaluatorEmployee?.FullName ?? "Unknown",
+                    Token = assignment.Token,
+                    Completed = false
+                });
+                result.Created++;
+                existing.Add(key);
             }
-
-            var assignment = new SurveyAssignment
-            {
-                SurveyId = surveyId,
-                EvaluatorId = evaluatorId,
-                TargetId = target.Id,
-                Token = Guid.NewGuid().ToString(),
-                InviteSent = false
-            };
-
-            await assignmentRepo.AddAsync(assignment);
-            result.Items.Add(new MatrixItemDto
-            {
-                EvaluatorId = evaluatorId,
-                TargetId = target.Id,
-                TargetName = target.FullName,
-                EvaluatorName = evaluatorId == target.Id
-                    ? target.FullName
-                    : (await employeeRepo.GetByIdAsync(evaluatorId))?.FullName ?? "Unknown",
-                Token = assignment.Token,
-                Completed = false
-            });
-            result.Created++;
-            existing.Add(key);
         }
 
         if (result.Created > 0)
@@ -213,34 +321,120 @@ public class RespondentTemplateService(
 
     private async Task<RespondentTemplate> LoadWithItemsAsync(int id)
     {
-        var template = (await templateRepo.FindAsync(t => t.Id == id, t => t.Items)).FirstOrDefault();
+        var template = (await templateRepo.FindAsync(t => t.Id == id, t => t.Items, t => t.Targets, t => t.Links)).FirstOrDefault();
         return template ?? throw new Exception("Шаблон респондентов не найден");
     }
 
     private async Task ValidateAsync(string name, List<CreateRespondentTemplateItemDto> items)
     {
+        // Валидация названия
         if (string.IsNullOrWhiteSpace(name))
             throw new Exception("Укажите название шаблона");
 
-        if (items.Count == 0)
-            throw new Exception("Добавьте в шаблон хотя бы одного респондента");
+        if (name.Length > 255)
+            throw new Exception("Название шаблона не должно быть длиннее 255 символов");
 
+        // Валидация количества элементов
+        if (items.Count == 0)
+            throw new Exception("Добавьте в шаблон хотя бы одного оценивающего");
+
+        // Валидация каждого элемента
         foreach (var item in items)
         {
-            if (item.EmployeeId is null)
-                throw new Exception("У каждого респондента должен быть выбран сотрудник");
+            if (item.EmployeeId is null || item.EmployeeId == -1)
+                throw new Exception("У каждого оценивающего должен быть выбран сотрудник");
 
-            if (await employeeRepo.GetByIdAsync(item.EmployeeId.Value) is null)
-                throw new Exception($"Сотрудник с id={item.EmployeeId} не найден");
+            var employee = await employeeRepo.GetByIdAsync(item.EmployeeId.Value);
+            if (employee is null)
+                throw new Exception($"Сотрудник с id={item.EmployeeId} не найден в системе");
         }
 
-        // Проверка дублирования одного и того же сотрудника в шаблоне
-        var duplicate = items
-            .GroupBy(i => i.EmployeeId)
-            .FirstOrDefault(g => g.Count() > 1);
+        // Проверка на дублирование оценивающих
+        var validIds = items
+            .Where(i => i.EmployeeId.HasValue && i.EmployeeId != -1)
+            .Select(i => i.EmployeeId!.Value)
+            .ToList();
 
-        if (duplicate != null)
-            throw new Exception("В шаблоне есть повторяющийся респондент");
+        var duplicateEvaluators = validIds
+            .GroupBy(id => id)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateEvaluators.Count > 0)
+        {
+            var duplicateNames = string.Join(", ", duplicateEvaluators);
+            throw new Exception($"В шаблоне есть повторяющиеся оценивающие (id: {duplicateNames})");
+        }
+    }
+
+    /// <summary>Проверяет и нормализует список оцениваемых, зашитых в шаблон (может быть пустым).</summary>
+    private async Task<List<int>> ValidateTargetsAsync(List<int> targetEmployeeIds)
+    {
+        if (targetEmployeeIds == null)
+            return new List<int>();
+
+        var ids = targetEmployeeIds
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        // Валидация каждого целевого сотрудника
+        foreach (var id in ids)
+        {
+            var employee = await employeeRepo.GetByIdAsync(id);
+            if (employee is null)
+                throw new Exception($"Оцениваемый сотрудник с id={id} не найден в системе");
+        }
+
+        // Проверка на дублирование
+        var duplicateTargets = ids
+            .GroupBy(id => id)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateTargets.Count > 0)
+        {
+            var duplicateNames = string.Join(", ", duplicateTargets);
+            throw new Exception($"В списке оцениваемых есть дубликаты (id: {duplicateNames})");
+        }
+
+        return ids;
+    }
+
+    /// <summary>
+    /// Проверяет и нормализует явные связи «кто кого оценивает».
+    /// Каждая связь обязана ссылаться на сотрудников, реально присутствующих
+    /// среди оценивающих и зашитых оцениваемых этого же запроса; дубликаты убираются.
+    /// </summary>
+    private static List<RespondentTemplateLinkDto> ValidateLinks(
+        List<RespondentTemplateLinkDto>? links,
+        List<int> evaluatorIds,
+        List<int> targetIds)
+    {
+        if (links == null || links.Count == 0)
+            return new List<RespondentTemplateLinkDto>();
+
+        var evaluatorSet = evaluatorIds.ToHashSet();
+        var targetSet = targetIds.ToHashSet();
+        var result = new List<RespondentTemplateLinkDto>();
+        var seen = new HashSet<(int, int)>();
+
+        foreach (var link in links)
+        {
+            if (!evaluatorSet.Contains(link.EvaluatorEmployeeId))
+                throw new Exception($"Связь ссылается на оценивающего (id={link.EvaluatorEmployeeId}), которого нет в составе шаблона");
+
+            if (!targetSet.Contains(link.TargetEmployeeId))
+                throw new Exception($"Связь ссылается на оцениваемого (id={link.TargetEmployeeId}), которого нет среди зашитых в шаблон");
+
+            var key = (link.EvaluatorEmployeeId, link.TargetEmployeeId);
+            if (seen.Add(key))
+                result.Add(link);
+        }
+
+        return result;
     }
 
     private RespondentTemplateDto ToDto(RespondentTemplate t, IReadOnlyDictionary<int, string> employees)
@@ -256,6 +450,22 @@ public class RespondentTemplateService(
                     : employees.TryGetValue(i.EmployeeId.Value, out var n) ? n : "Unknown"
             })
             .OrderBy(i => i.EmployeeName)
+            .ToList();
+        dto.Targets = t.Targets
+            .Select(target => new RespondentTemplateTargetDto
+            {
+                Id = target.Id,
+                EmployeeId = target.EmployeeId,
+                EmployeeName = employees.TryGetValue(target.EmployeeId, out var n) ? n : "Unknown"
+            })
+            .OrderBy(target => target.EmployeeName)
+            .ToList();
+        dto.Links = t.Links
+            .Select(link => new RespondentTemplateLinkDto
+            {
+                EvaluatorEmployeeId = link.EvaluatorEmployeeId,
+                TargetEmployeeId = link.TargetEmployeeId
+            })
             .ToList();
         return dto;
     }

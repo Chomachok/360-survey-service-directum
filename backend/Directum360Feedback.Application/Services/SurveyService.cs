@@ -17,6 +17,7 @@ public class SurveyService(
     IRepository<SurveyQuestion> surveyQuestionRepo,
     IRepository<SurveyTemplate> surveyTemplateRepo,
     IRepository<SurveyTemplateQuestion> templateQuestionRepo,
+    IRepository<SurveyAssignment> assignmentRepo,
     IMapper mapper,
     IConfiguration configuration,
     IServiceScopeFactory scopeFactory)
@@ -287,5 +288,23 @@ public class SurveyService(
         }).ToList();
 
         return dto;
+    }
+    
+    public async Task<IEnumerable<UserSurveyDto>> GetUserSurveysAsync(int userId)
+    {
+        var assignments = await assignmentRepo.FindAsync(
+            a => a.EvaluatorId == userId && a.Survey.Status == SurveyStatus.Active,
+            a => a.Survey,
+            a => a.Target
+        );
+
+        return assignments.Select(a => new UserSurveyDto
+        {
+            SurveyId = a.Survey.Id,
+            SurveyTitle = a.Survey.Title,
+            TargetName = a.Target?.FullName ?? "Unknown",
+            Token = a.Token,
+            Completed = a.Completed
+        });
     }
 }

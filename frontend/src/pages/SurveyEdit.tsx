@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
+import LogoLoader from '../components/LogoLoader'
 
 export default function SurveyEdit() {
   const { id } = useParams<{ id: string }>()
@@ -100,9 +101,7 @@ export default function SurveyEdit() {
 
   if (surveyLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-directum-orange border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <LogoLoader />
     )
   }
 

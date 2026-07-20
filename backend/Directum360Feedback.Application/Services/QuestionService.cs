@@ -22,7 +22,17 @@ public class QuestionService(
         {
             var dto = mapper.Map<QuestionDto>(q);
             if (!string.IsNullOrEmpty(q.Options))
-                dto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+            {
+                try
+                {
+                    dto.Options = JsonSerializer.Deserialize<List<string>>(q.Options);
+                }
+                catch
+                {
+                    // Если Options невалидный JSON (например, строка "SingleChoice"), оставляем null
+                    dto.Options = null;
+                }
+            }
             return dto;
         });
     }

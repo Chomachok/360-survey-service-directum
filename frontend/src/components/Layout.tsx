@@ -11,14 +11,13 @@ const Layout: React.FC = () => {
   const navigate = useNavigate()
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-
-  const userName = localStorage.getItem('userName') || 'Пользователь'
+  const userName = localStorage.getItem('userName') || 'Администратор'
 
   const navItems = [
     { path: '/', label: 'Дашборд', icon: LayoutDashboard },
     { path: '/survey/new', label: 'Создать опрос', icon: FileText },
-    { path: '/import', label: 'Импорт сотрудников', icon: Users },
   ]
+  const importItem = { path: '/import', label: 'Импорт сотрудников', icon: Users }
 
   const templateItems = [
     { path: '/templates', label: 'Шаблоны вопросов', icon: ListChecks },
@@ -31,6 +30,7 @@ const Layout: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('authToken')
     localStorage.removeItem('userName')
+    localStorage.removeItem('userEmail')
     localStorage.removeItem('isAdmin')
     navigate('/login')
   }
@@ -51,10 +51,7 @@ const Layout: React.FC = () => {
       <header className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link
-              to="/"
-              className="flex items-center text-directum-dark dark:text-white transition-opacity hover:opacity-80"
-            >
+            <Link to="/" className="flex items-center text-directum-dark dark:text-white transition-opacity hover:opacity-80">
               <Directum360Logo size={42} />
             </Link>
 
@@ -120,6 +117,20 @@ const Layout: React.FC = () => {
                   </div>
                 )}
               </div>
+            <NavLink
+              key={importItem.path}
+              to={importItem.path}
+              end={true}
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center space-x-1.5 ${
+                  isActive
+                    ? 'bg-directum-orange text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <importItem.icon size={16} />
+                <span>{importItem.label}</span>
+              </NavLink>
             </nav>
 
             <div className="flex items-center space-x-3">
@@ -128,7 +139,7 @@ const Layout: React.FC = () => {
               </span>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-110"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
                 aria-label="Переключить тему"
               >
                 {theme === 'light' ? <Moon size={20} className="text-gray-600" /> : <Sun size={20} className="text-yellow-400" />}
@@ -136,14 +147,15 @@ const Layout: React.FC = () => {
               <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">
                 {userName.charAt(0).toUpperCase()}
               </div>
+
               <button
                 onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-110 text-gray-600 dark:text-gray-300"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 text-gray-600 dark:text-gray-300"
                 title="Выйти"
               >
                 <LogOut size={20} />
               </button>
-            </div> 
+            </div>
           </div>
         </div>
       </header>
@@ -169,7 +181,7 @@ const Layout: React.FC = () => {
                 </NavLink>
               )
             })
-          })
+          }
           <div className="relative">
             <button
               onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}

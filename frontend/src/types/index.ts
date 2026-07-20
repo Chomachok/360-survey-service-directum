@@ -211,6 +211,15 @@ export interface RespondentTemplate {
   name: string
   description?: string
   items: RespondentTemplateItem[]
+  /** Оцениваемые, «зашитые» в шаблон. Пусто — шаблон универсальный (оцениваемый выбирается вручную). */
+  targets: RespondentTemplateTarget[]
+  /** Явные связи «кто кого оценивает». Пусто — каждый из items оценивает каждого из targets. */
+  links: RespondentTemplateLinkDto[]
+}
+
+export interface RespondentTemplateLinkDto {
+  evaluatorEmployeeId: number
+  targetEmployeeId: number
 }
 
 export interface RespondentTemplateItem {
@@ -219,10 +228,18 @@ export interface RespondentTemplateItem {
   employeeName?: string
 }
 
+export interface RespondentTemplateTarget {
+  id: number
+  employeeId: number
+  employeeName: string
+}
+
 export interface CreateRespondentTemplateDto {
   name: string
   description?: string
   items: CreateRespondentTemplateItemDto[]
+  targetEmployeeIds: number[]
+  links: RespondentTemplateLinkDto[]
 }
 
 export interface CreateRespondentTemplateItemDto {
@@ -233,10 +250,30 @@ export interface UpdateRespondentTemplateDto {
   name: string
   description?: string
   items: CreateRespondentTemplateItemDto[]
+  targetEmployeeIds: number[]
+  links: RespondentTemplateLinkDto[]
 }
 
 export interface ApplyRespondentTemplateResult {
   created: number
   skipped: number
   items: MatrixItem[]
+}
+
+export interface UserSurvey {
+  surveyId: number
+  surveyTitle: string
+  targetName: string
+  token: string
+  completed: boolean
+}
+
+// src/types/index.ts
+export interface CreateTemplateQuestionDto {
+  text: string
+  type: QuestionType
+  required: boolean
+  order: number
+  options?: string[]
+  tempId?: string // для временных ключей React
 }

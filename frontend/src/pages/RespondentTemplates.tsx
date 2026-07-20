@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Pencil, Users, X, UserCheck } from 'lucide-react'
+import { Plus, Trash2, Pencil, X, UserCheck, Target, Boxes, List, Grid3x3 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   getRespondentTemplates,
@@ -11,11 +11,20 @@ import {
 import { getEmployees } from '../api/employees'
 import type { RespondentTemplate, CreateRespondentTemplateItemDto } from '../types'
 import { ConfirmModal } from '../components/ConfirmModal'
+import LogoLoader from '../components/LogoLoader'
+import { SurveyMatrix } from '../components/MatrixGrid'
 
 /** пустая строка состава по умолчанию */
 const emptyItem = (): CreateRespondentTemplateItemDto => ({
   employeeId: -1,
 })
+
+/** пустая строка оцениваемого по умолчанию */
+const emptyTarget = (): { employeeId: number } => ({
+  employeeId: -1,
+})
+
+type ViewMode = 'list' | 'matrix'
 
 export default function RespondentTemplates() {
   const queryClient = useQueryClient()
@@ -30,12 +39,25 @@ export default function RespondentTemplates() {
     queryFn: getEmployees,
   })
 
+  const employeeNameById = useMemo(() => {
+    const map = new Map<number, string>()
+    employees?.forEach((e) => map.set(e.id, e.fullName))
+    return map
+  }, [employees])
+
+  // ---------- отображение страницы: список групп / общая матрица ----------
+  const [pageView, setPageView] = useState<ViewMode>('list')
+
   // ---------- состояние редактора ----------
   const [editorOpen, setEditorOpen] = useState(false)
+  const [editorView, setEditorView] = useState<ViewMode>('list')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [items, setItems] = useState<CreateRespondentTemplateItemDto[]>([emptyItem()])
+  const [targetRows, setTargetRows] = useState<{ employeeId: number }[]>([])
+  /** Явные связи «кто кого оценивает». Пусто (для конкретного оцениваемого) значит «пока никто не назначен». */
+  const [links, setLinks] = useState<{ evaluatorEmployeeId: number; targetEmployeeId: number }[]>([])
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id?: number; name?: string }>({
     isOpen: false,
@@ -46,6 +68,9 @@ export default function RespondentTemplates() {
     setName('')
     setDescription('')
     setItems([emptyItem()])
+    setTargetRows([])
+    setLinks([])
+    setEditorView('list')
   }
 
   const openCreate = () => {
@@ -62,6 +87,25 @@ export default function RespondentTemplates() {
         ? t.items.map((i) => ({ employeeId: i.employeeId ?? -1 }))
         : [emptyItem()],
     )
+    setTargetRows(t.targets.map((tg) => ({ employeeId: tg.employeeId })))
+    // Если связи явно не сохранены (старые шаблоны) — считаем, что действовал полный
+    // «крест»: каждый оценивающий оценивает каждого зашитого оцениваемого.
+    setLinks(
+      t.links && t.links.length > 0
+        ? t.links.map((l) => ({
+            evaluatorEmployeeId: l.evaluatorEmployeeId,
+            targetEmployeeId: l.targetEmployeeId,
+          }))
+        : t.items
+            .filter((i) => i.employeeId != null)
+            .flatMap((i) =>
+              t.targets.map((tg) => ({
+                evaluatorEmployeeId: i.employeeId as number,
+                targetEmployeeId: tg.employeeId,
+              })),
+            ),
+    )
+    setEditorView('list')
     setEditorOpen(true)
   }
 
@@ -79,16 +123,18 @@ export default function RespondentTemplates() {
         items: items.map((i) => ({
           employeeId: i.employeeId,
         })),
+        targetEmployeeIds: targetRows.map((t) => t.employeeId),
+        links: links.filter((l) => l.evaluatorEmployeeId !== -1 && l.targetEmployeeId !== -1),
       }
       return editingId ? updateRespondentTemplate(editingId, dto) : createRespondentTemplate(dto)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['respondent-templates'] })
-      toast.success(editingId ? 'Шаблон обновлён' : 'Шаблон создан')
+      toast.success(editingId ? 'Группа обновлена' : 'Группа создана')
       closeEditor()
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Не удалось сохранить шаблон')
+      toast.error(error.response?.data?.message || 'Не удалось сохранить группу')
     },
   })
 
@@ -96,11 +142,11 @@ export default function RespondentTemplates() {
     mutationFn: (id: number) => deleteRespondentTemplate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['respondent-templates'] })
-      toast.success('Шаблон удалён')
+      toast.success('Группа удалена')
       setDeleteModal({ isOpen: false })
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Не удалось удалить шаблон')
+      toast.error(error.response?.data?.message || 'Не удалось удалить группу')
       setDeleteModal({ isOpen: false })
     },
   })
@@ -108,48 +154,237 @@ export default function RespondentTemplates() {
   // ---------- валидация формы ----------
   const duplicateEmployees = items
     .map((i) => i.employeeId)
-    .filter((id) => id !== null)
+    .filter((id) => id !== null && id !== -1)
     .some((id, index, arr) => arr.indexOf(id) !== index)
 
-  const missingEmployee = items.some((i) => i.employeeId === null)
-  const canSave = name.trim().length > 0 && items.length > 0 && !missingEmployee && !duplicateEmployees
+  const missingEmployee = items.some((i) => i.employeeId === null || i.employeeId === -1)
+
+  const duplicateTargets = targetRows
+    .map((t) => t.employeeId)
+    .filter((id) => id !== -1)
+    .some((id, index, arr) => arr.indexOf(id) !== index)
+
+  const missingTarget = targetRows.some((t) => t.employeeId === -1)
+
+  const canSave =
+    name.trim().length > 0 &&
+    items.length > 0 &&
+    !missingEmployee &&
+    !duplicateEmployees &&
+    !missingTarget &&
+    !duplicateTargets
 
   const updateItem = (index: number, patch: Partial<CreateRespondentTemplateItemDto>) => {
+    const prevEmployeeId = items[index]?.employeeId
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+
+    if (patch.employeeId !== undefined && patch.employeeId !== prevEmployeeId) {
+      setLinks((prev) => {
+        const withoutOld = prev.filter((l) => l.evaluatorEmployeeId !== prevEmployeeId)
+        if (!patch.employeeId || patch.employeeId === -1) return withoutOld
+        // По умолчанию новый оценивающий привязывается ко всем текущим оцениваемым —
+        // конкретные связи можно снять ниже, в чипах, или в матрице.
+        const additions = targetRows
+          .filter((t) => t.employeeId !== -1)
+          .map((t) => ({ evaluatorEmployeeId: patch.employeeId as number, targetEmployeeId: t.employeeId }))
+        return [...withoutOld, ...additions]
+      })
+    }
+  }
+
+  const updateTargetRow = (index: number, employeeId: number) => {
+    const prevEmployeeId = targetRows[index]?.employeeId
+    setTargetRows((prev) => prev.map((t, i) => (i === index ? { employeeId } : t)))
+
+    setLinks((prev) => {
+      const withoutOld = prev.filter((l) => l.targetEmployeeId !== prevEmployeeId)
+      if (employeeId === -1) return withoutOld
+      // По умолчанию новый оцениваемый получает всех текущих оценивающих —
+      // конкретные связи можно снять ниже, в чипах, или в матрице.
+      const additions = items
+        .filter((i) => i.employeeId && i.employeeId !== -1)
+        .map((i) => ({ evaluatorEmployeeId: i.employeeId as number, targetEmployeeId: employeeId }))
+      return [...withoutOld, ...additions]
+    })
+  }
+
+  const removeItemRow = (index: number) => {
+    const removed = items[index]
+    setItems((prev) => prev.filter((_, i) => i !== index))
+    setLinks((prev) => prev.filter((l) => l.evaluatorEmployeeId !== removed.employeeId))
+  }
+
+  const removeTargetRow = (index: number) => {
+    const removed = targetRows[index]
+    setTargetRows((prev) => prev.filter((_, i) => i !== index))
+    setLinks((prev) => prev.filter((l) => l.targetEmployeeId !== removed.employeeId))
+  }
+
+  const isLinked = (evaluatorEmployeeId: number, targetEmployeeId: number) =>
+    links.some((l) => l.evaluatorEmployeeId === evaluatorEmployeeId && l.targetEmployeeId === targetEmployeeId)
+
+  const toggleLink = (evaluatorEmployeeId: number, targetEmployeeId: number) => {
+    setLinks((prev) =>
+      prev.some((l) => l.evaluatorEmployeeId === evaluatorEmployeeId && l.targetEmployeeId === targetEmployeeId)
+        ? prev.filter((l) => !(l.evaluatorEmployeeId === evaluatorEmployeeId && l.targetEmployeeId === targetEmployeeId))
+        : [...prev, { evaluatorEmployeeId, targetEmployeeId }],
+    )
+  }
+
+  const handleMatrixAdd = (evaluatorId: number, targetId: number) => {
+    // Добавляем оценивающего, если его ещё нет
+    if (!items.some((i) => i.employeeId === evaluatorId)) {
+      setItems((prev) => [...prev, { employeeId: evaluatorId }])
+    }
+    // Добавляем оцениваемого, если его ещё нет
+    if (!targetRows.some((t) => t.employeeId === targetId)) {
+      setTargetRows((prev) => [...prev, { employeeId: targetId }])
+    }
+    // Создаём именно эту связь (а не весь крест)
+    setLinks((prev) =>
+      prev.some((l) => l.evaluatorEmployeeId === evaluatorId && l.targetEmployeeId === targetId)
+        ? prev
+        : [...prev, { evaluatorEmployeeId: evaluatorId, targetEmployeeId: targetId }],
+    )
+  }
+
+  /** Убрать одну конкретную связь по клику на ячейку матрицы (не трогая сам состав) */
+  const handleMatrixDeleteCell = (
+    _id: number,
+    _evaluatorName: string,
+    _targetName: string,
+    evaluatorId?: number,
+    targetId?: number,
+  ) => {
+    if (evaluatorId == null || targetId == null) return
+    setLinks((prev) => prev.filter((l) => !(l.evaluatorEmployeeId === evaluatorId && l.targetEmployeeId === targetId)))
+  }
+
+  /** Убрать строку (оценивающего) или столбец (оцениваемого) целиком из матрицы */
+  const handleMatrixRemoveEntity = (type: 'row' | 'col', id: number) => {
+    if (type === 'row') {
+      setItems((prev) => prev.filter((i) => i.employeeId !== id))
+      setLinks((prev) => prev.filter((l) => l.evaluatorEmployeeId !== id))
+    } else {
+      setTargetRows((prev) => prev.filter((t) => t.employeeId !== id))
+      setLinks((prev) => prev.filter((l) => l.targetEmployeeId !== id))
+    }
+  }
+
+  // ---------- превью-матрица в редакторе (строится «на лету» из текущих полей формы) ----------
+  // Показываем ПОЛНУЮ сетку (все оценивающие × все оцениваемые), а флаг linked отмечает,
+  // где реально есть связь — так в матрице видны и ещё не привязанные строки/столбцы.
+  const editorPreviewData = useMemo(() => {
+    const evaluators = items.filter((i) => i.employeeId && i.employeeId !== -1)
+    const targets = targetRows.filter((t) => t.employeeId !== -1)
+    if (evaluators.length === 0 || targets.length === 0) return []
+    let idx = 0
+    const rows: any[] = []
+    evaluators.forEach((ev) => {
+      targets.forEach((tg) => {
+        idx += 1
+        rows.push({
+          id: idx,
+          evaluatorId: ev.employeeId,
+          evaluatorName: employeeNameById.get(ev.employeeId) || '—',
+          targetId: tg.employeeId,
+          targetName: employeeNameById.get(tg.employeeId) || '—',
+          token: '',
+          completed: false,
+          linked: isLinked(ev.employeeId, tg.employeeId),
+        })
+      })
+    })
+    return rows
+  }, [items, targetRows, links, employeeNameById])
+
+  // ---------- превью-матрица для карточки уже сохранённой группы ----------
+  const buildSavedPreview = (t: RespondentTemplate) => {
+    const evaluators = t.items.filter((i) => i.employeeId != null)
+    if (evaluators.length === 0 || t.targets.length === 0) return []
+    // Старые шаблоны без явных связей — считаем, что действовал полный «крест»
+    const hasExplicitLinks = t.links && t.links.length > 0
+    const linkSet = new Set((t.links ?? []).map((l) => `${l.evaluatorEmployeeId}_${l.targetEmployeeId}`))
+    let idx = 0
+    const rows: any[] = []
+    evaluators.forEach((ev) => {
+      t.targets.forEach((tg) => {
+        idx += 1
+        rows.push({
+          id: idx,
+          evaluatorId: ev.employeeId!,
+          evaluatorName: ev.employeeName || '—',
+          targetId: tg.employeeId,
+          targetName: tg.employeeName,
+          token: '',
+          completed: false,
+          linked: hasExplicitLinks ? linkSet.has(`${ev.employeeId}_${tg.employeeId}`) : true,
+        })
+      })
+    })
+    return rows
   }
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-directum-orange border-t-transparent" />
-      </div>
-    )
+    return <LogoLoader />
   }
 
   return (
     <div>
-      <div className="animate-fadeInUp mb-8 flex items-center justify-between">
+      <div className="animate-fadeInUp mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-directum-dark">Шаблоны респондентов</h1>
           <p className="mt-1 text-gray-500">
-            Заранее описанный состав оценивающих. Один шаблон подходит любому оцениваемому.
+            Группы респондентов — заранее описанный состав оцениваемых и тех, кто их
+            оценивает. Группу можно оставить универсальной (оцениваемый выбирается при
+            применении) или сразу привязать к одному или нескольким оцениваемым.
           </p>
         </div>
-        <button onClick={openCreate} className="btn-primary flex items-center space-x-2">
+        <button onClick={openCreate} className="btn-primary flex shrink-0 items-center space-x-2">
           <Plus size={20} />
-          <span>Создать шаблон</span>
+          <span>Создать группу</span>
         </button>
       </div>
 
+      {templates && templates.length > 0 && (
+        <div className="animate-fadeInUp mb-6 flex items-center gap-2 border-b border-gray-200 pb-3 dark:border-gray-700">
+          <span className="text-sm text-gray-500">Отображение:</span>
+          <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setPageView('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                pageView === 'list'
+                  ? 'bg-directum-orange text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+              }`}
+            >
+              <List size={15} />
+              Список
+            </button>
+            <button
+              onClick={() => setPageView('matrix')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                pageView === 'matrix'
+                  ? 'bg-directum-orange text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Grid3x3 size={15} />
+              Матрица
+            </button>
+          </div>
+        </div>
+      )}
+
       {templates?.length === 0 ? (
         <div className="card animate-fadeInUp py-12 text-center">
-          <Users size={48} className="mx-auto mb-4 text-gray-300" />
-          <p className="text-gray-500">Шаблонов пока нет</p>
+          <Boxes size={48} className="mx-auto mb-4 text-gray-300" />
+          <p className="text-gray-500">Групп респондентов пока нет</p>
           <button onClick={openCreate} className="btn-secondary mt-4 inline-block">
-            Создать первый шаблон
+            Создать первую группу
           </button>
         </div>
-      ) : (
+      ) : pageView === 'list' ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {templates?.map((t, index) => (
             <div
@@ -158,9 +393,14 @@ export default function RespondentTemplates() {
               style={{ animationDelay: `${index * 80}ms` }}
             >
               <div className="flex items-start justify-between">
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold text-directum-dark">{t.name}</h3>
-                  {t.description && <p className="mt-1 text-sm text-gray-500">{t.description}</p>}
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-directum-orange/10 text-directum-orange">
+                    <Boxes size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold text-directum-dark dark:text-white">{t.name}</h3>
+                    {t.description && <p className="mt-1 text-sm text-gray-500">{t.description}</p>}
+                  </div>
                 </div>
                 <div className="ml-3 flex shrink-0 items-center space-x-1">
                   <button
@@ -180,25 +420,110 @@ export default function RespondentTemplates() {
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2">
-                {t.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-700"
-                  >
-                    <span className="flex items-center gap-2 text-sm">
-                      <UserCheck size={15} className="text-gray-400" />
-                      {item.employeeName || 'Неизвестно'}
-                    </span>
+              <div className="mt-4">
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                  <Target size={13} />
+                  Кого оценивают {t.targets.length > 0 ? `(${t.targets.length})` : ''}
+                </p>
+                {t.targets.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {t.targets.map((target) => (
+                      <span
+                        key={target.id}
+                        className="rounded-full bg-directum-orange/10 px-2.5 py-1 text-xs text-directum-orange"
+                      >
+                        {target.employeeName}
+                      </span>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <p className="text-xs italic text-gray-400">
+                    Универсальная — оцениваемый выбирается при применении
+                  </p>
+                )}
               </div>
 
-              <p className="mt-3 text-xs text-gray-400">
-                Респондентов: {t.items.length}
-              </p>
+              <div className="mt-4">
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                  <UserCheck size={13} />
+                  Кто оценивает ({t.items.length})
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {t.items.map((item) => (
+                    <span
+                      key={item.id}
+                      className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                    >
+                      {item.employeeName || 'Сам оцениваемый'}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {templates?.map((t, index) => {
+            const preview = buildSavedPreview(t)
+            return (
+              <div
+                key={t.id}
+                className="card animate-fadeInUp"
+                style={{ animationDelay: `${index * 80}ms` }}
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-directum-orange/10 text-directum-orange">
+                      <Boxes size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold text-directum-dark dark:text-white">{t.name}</h3>
+                      {t.description && <p className="mt-1 text-sm text-gray-500">{t.description}</p>}
+                    </div>
+                  </div>
+                  <div className="ml-3 flex shrink-0 items-center space-x-1">
+                    <button
+                      onClick={() => openEdit(t)}
+                      className="p-1 text-gray-400 transition-colors hover:text-directum-orange"
+                      title="Редактировать"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteModal({ isOpen: true, id: t.id, name: t.name })}
+                      className="p-1 text-gray-400 transition-colors hover:text-red-500"
+                      title="Удалить"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {preview.length > 0 ? (
+                  <SurveyMatrix
+                    data={preview}
+                    employees={[]} 
+                    isDraft={false}
+                    onAdd={() => {}}
+                    onDelete={() => {}}
+                    onCopyLink={() => {}}
+                    isMutating={false}
+                    deleteMutation={{ mutateAsync: async () => {} }}
+                    variant="template"
+                    rowLabel="Оценивает"
+                    colLabel="Оценивают"
+                  />
+                ) : (
+                  <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-sm italic text-gray-400 dark:bg-gray-800">
+                    {t.targets.length === 0
+                      ? 'Группа универсальная — оцениваемые не заданы, матрицу показать нельзя'
+                      : 'Добавьте хотя бы одного респондента, чтобы увидеть матрицу'}
+                  </p>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -207,10 +532,10 @@ export default function RespondentTemplates() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeEditor} />
 
-          <div className="animate-fadeInUp relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl dark:bg-gray-800">
+          <div className="animate-fadeInUp relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl dark:bg-gray-800">
             <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-directum-dark dark:text-white">
-                {editingId ? 'Редактирование шаблона' : 'Новый шаблон респондентов'}
+                {editingId ? 'Редактирование группы' : 'Новая группа респондентов'}
               </h3>
               <button
                 onClick={closeEditor}
@@ -220,9 +545,9 @@ export default function RespondentTemplates() {
               </button>
             </div>
 
-            <div className="space-y-4 p-4">
+            <div className="space-y-5 p-4">
               <div>
-                <label className="label-field">Название</label>
+                <label className="label-field">Название группы</label>
                 <input
                   className="input-field"
                   value={name}
@@ -241,61 +566,223 @@ export default function RespondentTemplates() {
                 />
               </div>
 
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label className="label-field mb-0">Состав респондентов</label>
+              {/* Переключатель список / матрица */}
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-3 dark:border-gray-700">
+                <span className="text-sm text-gray-500">Состав группы:</span>
+                <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                   <button
-                    onClick={() => setItems((prev) => [...prev, emptyItem()])}
-                    className="flex items-center gap-1 text-sm text-directum-orange hover:underline"
+                    type="button"
+                    onClick={() => setEditorView('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                      editorView === 'list'
+                        ? 'bg-directum-orange text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
                   >
-                    <Plus size={14} />
-                    Добавить
+                    <List size={15} />
+                    Список
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditorView('matrix')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                      editorView === 'matrix'
+                        ? 'bg-directum-orange text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Grid3x3 size={15} />
+                    Матрица
                   </button>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  {items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <select
-                        value={item.employeeId ?? ''}
-                        onChange={(e) =>
-                          updateItem(index, {
-                            employeeId: e.target.value === '' ? -1 : Number(e.target.value),
-                          })
-                        }
-                        className="input-field flex-1"
-                      >
-                        <option value="">Выберите сотрудника</option>
-                        {employees?.map((e) => (
-                          <option key={e.id} value={e.id}>
-                            {e.fullName}
-                          </option>
-                        ))}
-                      </select>
-
+              {editorView === 'list' ? (
+                <div className="space-y-5">
+                  {/* Кого оценивают */}
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="label-field mb-0 flex items-center gap-1.5">
+                        <Target size={14} className="text-gray-400" />
+                        Кого оценивают
+                      </label>
                       <button
-                        onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-                        className="p-1 text-gray-400 transition-colors hover:text-red-500 disabled:opacity-30"
-                        title="Убрать"
-                        disabled={items.length === 1}
+                        onClick={() => setTargetRows((prev) => [...prev, emptyTarget()])}
+                        className="flex items-center gap-1 text-sm text-directum-orange hover:underline"
                       >
-                        <Trash2 size={18} />
+                        <Plus size={14} />
+                        Добавить оцениваемого
                       </button>
                     </div>
-                  ))}
-                </div>
 
-                {missingEmployee && (
-                  <p className="mt-2 text-sm text-red-500">
-                    У каждого респондента должен быть выбран сотрудник
-                  </p>
-                )}
-                {duplicateEmployees && (
-                  <p className="mt-2 text-sm text-red-500">
-                    Один сотрудник не может быть добавлен дважды
-                  </p>
-                )}
-              </div>
+                    {targetRows.length === 0 ? (
+                      <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-xs italic text-gray-400 dark:bg-gray-700">
+                        Никого не выбрано — группа останется универсальной, оцениваемый будет
+                        выбираться вручную при применении.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {targetRows.map((row, index) => {
+                          const validEvaluators = items.filter(
+                            (i) => i.employeeId && i.employeeId !== -1,
+                          ) as { employeeId: number }[]
+                          return (
+                            <div
+                              key={index}
+                              className="rounded-lg border border-gray-200 p-2.5 dark:border-gray-700"
+                            >
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={row.employeeId ?? ''}
+                                  onChange={(e) => updateTargetRow(index, Number(e.target.value))}
+                                  className="input-field flex-1"
+                                >
+                                  <option value="">Выберите сотрудника</option>
+                                  {employees?.map((e) => (
+                                    <option key={e.id} value={e.id}>
+                                      {e.fullName}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => removeTargetRow(index)}
+                                  className="p-1 text-gray-400 transition-colors hover:text-red-500"
+                                  title="Убрать"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+
+                              {row.employeeId !== -1 && (
+                                <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-700">
+                                  <p className="mb-1.5 text-xs text-gray-400">Кто его оценивает:</p>
+                                  {validEvaluators.length === 0 ? (
+                                    <p className="text-xs italic text-gray-400">
+                                      Сначала добавьте хотя бы одного оценивающего ниже
+                                    </p>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {validEvaluators.map((ev) => {
+                                        const linked = isLinked(ev.employeeId, row.employeeId)
+                                        return (
+                                          <button
+                                            key={ev.employeeId}
+                                            type="button"
+                                            onClick={() => toggleLink(ev.employeeId, row.employeeId)}
+                                            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                                              linked
+                                                ? 'bg-directum-orange text-white'
+                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                                            }`}
+                                            title={linked ? 'Нажмите, чтобы убрать связь' : 'Нажмите, чтобы назначить'}
+                                          >
+                                            {employeeNameById.get(ev.employeeId) || '—'}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {missingTarget && (
+                      <p className="mt-2 text-sm text-red-500">Выберите сотрудника в каждой строке или уберите пустую</p>
+                    )}
+                    {duplicateTargets && (
+                      <p className="mt-2 text-sm text-red-500">Один сотрудник не может быть оцениваемым дважды</p>
+                    )}
+                  </div>
+
+                  {/* Кто оценивает */}
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="label-field mb-0 flex items-center gap-1.5">
+                        <UserCheck size={14} className="text-gray-400" />
+                        Кто оценивает
+                      </label>
+                      <button
+                        onClick={() => setItems((prev) => [...prev, emptyItem()])}
+                        className="flex items-center gap-1 text-sm text-directum-orange hover:underline"
+                      >
+                        <Plus size={14} />
+                        Добавить оценивающего
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {items.map((item, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <select
+                            value={item.employeeId ?? ''}
+                            onChange={(e) =>
+                              updateItem(index, {
+                                employeeId: e.target.value === '' ? -1 : Number(e.target.value),
+                              })
+                            }
+                            className="input-field flex-1"
+                          >
+                            <option value="">Выберите сотрудника</option>
+                            {employees?.map((e) => (
+                              <option key={e.id} value={e.id}>
+                                {e.fullName}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            onClick={() => removeItemRow(index)}
+                            className="p-1 text-gray-400 transition-colors hover:text-red-500 disabled:opacity-30"
+                            title="Убрать"
+                            disabled={items.length === 1}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {missingEmployee && (
+                      <p className="mt-2 text-sm text-red-500">
+                        У каждого респондента должен быть выбран сотрудник
+                      </p>
+                    )}
+                    {duplicateEmployees && (
+                      <p className="mt-2 text-sm text-red-500">
+                        Один сотрудник не может быть добавлен дважды
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {editorPreviewData.length > 0 ? (
+                    <SurveyMatrix
+                      data={editorPreviewData}
+                      employees={employees?.map(e => ({ value: e.id, label: e.fullName })) || []}
+                      isDraft={true}
+                      onAdd={handleMatrixAdd}
+                      onDelete={handleMatrixDeleteCell}
+                      onCopyLink={() => {}}
+                      isMutating={false}
+                      deleteMutation={{ mutateAsync: async () => {} }}
+                      variant="template"
+                      rowLabel="Оценивает"
+                      colLabel="Оценивают"
+                      onRemoveEntity={handleMatrixRemoveEntity}
+                    />
+                  ) : (
+                    <p className="rounded-lg bg-gray-50 px-3 py-6 text-center text-sm italic text-gray-400 dark:bg-gray-700">
+                      Заполните списки «Кого оценивают» и «Кто оценивает» на вкладке «Список»,
+                      чтобы увидеть матрицу.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-gray-200 p-4 dark:border-gray-700">
@@ -321,8 +808,8 @@ export default function RespondentTemplates() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false })}
         onConfirm={() => deleteModal.id && deleteMutation.mutate(deleteModal.id)}
-        title="Удаление шаблона"
-        message={`Удалить шаблон «${deleteModal.name}»? Уже созданные матрицы опросов это не затронет.`}
+        title="Удаление группы"
+        message={`Удалить группу «${deleteModal.name}»? Уже созданные матрицы опросов это не затронет.`}
         confirmText="Удалить"
         type="danger"
         isLoading={deleteMutation.isPending}
