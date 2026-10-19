@@ -11,7 +11,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: definition of done
+    id: definition-of-done
     attributes:
       label: Критерии готовности
       description: Опишите критерии, по которым можно понять, что задача выполнена
