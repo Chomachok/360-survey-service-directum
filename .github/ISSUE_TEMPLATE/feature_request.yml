@@ -1,0 +1,19 @@
+name: Feature request
+description: Предложить новую функциональность
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему решает эта фича?
+      description: Опишите, зачем это нужно.
+    validations:
+      required: true
+  - type: textarea
+    id: definition of done
+    attributes:
+      label: Критерии готовности
+      description: Опишите критерии, по которым можно понять, что задача выполнена
+    validations:
+      required: true

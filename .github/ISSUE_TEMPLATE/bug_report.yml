@@ -1,0 +1,28 @@
+name: Bug report
+description: Сообщить об ошибке
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание бага
+      description: Чётко и кратко опишите, что пошло не так.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги для воспроизведения
+      placeholder: |
+        1. Перейти на...
+        2. Нажать...
+        3. Увидеть ошибку...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+    validations:
+      required: true
