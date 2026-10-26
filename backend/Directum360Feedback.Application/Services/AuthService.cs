@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Directum360Feedback.Application.DTOs.AuthDto;
 using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
+using Directum360Feedback.Domain.Enums;
 using Directum360Feedback.Domain.Settings;
 using Directum360Feedback.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
@@ -87,7 +88,7 @@ public class AuthService(
         {
             new(ClaimTypes.Email, employee.Email),
             new(ClaimTypes.Name, employee.FullName),
-            new("IsAdmin", employee.IsAdmin.ToString().ToLower()),
+            new("IsAdmin", employee.Roles.Contains(EmployeeRole.Administrator).ToString()),
             new(ClaimTypes.NameIdentifier, employee.Id.ToString())
         };
 
@@ -107,7 +108,7 @@ public class AuthService(
         {
             Token = tokenString,
             FullName = employee.FullName,
-            IsAdmin = employee.IsAdmin,
+            IsAdmin = employee.Roles.Contains(EmployeeRole.Administrator),
             Email = employee.Email
         };
     }

@@ -1,4 +1,5 @@
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.EmployeeDTOs;
 
 namespace Directum360Feedback.Application.Interfaces;
 
