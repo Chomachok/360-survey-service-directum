@@ -122,7 +122,7 @@ export default function SurveyEdit() {
       </button>
 
       <div className="card animate-fadeInUp">
-        <h1 className="text-2xl font-bold text-directum-dark mb-2">Редактирование опроса</h1>
+        <h1 className="page-title mb-2">Редактирование опроса</h1>
         <p className="text-gray-500 mb-6">Измените информацию о вашем опросе 360 градусов</p>
 
         {!isDraft && (

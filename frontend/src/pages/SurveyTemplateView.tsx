@@ -46,7 +46,7 @@ export default function SurveyTemplateView() {
       <div className="card animate-fadeInUp">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-directum-dark">{template.name}</h1>
+            <h1 className="page-title">{template.name}</h1>
             {template.description && (
               <p className="text-gray-500 mt-1">{template.description}</p>
             )}

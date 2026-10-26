@@ -304,12 +304,12 @@ export default function SurveyTemplates() {
 
   return (
     <div>
-      <div className="animate-fadeInUp mb-8 flex items-center justify-between">
+      <div className="animate-fadeInUp mb-8 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Шаблоны опросов</h1>
-          <p className="mt-1 text-gray-500">Создавайте готовые наборы вопросов для быстрого запуска опросов</p>
+          <h1 className="page-title">Шаблоны опросов</h1>
+          <p className="page-description">Создавайте готовые наборы вопросов для быстрого запуска опросов</p>
         </div>
-        <button onClick={openCreateForm} className="btn-primary flex items-center space-x-2">
+        <button onClick={openCreateForm} className="btn-primary w-full sm:w-auto">
           <Plus size={20} />
           <span>Создать шаблон</span>
         </button>
