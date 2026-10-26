@@ -1,12 +1,10 @@
 using AutoMapper;
-using Directum360Feedback.Application.DTOs;
 using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Infrastructure.Repositories;
 using CsvHelper;
-using CsvHelper.Configuration;
 using System.Globalization;
-using System.IO;
+using Directum360Feedback.Application.DTOs.EmployeeDTOs;
 
 namespace Directum360Feedback.Application.Services;
 
@@ -29,17 +27,12 @@ public class EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper)
             var employee = new Employee
             {
                 FullName = rec.FullName,
-                Email = rec.Email
+                Email = rec.Email,
+                Roles = rec.Roles
             };
             await employeeRepo.AddAsync(employee);
         }
         await employeeRepo.SaveChangesAsync();
-    }
-
-    private class EmployeeImportDto
-    {
-        public string FullName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
     }
 
     public async Task<EmployeeDto> CreateEmployeeAsync(CreateEmployeeDto dto)
@@ -47,7 +40,8 @@ public class EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper)
         var employee = new Employee
         {
             FullName = dto.FullName,
-            Email = dto.Email
+            Email = dto.Email,
+            Roles = dto.Roles
         };
 
         await employeeRepo.AddAsync(employee);

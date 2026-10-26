@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Domain.Enums;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Directum360Feedback.Infrastructure.Data;
 
@@ -63,12 +64,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(q => q.SurveyTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Employee>()
+            .PrimitiveCollection(e => e.Roles)
+            .ElementType()
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Employee>()
+            .PrimitiveCollection(e => e.Roles)
+            .Metadata.SetValueComparer(new ValueComparer<List<EmployeeRole>>(
+                (a, b) => a.SequenceEqual(b),
+                v => v.Aggregate(0, (h, r) => HashCode.Combine(h, (int)r)),
+                v => v.ToList()));
+
         // Seed данные для Employee
         modelBuilder.Entity<Employee>().HasData(
-            new Employee { Id = 1, FullName = "Иванов Иван Иванович", Email = "ivanov@example.com" },
-            new Employee { Id = 2, FullName = "Петров Пётр Петрович", Email = "petrov@example.com" },
-            new Employee { Id = 3, FullName = "Иванова Мария Ивановна", Email = "ivanova@example.com" },
-            new Employee { Id = 4, FullName = "Александрова Александра Александровна", Email = "alexsandrovna@example.com" }
+            new Employee { Id = 1, FullName = "Иванов Иван Иванович", Roles = [EmployeeRole.Respondent], Email = "ivanov@example.com" },
+            new Employee { Id = 2, FullName = "Петров Пётр Петрович", Roles = [EmployeeRole.Respondent] ,Email = "petrov@example.com" },
+            new Employee { Id = 3, FullName = "Иванова Мария Ивановна", Roles = [EmployeeRole.Respondent], Email = "ivanova@example.com" },
+            new Employee { Id = 4, FullName = "Александрова Александра Александровна", Roles = [EmployeeRole.Respondent], Email = "alexsandrovna@example.com" }
         );
 
         // Настройка для Survey (Author и Target)
@@ -407,7 +420,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
         
         modelBuilder.Entity<Employee>().HasData(
-            new Employee { Id = 5, FullName = "Администратор", Email = "admin@directum360.ru", IsAdmin = true, CreatedAt = DateTime.UtcNow }
+            new Employee
+            {
+                Id = 5, 
+                FullName = "Администратор",
+                Email = "admin@directum360.ru",
+                Roles = new List<EmployeeRole>
+                {
+                    EmployeeRole.Administrator,
+                    EmployeeRole.Respondent,
+                    EmployeeRole.SurveyAuthor
+                },
+                CreatedAt = DateTime.UtcNow
+            }
         );
     }
 }
