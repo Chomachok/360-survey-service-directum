@@ -63,6 +63,7 @@ public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailServ
         }
     }
 
+    
     private async Task<string> GetHtmlTemplateAsync(string templateName)
     {
         var possiblePaths = new List<string>
@@ -77,14 +78,37 @@ public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailServ
             if (File.Exists(path))
             {
                 logger.LogInformation($"✅ Найден файл шаблона: {path}");
-                var content = await File.ReadAllTextAsync(path);
-                return content;
+                return await File.ReadAllTextAsync(path);
             }
 
             logger.LogWarning($"❌ Файл не найден: {path}");
+
+            // Дополнительно проверяем имя файла без учёта регистра.
+            var directory = Path.GetDirectoryName(path);
+            var fileName = Path.GetFileName(path);
+
+            if (Directory.Exists(directory))
+            {
+                var matchingFile = Directory
+                    .GetFiles(directory)
+                    .FirstOrDefault(file =>
+                        string.Equals(
+                            Path.GetFileName(file),
+                            fileName,
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (matchingFile != null)
+                {
+                    logger.LogInformation(
+                        $"✅ Найден файл шаблона с другим регистром букв: {matchingFile}");
+
+                    return await File.ReadAllTextAsync(matchingFile);
+                }
+            }
         }
 
-        throw new FileNotFoundException($"Шаблон {templateName} не найден ни по одному из путей");
+        throw new FileNotFoundException(
+            $"Шаблон {templateName} не найден ни по одному из путей");
     }
     
     public async Task SendCodeEmailAsync(string toEmail, string fullName, string code)

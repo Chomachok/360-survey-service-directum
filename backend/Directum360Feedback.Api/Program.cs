@@ -10,11 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("https://localhost:5224;http://localhost:5223");
-
-builder.Services.AddHttpsRedirection(options => 
-    options.HttpsPort = 5224
-);
+builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
 // Добавляем конвертер для enum
 builder.Services.AddControllers()
@@ -52,7 +48,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:8080")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -67,7 +63,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers().RequireAuthorization();
