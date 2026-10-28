@@ -91,6 +91,11 @@ public class AuthService(
             new("IsAdmin", employee.Roles.Contains(EmployeeRole.Administrator).ToString()),
             new(ClaimTypes.NameIdentifier, employee.Id.ToString())
         };
+        
+        foreach (var role in employee.Roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
