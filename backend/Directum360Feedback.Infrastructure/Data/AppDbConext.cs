@@ -434,5 +434,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 CreatedAt = DateTime.UtcNow
             }
         );
+        
+        modelBuilder.Entity<Employee>().HasData(
+            new Employee
+            {
+                Id = 6, 
+                FullName = "Системный администратор",
+                Email = "sysadmin@directum360.ru",
+                Roles = new List<EmployeeRole>
+                {
+                    EmployeeRole.SystemAdministrator,
+                    EmployeeRole.Administrator,
+                    EmployeeRole.Respondent,
+                    EmployeeRole.SurveyAuthor
+                },
+                CreatedAt = DateTime.UtcNow
+            }
+        );
     }
 }

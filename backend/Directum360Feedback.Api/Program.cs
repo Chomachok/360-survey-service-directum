@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using Directum360Feedback.Api.Middleware;
 using Directum360Feedback.Application;
 using Directum360Feedback.Application.Validators;
 using Directum360Feedback.Domain.Settings;
@@ -91,6 +92,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
 app.UseAuthentication();

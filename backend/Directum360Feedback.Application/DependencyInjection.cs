@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IRespondentTemplateService, RespondentTemplateService>();
         services.AddScoped<ISurveyTemplateService, SurveyTemplateService>();
+        services.AddScoped<IAdminPanelService, AdminPanelService>();
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
         services.AddScoped<IAuthService, AuthService>();
         services.AddAutoMapper(typeof(DependencyInjection));
