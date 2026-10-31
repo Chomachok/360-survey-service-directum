@@ -15,7 +15,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.31");
 
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Answer", b =>
                 {
@@ -64,6 +64,10 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Roles")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Employees");
@@ -72,31 +76,77 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 7, 12, 13, 9, 51, 928, DateTimeKind.Utc).AddTicks(755),
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4095),
                             Email = "ivanov@example.com",
-                            FullName = "Иванов Иван Иванович"
+                            FullName = "Иванов Иван Иванович",
+                            Roles = "[\"Respondent\"]"
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 7, 12, 13, 9, 51, 928, DateTimeKind.Utc).AddTicks(1698),
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4113),
                             Email = "petrov@example.com",
-                            FullName = "Петров Пётр Петрович"
+                            FullName = "Петров Пётр Петрович",
+                            Roles = "[\"Respondent\"]"
                         },
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 7, 12, 13, 9, 51, 928, DateTimeKind.Utc).AddTicks(1701),
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4116),
                             Email = "ivanova@example.com",
-                            FullName = "Иванова Мария Ивановна"
+                            FullName = "Иванова Мария Ивановна",
+                            Roles = "[\"Respondent\"]"
                         },
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 7, 12, 13, 9, 51, 928, DateTimeKind.Utc).AddTicks(1703),
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4119),
                             Email = "alexsandrovna@example.com",
-                            FullName = "Александрова Александра Александровна"
+                            FullName = "Александрова Александра Александровна",
+                            Roles = "[\"Respondent\"]"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 823, DateTimeKind.Utc).AddTicks(9273),
+                            Email = "admin@directum360.ru",
+                            FullName = "Администратор",
+                            Roles = "[\"Administrator\",\"Respondent\",\"SurveyAuthor\"]"
                         });
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.OneTimeCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code");
+
+                    b.HasIndex("Email");
+
+                    b.ToTable("OneTimeCodes");
                 });
 
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.QuestionTemplate", b =>
@@ -130,7 +180,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 7, 12, 13, 9, 51, 928, DateTimeKind.Utc).AddTicks(9554),
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 823, DateTimeKind.Utc).AddTicks(2097),
                             Name = "Общая производительность команды",
                             Options = "[\"Отлично\",\"Хорошо\",\"Средне\",\"Плохо\",\"Ужасно\"]",
                             Text = "Как вы оцениваете общую производительность команды?",
@@ -139,11 +189,186 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 7, 12, 13, 9, 51, 929, DateTimeKind.Utc).AddTicks(602),
+                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 823, DateTimeKind.Utc).AddTicks(2103),
                             Name = "Обратная связь",
                             Text = "Пожалуйста, оставьте дополнительные комментарии.",
                             Type = 0
                         });
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RespondentTemplates");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Самооценка + руководитель + два коллеги",
+                            Name = "Классическая 360"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Горизонтальная оценка без руководителя",
+                            Name = "Только коллеги"
+                        });
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("EmployeeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("RespondentTemplateItems");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Role = 0,
+                            TemplateId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeId = 1,
+                            Role = 1,
+                            TemplateId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeId = 2,
+                            Role = 2,
+                            TemplateId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeId = 3,
+                            Role = 2,
+                            TemplateId = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeId = 2,
+                            Role = 2,
+                            TemplateId = 2
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeId = 3,
+                            Role = 2,
+                            TemplateId = 2
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeId = 4,
+                            Role = 2,
+                            TemplateId = 2
+                        });
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EvaluatorEmployeeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TargetEmployeeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvaluatorEmployeeId");
+
+                    b.HasIndex("TargetEmployeeId");
+
+                    b.HasIndex("TemplateId", "EvaluatorEmployeeId", "TargetEmployeeId")
+                        .IsUnique();
+
+                    b.ToTable("RespondentTemplateLinks");
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateTarget", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("RespondentTemplateTargets");
                 });
 
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Survey", b =>
@@ -170,6 +395,9 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("TargetId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -177,6 +405,8 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("TargetId");
 
                     b.ToTable("Surveys");
                 });
@@ -200,9 +430,6 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("InviteSent")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Role")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("SurveyId")
@@ -261,6 +488,263 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.ToTable("SurveyQuestions");
                 });
 
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.SurveyTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SurveyTemplates");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Опрос для сбора обратной связи о профессиональных навыках и компетенциях сотрудника. Подходит для оценки как руководителей, так и специалистов.",
+                            Name = "Оценка профессиональных компетенций"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Опрос для сбора обратной связи о лидерских и управленческих навыках сотрудника. Подходит для оценки руководителей и сотрудников с потенциалом лидерства.",
+                            Name = "Оценка лидерских качеств"
+                        });
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.SurveyTemplateQuestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Required")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SurveyTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SurveyTemplateId");
+
+                    b.ToTable("SurveyTemplateQuestions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Требует развития\"]",
+                            Order = 1,
+                            Required = true,
+                            SurveyTemplateId = 1,
+                            Text = "Как вы оцениваете уровень профессиональных знаний сотрудника в своей области?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Всегда проявляет\",\"Часто\",\"Иногда\",\"Редко\",\"Никогда\"]",
+                            Order = 2,
+                            Required = true,
+                            SurveyTemplateId = 1,
+                            Text = "Насколько сотрудник проявляет инициативу в решении рабочих задач?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]",
+                            Order = 3,
+                            Required = true,
+                            SurveyTemplateId = 1,
+                            Text = "Как вы оцениваете способность сотрудника адаптироваться к изменениям?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]",
+                            Order = 4,
+                            Required = true,
+                            SurveyTemplateId = 1,
+                            Text = "Насколько сотрудник умеет работать в команде и выстраивать отношения с коллегами?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Высокое\",\"Среднее\",\"Низкое\"]",
+                            Order = 5,
+                            Required = true,
+                            SurveyTemplateId = 1,
+                            Text = "Как вы оцениваете качество выполнения задач сотрудником?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Order = 6,
+                            Required = false,
+                            SurveyTemplateId = 1,
+                            Text = "Какие сильные стороны сотрудника вы можете выделить?",
+                            Type = 0
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Order = 7,
+                            Required = false,
+                            SurveyTemplateId = 1,
+                            Text = "Какие области для развития вы бы порекомендовали сотруднику?",
+                            Type = 0
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Неудовлетворительно\"]",
+                            Order = 8,
+                            Required = false,
+                            SurveyTemplateId = 1,
+                            Text = "Как вы оцениваете общую эффективность сотрудника?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Требует развития\"]",
+                            Order = 1,
+                            Required = true,
+                            SurveyTemplateId = 2,
+                            Text = "Как вы оцениваете способность сотрудника вдохновлять и мотивировать других?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Всегда эффективно\",\"Часто\",\"Иногда\",\"Редко\",\"Никогда\"]",
+                            Order = 2,
+                            Required = true,
+                            SurveyTemplateId = 2,
+                            Text = "Насколько сотрудник эффективно принимает решения в сложных ситуациях?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]",
+                            Order = 3,
+                            Required = true,
+                            SurveyTemplateId = 2,
+                            Text = "Как вы оцениваете навыки делегирования задач сотрудником?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]",
+                            Order = 4,
+                            Required = true,
+                            SurveyTemplateId = 2,
+                            Text = "Насколько сотрудник умеет разрешать конфликты в команде?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Отлично\",\"Хорошо\",\"Удовлетворительно\",\"Плохо\"]",
+                            Order = 5,
+                            Required = true,
+                            SurveyTemplateId = 2,
+                            Text = "Как вы оцениваете коммуникативные навыки сотрудника?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Всегда\",\"Часто\",\"Иногда\",\"Редко\",\"Никогда\"]",
+                            Order = 6,
+                            Required = true,
+                            SurveyTemplateId = 2,
+                            Text = "Насколько сотрудник способен брать на себя ответственность за результаты команды?",
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Order = 7,
+                            Required = false,
+                            SurveyTemplateId = 2,
+                            Text = "Какие сильные стороны как лидера вы можете выделить у этого сотрудника?",
+                            Type = 0
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Order = 8,
+                            Required = false,
+                            SurveyTemplateId = 2,
+                            Text = "Какие качества лидера сотруднику стоит развивать?",
+                            Type = 0
+                        },
+                        new
+                        {
+                            Id = 17,
+                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Options = "[\"Высокий\",\"Выше среднего\",\"Средний\",\"Ниже среднего\",\"Низкий\"]",
+                            Order = 9,
+                            Required = false,
+                            SurveyTemplateId = 2,
+                            Text = "Как вы оцениваете общий уровень лидерства сотрудника?",
+                            Type = 1
+                        });
+                });
+
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Answer", b =>
                 {
                     b.HasOne("Directum360Feedback.Domain.Entities.SurveyAssignment", "Assignment")
@@ -280,15 +764,86 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.Navigation("Question");
                 });
 
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateItem", b =>
+                {
+                    b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Directum360Feedback.Domain.Entities.RespondentTemplate", "Template")
+                        .WithMany("Items")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateLink", b =>
+                {
+                    b.HasOne("Directum360Feedback.Domain.Entities.Employee", "EvaluatorEmployee")
+                        .WithMany()
+                        .HasForeignKey("EvaluatorEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Directum360Feedback.Domain.Entities.Employee", "TargetEmployee")
+                        .WithMany()
+                        .HasForeignKey("TargetEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Directum360Feedback.Domain.Entities.RespondentTemplate", "Template")
+                        .WithMany("Links")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EvaluatorEmployee");
+
+                    b.Navigation("TargetEmployee");
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplateTarget", b =>
+                {
+                    b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Directum360Feedback.Domain.Entities.RespondentTemplate", "Template")
+                        .WithMany("Targets")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Template");
+                });
+
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Survey", b =>
                 {
                     b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Author")
                         .WithMany("AuthoredSurveys")
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Target")
+                        .WithMany()
+                        .HasForeignKey("TargetId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Author");
+
+                    b.Navigation("Target");
                 });
 
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.SurveyAssignment", b =>
@@ -308,7 +863,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.HasOne("Directum360Feedback.Domain.Entities.Employee", "Target")
                         .WithMany("AssignmentsAsTarget")
                         .HasForeignKey("TargetId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Evaluator");
@@ -329,6 +884,17 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.Navigation("Survey");
                 });
 
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.SurveyTemplateQuestion", b =>
+                {
+                    b.HasOne("Directum360Feedback.Domain.Entities.SurveyTemplate", "SurveyTemplate")
+                        .WithMany("Questions")
+                        .HasForeignKey("SurveyTemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SurveyTemplate");
+                });
+
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Employee", b =>
                 {
                     b.Navigation("AssignmentsAsEvaluator");
@@ -336,6 +902,15 @@ namespace Directum360Feedback.Infrastructure.Migrations
                     b.Navigation("AssignmentsAsTarget");
 
                     b.Navigation("AuthoredSurveys");
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.RespondentTemplate", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Links");
+
+                    b.Navigation("Targets");
                 });
 
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.Survey", b =>
@@ -353,6 +928,11 @@ namespace Directum360Feedback.Infrastructure.Migrations
             modelBuilder.Entity("Directum360Feedback.Domain.Entities.SurveyQuestion", b =>
                 {
                     b.Navigation("Answers");
+                });
+
+            modelBuilder.Entity("Directum360Feedback.Domain.Entities.SurveyTemplate", b =>
+                {
+                    b.Navigation("Questions");
                 });
 #pragma warning restore 612, 618
         }

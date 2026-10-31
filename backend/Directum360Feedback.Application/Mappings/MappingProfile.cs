@@ -1,5 +1,6 @@
 using AutoMapper;
 using Directum360Feedback.Application.DTOs;
+using Directum360Feedback.Application.DTOs.EmployeeDTOs;
 using Directum360Feedback.Application.DTOs.SurveyTemplateDTOs;
 using Directum360Feedback.Domain.Entities;
 
@@ -37,5 +38,8 @@ public class MappingProfile : Profile
 
         CreateMap<UpdateSurveyTemplateDto, SurveyTemplate>()
             .ForMember(dest => dest.Questions, opt => opt.Ignore());
+        
+        CreateMap<Employee, EmployeeDto>()
+            .ForMember(dest => dest.Roles, opt => opt.UseDestinationValue());
     }
 }

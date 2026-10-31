@@ -1,0 +1,7 @@
+﻿services:
+  directum360feedback.api:
+    image: directum360feedback.api
+    build:
+      context: .
+      dockerfile: Directum360Feedback.Api/Dockerfile
+
