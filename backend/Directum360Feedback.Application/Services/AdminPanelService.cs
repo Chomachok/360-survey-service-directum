@@ -49,14 +49,34 @@ public class AdminPanelService : IAdminPanelService
         return _mapper.Map<EmployeeDto>(employee);
     }
 
-    public async Task<EmployeeDto> UpdateEmployeeAsync(EmployeeDto newEmployeeDto, int id)
+    public async Task<EmployeeDto> UpdateEmployeeAsync(UpdateEmployeeDto dto, int id)
     {
         var employee = await _employeeRepository.GetByIdAsync(id)
-            ?? throw new KeyNotFoundException($"Employee with id {id} not found");
+                       ?? throw new KeyNotFoundException($"Employee with id {id} not found");
 
-        employee.FullName = newEmployeeDto.FullName;
-        employee.Email = newEmployeeDto.Email;
-        employee.Roles = newEmployeeDto.Roles.ToList();
+        if (dto.FullName is not null)
+            employee.FullName = dto.FullName.Trim();
+
+        if (dto.Email is not null)
+        {
+            var email = dto.Email.Trim();
+
+            if (!string.Equals(employee.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                var existing = (await _employeeRepository.GetAllAsync())
+                    .Any(e => e.Id != id
+                              && string.Equals(e.Email, email, StringComparison.OrdinalIgnoreCase));
+
+                if (existing)
+                    throw new InvalidOperationException(
+                        $"Employee with email '{email}' already exists");
+
+                employee.Email = email;
+            }
+        }
+
+        if (dto.Roles is not null)
+            employee.Roles = dto.Roles.ToList();
 
         _employeeRepository.Update(employee);
         await _employeeRepository.SaveChangesAsync();

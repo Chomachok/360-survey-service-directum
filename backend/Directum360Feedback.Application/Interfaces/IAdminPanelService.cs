@@ -7,7 +7,7 @@ public interface IAdminPanelService
     Task<IReadOnlyCollection<EmployeeDto>> GetAllEmployeesAsync();
     Task<EmployeeDto?> GetEmployeeByIdAsync(int id);
     Task<EmployeeDto> AddEmployeeAsync(CreateEmployeeDto employeeDto);
-    Task<EmployeeDto> UpdateEmployeeAsync(EmployeeDto newEmployeeDto, int id);
+    Task<EmployeeDto> UpdateEmployeeAsync(UpdateEmployeeDto newEmployeeDto, int id);
     Task DeleteEmployeeAsync(int id);
     Task ImportEmployeesFromCsvAsync(Stream fileStream);
 }

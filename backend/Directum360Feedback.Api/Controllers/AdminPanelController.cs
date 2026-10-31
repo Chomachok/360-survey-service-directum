@@ -64,7 +64,9 @@ public class AdminPanelController : ControllerBase
     /// <param name="id">Employee id.</param>
     /// <returns>200Ok with updated EmployeeDto.</returns>
     [HttpPatch("update/{id:int}")]
-    public async Task<IActionResult> UpdateEmployeeAsync([FromBody] EmployeeDto newEmployeeDto, int id)
+    public async Task<IActionResult> UpdateEmployeeAsync(
+        [FromBody] UpdateEmployeeDto newEmployeeDto, 
+        [FromRoute] int id)
     {
         var updatedEmployee = await _adminPanelService.UpdateEmployeeAsync(newEmployeeDto, id);
         
