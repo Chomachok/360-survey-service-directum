@@ -73,11 +73,19 @@ export default function ImportEmployees() {
         Назад к дашборду
       </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="mb-7 animate-fadeInUp">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-200/80 bg-orange-50/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-directum-orange dark:border-orange-900/50 dark:bg-orange-950/30">
+          <FileSpreadsheet size={14} /> Справочник
+        </div>
+        <h1 className="page-title">Сотрудники</h1>
+        <p className="page-description">Добавляйте сотрудников по одному или загрузите список из файла</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
         {/* Левая колонка – импорт файла */}
         <div className="card animate-fadeInUp">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-directum-yellow flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-950/40">
               <FileSpreadsheet className="text-directum-orange" size={24} />
             </div>
             <div>
@@ -126,7 +134,7 @@ export default function ImportEmployees() {
         {/* Правая колонка – ручное добавление */}
         <div className="card animate-fadeInUp-delay">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-directum-orange/10 flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-950/40">
               <UserPlus className="text-directum-orange" size={24} />
             </div>
             <div>

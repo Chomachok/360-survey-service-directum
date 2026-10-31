@@ -525,8 +525,8 @@ export default function QuestionBuilder() {
         Назад к дашборду
       </button>
 
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-directum-dark">Вопросы опроса</h1>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="page-title">Вопросы опроса</h1>
         <span
           className={`text-sm px-3 py-1 rounded-full font-medium ${
             isDraft

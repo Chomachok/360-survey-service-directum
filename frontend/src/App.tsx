@@ -10,6 +10,10 @@ import Matrix from './pages/Matrix'
 import PublicSurvey from './pages/PublicSurvey'
 import Results from './pages/Results'
 import ImportEmployees from './pages/ImportEmployees'
+import Employees from './pages/Employees'
+import EmployeeCreate from './pages/EmployeeCreate'
+import EmployeeEdit from './pages/EmployeeEdit'
+import EmployeeDelete from './pages/EmployeeDelete'
 import UserDashboard from './pages/UserDashboard'
 import LoginPage from './pages/LoginPage'
 import Layout from './components/Layout'
@@ -43,6 +47,10 @@ function App() {
               <Route path="/respondent-templates" element={<RespondentTemplates />} />
               <Route path="/survey/:id/matrix" element={<Matrix />} />
               <Route path="/survey/:id/results" element={<Results />} />
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/employees/new" element={<EmployeeCreate />} />
+              <Route path="/employees/:id/edit" element={<EmployeeEdit />} />
+              <Route path="/employees/:id/delete" element={<EmployeeDelete />} />
               <Route path="/import" element={<ImportEmployees />} />
             </Route>
           </Route>

@@ -331,16 +331,16 @@ export default function RespondentTemplates() {
 
   return (
     <div>
-      <div className="animate-fadeInUp mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="animate-fadeInUp mb-8 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Шаблоны респондентов</h1>
-          <p className="mt-1 text-gray-500">
+          <h1 className="page-title">Шаблоны респондентов</h1>
+          <p className="page-description max-w-3xl">
             Группы респондентов — заранее описанный состав оцениваемых и тех, кто их
             оценивает. Группу можно оставить универсальной (оцениваемый выбирается при
             применении) или сразу привязать к одному или нескольким оцениваемым.
           </p>
         </div>
-        <button onClick={openCreate} className="btn-primary flex shrink-0 items-center space-x-2">
+        <button onClick={openCreate} className="btn-primary w-full shrink-0 sm:w-auto">
           <Plus size={20} />
           <span>Создать группу</span>
         </button>

@@ -82,13 +82,14 @@ export default function LoginPage() {
         {theme === 'light' ? <Moon size={24} className="text-gray-600" /> : <Sun size={24} className="text-yellow-400" />}
       </button>
 
-      <div className="max-w-md w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-lg p-8 animate-fadeInUp">
+      <div className="surface relative mx-4 w-full max-w-md overflow-hidden rounded-3xl bg-white/90 p-7 shadow-2xl backdrop-blur-xl animate-fadeInUp sm:p-9">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-300 via-directum-orange to-orange-500" />
         <div className="text-center mb-8">
           <img src="/directum-logo.svg" alt="Directum" className="h-12 mx-auto" />
           <h2 className="mt-4 text-2xl font-bold text-directum-dark dark:text-white">
             Вход в Directum360
           </h2>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
             {step === 'email'
               ? 'Введите ваш email, чтобы получить код'
               : 'Введите код из письма'}
