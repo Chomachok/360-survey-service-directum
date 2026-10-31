@@ -2,7 +2,7 @@ using Directum360Feedback.Domain.Enums;
 
 namespace Directum360Feedback.Domain.Entities;
 
-public class Employee : BaseEntity
+public class   Employee : BaseEntity
 {
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;

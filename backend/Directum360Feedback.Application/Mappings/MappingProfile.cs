@@ -38,5 +38,8 @@ public class MappingProfile : Profile
 
         CreateMap<UpdateSurveyTemplateDto, SurveyTemplate>()
             .ForMember(dest => dest.Questions, opt => opt.Ignore());
+        
+        CreateMap<Employee, EmployeeDto>()
+            .ForMember(dest => dest.Roles, opt => opt.UseDestinationValue());
     }
 }
