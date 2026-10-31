@@ -17,7 +17,7 @@ const templateItems = [
 const mainItems = [
   { path: '/', label: 'Дашборд', icon: LayoutDashboard },
   { path: '/survey/new', label: 'Создать опрос', icon: FileText },
-  { path: '/import', label: 'Сотрудники', icon: Users },
+  { path: '/employees', label: 'Сотрудники', icon: Users },
 ]
 
 const Layout: React.FC = () => {
@@ -64,7 +64,7 @@ const Layout: React.FC = () => {
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Основная навигация">
             {mainItems.map(({ path, label, icon: Icon }) => (
-              <NavLink key={path} to={path} end className={({ isActive }) => navClass(isActive)}>
+              <NavLink key={path} to={path} end={path !== '/employees'} className={({ isActive }) => navClass(isActive)}>
                 <Icon size={17} strokeWidth={1.8} />
                 <span>{label}</span>
               </NavLink>
@@ -127,7 +127,7 @@ const Layout: React.FC = () => {
         <nav className="border-t border-gray-100/80 px-3 py-2 dark:border-gray-700/80 lg:hidden" aria-label="Мобильная навигация">
           <div className="mx-auto flex max-w-[1440px] items-center gap-1 overflow-x-auto">
             {mainItems.map(({ path, label, icon: Icon }) => (
-              <NavLink key={path} to={path} end className={({ isActive }) => `${navClass(isActive)} shrink-0 px-2.5 text-xs sm:text-sm`}>
+              <NavLink key={path} to={path} end={path !== '/employees'} className={({ isActive }) => `${navClass(isActive)} shrink-0 px-2.5 text-xs sm:text-sm`}>
                 <Icon size={16} />
                 <span>{label}</span>
               </NavLink>
