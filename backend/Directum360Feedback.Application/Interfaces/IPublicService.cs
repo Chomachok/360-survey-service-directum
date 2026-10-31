@@ -4,6 +4,6 @@ namespace Directum360Feedback.Application.Interfaces;
 
 public interface IPublicService
 {
-    Task<PublicSurveyDto?> GetSurveyByTokenAsync(string token);
-    Task SubmitAnswersAsync(string token, SubmitAnswersDto dto);
+    Task<PublicSurveyDto?> GetSurveyByTokenAsync(string token, int currentlyEmployeeId);
+    Task SubmitAnswersAsync(string token, int currentEmployeeId, SubmitAnswersDto dto);
 }

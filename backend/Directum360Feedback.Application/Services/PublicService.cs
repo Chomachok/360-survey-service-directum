@@ -16,7 +16,7 @@ public class PublicService(
     IMapper mapper)
     : IPublicService
 {
-    public async Task<PublicSurveyDto?> GetSurveyByTokenAsync(string token)
+    public async Task<PublicSurveyDto?> GetSurveyByTokenAsync(string token, int currentlyEmployeeId)
     {
         var assignments = await assignmentRepo.FindAsync(
             a => a.Token == token,
@@ -25,11 +25,17 @@ public class PublicService(
         );
         var assignment = assignments.FirstOrDefault();
         if (assignment == null) return null;
-        if (assignment.Completed) throw new Exception("Опрос уже пройден");
+
+        if (assignment.EvaluatorId != currentlyEmployeeId)
+        {
+            throw new UnauthorizedAccessException("Этот опрос назначен другому сотруднику.");
+        }
+        
+        if (assignment.Completed) throw new Exception("Опрос уже пройден.");
 
         var survey = assignment.Survey;
         if (survey.Status != SurveyStatus.Active)
-            throw new Exception("Опрос не активен");
+            throw new Exception("Опрос не активен.");
 
         var target = assignment.Target;
         var questions = await questionRepo.FindAsync(q => q.SurveyId == survey.Id);
@@ -53,10 +59,16 @@ public class PublicService(
         return dto;
     }
 
-    public async Task SubmitAnswersAsync(string token, SubmitAnswersDto dto)
+    public async Task SubmitAnswersAsync(string token, int currentEmployeeId, SubmitAnswersDto dto)
     {
         var assignment = (await assignmentRepo.FindAsync(a => a.Token == token)).FirstOrDefault();
         if (assignment == null) throw new Exception("Invalid token");
+
+        if (assignment.EvaluatorId != currentEmployeeId)
+        {
+            throw new UnauthorizedAccessException("Этот опрос назначен другому сотруднику.");
+        }
+        
         if (assignment.Completed) throw new Exception("Already submitted");
 
         foreach (var ansDto in dto.Answers)
