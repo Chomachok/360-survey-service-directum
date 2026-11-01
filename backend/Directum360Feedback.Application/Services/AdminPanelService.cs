@@ -8,6 +8,8 @@ using Directum360Feedback.Application.Interfaces;
 using Directum360Feedback.Domain.Entities;
 using Directum360Feedback.Domain.Enums;
 using Directum360Feedback.Infrastructure.Repositories;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace Directum360Feedback.Application.Services;
 
@@ -37,15 +39,36 @@ public class AdminPanelService : IAdminPanelService
 
     public async Task<EmployeeDto> AddEmployeeAsync(CreateEmployeeDto employeeDto)
     {
+        var email = employeeDto.Email.Trim();
+
+        // Пречек: если email занят — 409 без INSERT, без fail от EF Core.
+        // С COLLATE NOCASE в БД `e.Email == email` сравнивает без учёта регистра.
+        var emailTaken = (await _employeeRepository
+            .FindAsync(e => e.Email == email))
+            .Any();
+
+        if (emailTaken)
+            throw new InvalidOperationException($"Сотрудник с почтой '{email}' уже существует.");
+
         var employee = new Employee
         {
-            FullName = employeeDto.FullName,
-            Email = employeeDto.Email,
+            FullName = employeeDto.FullName.Trim(),
+            Email = email,
             Roles = employeeDto.Roles.ToList()
         };
 
         await _employeeRepository.AddAsync(employee);
-        await _employeeRepository.SaveChangesAsync();
+
+        try
+        {
+            await _employeeRepository.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+        {
+            // Сюда попадаем только если между SELECT и INSERT кто-то вставил такой же email
+            throw new InvalidOperationException($"Сотрудник с почтой '{email}' уже существует.");
+        }
+
         return _mapper.Map<EmployeeDto>(employee);
     }
 
@@ -61,25 +84,34 @@ public class AdminPanelService : IAdminPanelService
         {
             var email = dto.Email.Trim();
 
-            if (!string.Equals(employee.Email, email, StringComparison.OrdinalIgnoreCase))
-            {
-                var existing = (await _employeeRepository.GetAllAsync())
-                    .Any(e => e.Id != id
-                              && string.Equals(e.Email, email, StringComparison.OrdinalIgnoreCase));
+            // Пречек: email занят ДРУГИМ сотрудником.
+            // e.Id != id — исключаем самого себя, иначе смена регистра своего же email
+            // (Ivan@ → ivan@) ложно считалась бы конфликтом.
+            var takenByOther = (await _employeeRepository
+                .FindAsync(e => e.Email == email && e.Id != id))
+                .Any();
 
-                if (existing)
-                    throw new InvalidOperationException(
-                        $"Employee with email '{email}' already exists");
+            if (takenByOther)
+                throw new InvalidOperationException(
+                    $"Employee with email '{email}' already exists");
 
-                employee.Email = email;
-            }
+            employee.Email = email;
         }
 
         if (dto.Roles is not null)
             employee.Roles = dto.Roles.ToList();
 
         _employeeRepository.Update(employee);
-        await _employeeRepository.SaveChangesAsync();
+
+        try
+        {
+            await _employeeRepository.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+        {
+            throw new InvalidOperationException(
+                $"Employee with email '{employee.Email}' already exists");
+        }
 
         return _mapper.Map<EmployeeDto>(employee);
     }
@@ -163,22 +195,26 @@ public class AdminPanelService : IAdminPanelService
         }
 
         if (toAdd.Count == 0 && errors.Count == 0)
-        {
             throw new InvalidOperationException("CSV file contains no records");
-        }
 
         if (errors.Count > 0)
-        {
             throw new InvalidOperationException(
                 $"CSV validation failed:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}");
-        }
 
         foreach (var employee in toAdd)
-        {
             await _employeeRepository.AddAsync(employee);
-        }
 
-        await _employeeRepository.SaveChangesAsync();
+        try
+        {
+            await _employeeRepository.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+        {
+            // На случай race: между GetAllAsync и SaveChangesAsync кто-то вставил email
+            throw new InvalidOperationException(
+                "Импорт CSV: некоторые email уже существуют в БД " +
+                "(возможно, параллельный импорт или ручное добавление)");
+        }
     }
 
     private static bool IsValidEmail(string email)
@@ -197,9 +233,7 @@ public class AdminPanelService : IAdminPanelService
     private static List<EmployeeRole> ParseRoles(string? rolesRaw)
     {
         if (string.IsNullOrWhiteSpace(rolesRaw))
-        {
             return new List<EmployeeRole>();
-        }
 
         var result = new List<EmployeeRole>();
         var parts = rolesRaw.Split(
@@ -209,11 +243,14 @@ public class AdminPanelService : IAdminPanelService
         foreach (var part in parts)
         {
             if (Enum.TryParse<EmployeeRole>(part, ignoreCase: true, out var role))
-            {
                 result.Add(role);
-            }
         }
 
         return result;
     }
+
+    private static bool IsEmailUniqueViolation(DbUpdateException ex)
+        => ex.InnerException is SqliteException sqlite
+           && sqlite.SqliteErrorCode == 19
+           && sqlite.SqliteExtendedErrorCode == 2067;
 }
