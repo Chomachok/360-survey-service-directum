@@ -55,4 +55,10 @@ public class EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper)
         await employeeRepo.SaveChangesAsync();
         return mapper.Map<EmployeeDto>(employee);
     }
+
+    public async Task<EmployeeDto> GetInfoAboutEmployeeAsync(int id)
+    {
+        var employee = await employeeRepo.GetByIdAsync(id);
+        return mapper.Map<EmployeeDto>(employee);
+    }
 }
