@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, X, Check, Link as LinkIcon, Trash2, Users2, Boxes } from 'lucide-react';
+import { Plus, X, Check, Link as LinkIcon, Trash2, Boxes } from 'lucide-react';
 import Select from 'react-select';
 import { reactSelectStyles } from '../styles/reactSelectStyles';
 import toast from 'react-hot-toast';
@@ -195,7 +195,6 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
         styles={{
           ...reactSelectStyles,
           control: (base) => ({ ...base, minHeight: '32px', fontSize: '13px' }),
-          menuPortalTarget: document.body,
         }}
         menuPortalTarget={document.body}
         autoFocus

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { sendCode, verifyCode } from '../api/auth'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon } from 'lucide-react'
@@ -151,6 +151,11 @@ export default function LoginPage() {
               {isLoading ? 'Проверка...' : 'Войти'}
             </button>
           </form>
+        )}
+        {step === 'email' && (
+          <Link to="/preview" className="btn-secondary mt-3 flex w-full justify-center">
+            Предпросмотр страниц приложения
+          </Link>
         )}
       </div>
     </div>

@@ -1,35 +1,28 @@
-import api from './client'
-import axios from 'axios'
+import { adminApi } from './client'
+import type { CreateEmployeeDto, Employee, UpdateEmployeeDto } from '../types'
+import { getApiErrorMessage } from './errors'
 
-export interface Employee {
-  id: number
-  fullName: string
-  email: string
+export const employeesQueryKey = ['employees'] as const
+export type EmployeeInput = CreateEmployeeDto
+export const getEmployeeErrorMessage = getApiErrorMessage
+
+export const getEmployees = async (): Promise<Employee[]> =>
+  (await adminApi.get<Employee[]>('/admin-panel/employees')).data
+
+export const getEmployee = async (id: number): Promise<Employee> =>
+  (await adminApi.get<Employee>(`/admin-panel/employees/${id}`)).data
+
+export const createEmployee = async (data: CreateEmployeeDto): Promise<Employee> =>
+  (await adminApi.post<Employee>('/admin-panel/employees/create', data)).data
+
+export const updateEmployee = async (id: number, data: UpdateEmployeeDto): Promise<Employee> =>
+  (await adminApi.patch<Employee>(`/admin-panel/employees/update/${id}`, data)).data
+
+export const deleteEmployee = async (id: number): Promise<void> => {
+  await adminApi.delete(`/admin-panel/employees/delete/${id}`)
 }
 
-export interface EmployeeInput {
-  fullName: string
-  email: string
-}
-
-export const getEmployees = () => api.get<Employee[]>('/employees').then(res => res.data)
-export const importEmployees = (formData: FormData) => api.post('/employees/import', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-})
-export const createEmployee = (data: EmployeeInput) =>
-  api.post<Employee>('/employees', data).then(res => res.data)
-export const updateEmployee = (id: number, data: EmployeeInput) =>
-  api.put<Employee>(`/employees/${id}`, data).then(res => res.data)
-export const deleteEmployee = (id: number) => api.delete(`/employees/${id}`)
-
-export const getEmployeeErrorMessage = (error: unknown, fallback: string) => {
-  if (axios.isAxiosError(error)) {
-    const status = error.response?.status
-    if (status === 404 || status === 405) {
-      return 'Сервер пока не поддерживает эту операцию. Для обновления и удаления нужны backend-эндпоинты.'
-    }
-    const responseMessage = error.response?.data?.message
-    if (typeof responseMessage === 'string' && responseMessage.trim()) return responseMessage
-  }
-  return fallback
-}
+export const importEmployees = async (formData: FormData): Promise<{ message: string }> =>
+  (await adminApi.post<{ message: string }>('/admin-panel/employees/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })).data

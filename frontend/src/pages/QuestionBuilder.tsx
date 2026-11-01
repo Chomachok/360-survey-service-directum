@@ -11,7 +11,7 @@ import {
 } from '../api/questions'
 import { getSurvey } from '../api/surveys'
 import { saveSurveyAsTemplate } from '../api/surveys'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import {
   QuestionType,
   CreateQuestionDto,
@@ -708,7 +708,7 @@ export default function QuestionBuilder() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={questions.map((q) => q.id)}
+                  items={(questions ?? []).map((q) => q.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   {questions

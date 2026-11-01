@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getSurveyTemplate } from '../api/surveyTemplates'
-import { ArrowLeft, Eye, FileText, ListChecks } from 'lucide-react'
+import { ArrowLeft, ListChecks } from 'lucide-react'
 import { QuestionType } from '../types'
 import LogoLoader from '../components/LogoLoader'
 

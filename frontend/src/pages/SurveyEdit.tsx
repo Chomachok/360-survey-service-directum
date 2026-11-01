@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurvey, updateSurvey } from '../api/surveys'
-import { getEmployees } from '../api/employees'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
-import Select from 'react-select'
-import { reactSelectStyles } from '../styles/reactSelectStyles'
 import LogoLoader from '../components/LogoLoader'
 
 export default function SurveyEdit() {
@@ -18,11 +15,6 @@ export default function SurveyEdit() {
   const { data: survey, isLoading: surveyLoading } = useQuery({
     queryKey: ['survey', surveyId],
     queryFn: () => getSurvey(surveyId),
-  })
-
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: getEmployees,
   })
 
   const [title, setTitle] = useState('')
