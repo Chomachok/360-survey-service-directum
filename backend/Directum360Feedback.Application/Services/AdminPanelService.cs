@@ -41,8 +41,6 @@ public class AdminPanelService : IAdminPanelService
     {
         var email = employeeDto.Email.Trim();
 
-        // Пречек: если email занят — 409 без INSERT, без fail от EF Core.
-        // С COLLATE NOCASE в БД `e.Email == email` сравнивает без учёта регистра.
         var emailTaken = (await _employeeRepository
             .FindAsync(e => e.Email == email))
             .Any();
@@ -65,7 +63,6 @@ public class AdminPanelService : IAdminPanelService
         }
         catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
         {
-            // Сюда попадаем только если между SELECT и INSERT кто-то вставил такой же email
             throw new InvalidOperationException($"Сотрудник с почтой '{email}' уже существует.");
         }
 
@@ -84,9 +81,6 @@ public class AdminPanelService : IAdminPanelService
         {
             var email = dto.Email.Trim();
 
-            // Пречек: email занят ДРУГИМ сотрудником.
-            // e.Id != id — исключаем самого себя, иначе смена регистра своего же email
-            // (Ivan@ → ivan@) ложно считалась бы конфликтом.
             var takenByOther = (await _employeeRepository
                 .FindAsync(e => e.Email == email && e.Id != id))
                 .Any();
@@ -210,7 +204,6 @@ public class AdminPanelService : IAdminPanelService
         }
         catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
         {
-            // На случай race: между GetAllAsync и SaveChangesAsync кто-то вставил email
             throw new InvalidOperationException(
                 "Импорт CSV: некоторые email уже существуют в БД " +
                 "(возможно, параллельный импорт или ручное добавление)");
