@@ -37,10 +37,19 @@ def _add_text_question(page: Page, text: str) -> None:
 
 
 def _find_survey(page: Page, title: str) -> None:
-    """Находит карточку опроса на дашборде через поиск."""
     page.goto(f"{WEB_BASE_URL}/")
     page.get_by_placeholder("Поиск по названию...").fill(title)
-    page.wait_for_timeout(800)
+    expect(page.get_by_text(title, exact=False).first).to_be_visible(timeout=15000)
+    # ждём, что фильтр реально применился — а не 800 мс наугад
+    page.wait_for_function(
+        """(needle) => {
+            const cards = Array.from(document.querySelectorAll('[class*="card"], [class*="Card"]'));
+            const matched = cards.filter(el => el.textContent.includes(needle));
+            return matched.length === 1;
+        }""",
+        arg=title,
+        timeout=15000,
+    )
 
 
 def _confirm_action(page: Page, modal_title: str, action: str) -> None:

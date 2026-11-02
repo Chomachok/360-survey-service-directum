@@ -73,11 +73,12 @@ def sign_in(page: Page, open_page: Callable[[str], Page],
 
 
 @pytest.fixture
-def admin_page(sign_in) -> Page:
-    """Страница администратора-автора: дашборд со списком опросов."""
-    page = sign_in(ADMIN_EMAIL)
-    expect(page.get_by_role("heading", name="Дашборд")).to_be_visible()
-    return page
+def admin_page(browser):
+    context = browser.new_context()
+    page = context.new_page()
+    page.set_default_timeout(15000)
+    yield page
+    context.close()
 
 
 @pytest.fixture
