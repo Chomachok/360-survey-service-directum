@@ -205,15 +205,15 @@ class TestResponseDtoShape:
         for item in surveys.client.get(f"/api/surveys/{setup.survey_id}/matrix").json():
             validate(item, MATRIX_ITEM_DTO, "GET /api/surveys/{id}/matrix")
 
-    def test_public_survey_shape(self, surveys, respondent_api):
+    def test_public_survey_shape(self, surveys, login_as):
         setup = surveys.ready_survey()
-        body = respondent_api.get(f"/api/public/{setup.token}").json()
+        body = login_as("petrov").get(f"/api/public/{setup.token}").json()
         validate(body, PUBLIC_SURVEY_DTO, "GET /api/public/{token}")
 
-    def test_results_shape(self, surveys, respondent_api):
+    def test_results_shape(self, surveys, login_as):
         setup = surveys.ready_survey()
-        respondent_api.post(f"/api/public/{setup.token}/answers",
-                            json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         body = surveys.client.get(f"/api/surveys/{setup.survey_id}/Results").json()
         validate(body, RESULTS_DTO, "GET /api/surveys/{id}/Results")
 
