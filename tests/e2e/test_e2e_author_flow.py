@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import time
+
 import pytest
 from conftest import matrix_list_mode, pick_employee, switch_to_list_view
 from helpers import RESPONDENT_EMAIL, SEED_EMPLOYEES, WEB_BASE_URL
@@ -53,6 +55,27 @@ def _confirm_action(page: Page, modal_title: str, action: str) -> None:
     )
     expect(modal).to_be_visible()
     modal.get_by_role("button", name=action, exact=True).click()
+
+
+def _wait_for_results(admin_api, survey_id: int, employee_name: str, timeout: float = 20.0) -> None:
+    """Ждёт, пока агрегатор результатов отдаст ответы оцениваемого.
+
+    Без этого UI-проверка ловит гонку: страница результатов монтируется и делает
+    запрос, а ответы респондента ещё не видны агрегатору (в CI это дало падение
+    `test_author_journey_collects_response` на ожидании имени оцениваемого).
+    Условие проверяем через API — так падение сразу указывает на потерю данных,
+    а не на медленный рендер.
+    """
+    deadline = time.time() + timeout
+    last: object = None
+    while time.time() < deadline:
+        last = admin_api.get(f"/api/surveys/{survey_id}/results").json()
+        names = [item.get("employeeName") for item in last.get("results", [])]
+        if employee_name in names:
+            return
+        time.sleep(0.5)
+    raise AssertionError(
+        f"результаты не появились за {timeout}с: ждали «{employee_name}», получили {last}")
 
 
 class TestPublishFromUi:
@@ -144,6 +167,7 @@ class TestFullAuthorJourney:
         expect(page.get_by_text("Завершено", exact=True)).to_be_visible(timeout=15000)
 
         # автор видит ответ: карточка оцениваемого и вопрос раскрываются кликом
+        _wait_for_results(admin_api, survey_id, IVANOV["fullName"])
         page.goto(f"{WEB_BASE_URL}/survey/{survey_id}/results")
         page.get_by_text(IVANOV["fullName"], exact=False).first.click()
         page.get_by_text("Как коллега справляется с задачами?").first.click()
