@@ -17,6 +17,13 @@ public class EmployeeService(IRepository<Employee> employeeRepo, IMapper mapper)
         return mapper.Map<IEnumerable<EmployeeDto>>(sorted);
     }
 
+    public async Task<EmployeeDto> GetEmployeeByIdAsync(int id)
+    {
+        var employee = await employeeRepo.GetByIdAsync(id);
+        
+        return mapper.Map<EmployeeDto>(employee);
+    }
+
     public async Task ImportEmployeesFromCsvAsync(Stream fileStream)
     {
         using var reader = new StreamReader(fileStream);
