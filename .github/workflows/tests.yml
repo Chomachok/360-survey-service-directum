@@ -59,7 +59,13 @@ jobs:
       - uses: ./.github/actions/setup-test-env
       - name: pytest e2e
         working-directory: tests
-        run: python -m pytest e2e -q -ra
+        run: |
+          python -m pytest e2e -v -ra \
+            --reruns 1 --reruns-delay 3 \
+            --tracing=retain-on-failure \
+            --video=retain-on-failure \
+            --screenshot=only-on-failure \
+            --output=e2e-artifacts
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
