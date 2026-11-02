@@ -1,0 +1,95 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - ci/add-pipeline-for-autotesting
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  API_BASE_URL: http://localhost:5223
+  WEB_BASE_URL: "http://[::1]:8080"
+  MAILPIT_URL: http://localhost:8025
+  HTTP_TIMEOUT: "20"
+
+jobs:
+  api:
+    name: API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-test-env
+      - name: pytest api
+        working-directory: tests
+        run: python -m pytest api -q -ra
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-api
+          path: tests/report.html
+          if-no-files-found: warn
+      - name: Dump compose logs
+        if: failure()
+        run: docker compose logs --no-color > compose-logs.txt 2>&1 || true
+      - name: Upload compose logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-logs-api
+          path: compose-logs.txt
+      - name: Tear down
+        if: always()
+        run: docker compose down -v --remove-orphans || true
+
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-test-env
+      - name: pytest e2e
+        working-directory: tests
+        run: python -m pytest e2e -q -ra
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-e2e
+          path: tests/report.html
+          if-no-files-found: warn
+      - name: Dump compose logs
+        if: failure()
+        run: docker compose logs --no-color > compose-logs.txt 2>&1 || true
+      - name: Upload compose logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-logs-e2e
+          path: compose-logs.txt
+      - name: Tear down
+        if: always()
+        run: docker compose down -v --remove-orphans || true
+
+  gate:
+    name: All tests passed
+    needs: [ api, e2e ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify
+        run: |
+          echo "api: ${{ needs.api.result }}"
+          echo "e2e: ${{ needs.e2e.result }}"
+          if [[ "${{ needs.api.result }}" != "success" || "${{ needs.e2e.result }}" != "success" ]]; then
+            exit 1
+          fi
