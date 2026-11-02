@@ -52,6 +52,34 @@ def backend_available(api_base_url: str) -> None:
     except requests.RequestException as exc:
         pytest.exit(f"backend недоступен по адресу {api_base_url}: {exc}", returncode=3)
 
+@pytest.fixture(scope="session")
+def login_as(api_base_url: str, login: Callable[[str], str]) -> Callable[[str], ApiClient]:
+    """Фабрика: login_as('petrov') → ApiClient, авторизованный как petrov.
+
+    Нужна из-за фикса RESP-6 (commit 9be4017): ответы по персональной ссылке
+    оценщика принимаются только от самого оценщика. admin_api для этих
+    тестов больше не подходит.
+
+    Переиспользует фикстуру `login` (JWT кэшируется на сессию по email),
+    только оборачивает токен в ApiClient.
+    """
+    cache: dict[str, ApiClient] = {}
+
+    def _factory(key: str) -> ApiClient:
+        if key in cache:
+            return cache[key]
+        if key not in SEED_EMPLOYEES:
+            raise KeyError(
+                f"нет seed-сотрудника {key!r}; доступны: {sorted(SEED_EMPLOYEES)}"
+            )
+        email = SEED_EMPLOYEES[key]["email"]
+        token = login(email)
+        client = ApiClient(api_base_url, token=token)
+        cache[key] = client
+        return client
+
+    return _factory
+
 
 @pytest.fixture
 def api(api_base_url: str, backend_available: None) -> ApiClient:

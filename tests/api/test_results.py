@@ -33,9 +33,10 @@ def evaluators_of(results: dict, employee_name: str) -> list[dict]:
 
 class TestResultsContract:
     @pytest.mark.smoke
-    def test_results_shape(self, surveys, admin_api):
+    def test_results_shape(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         response = admin_api.get(f"/api/surveys/{setup.survey_id}/Results")
         assert response.status_code == 200
         body = response.json()
@@ -60,19 +61,20 @@ class TestResultsContract:
         body = surveys.client.get(f"/api/surveys/{setup.survey_id}/Results").json()
         assert body["results"] == []
 
-    def test_only_completed_assignments_appear(self, surveys, admin_api):
+    def test_only_completed_assignments_appear(self, surveys, login_as):
         setup = surveys.ready_survey(evaluator_ids=(PETROV, IVANOVA))
-        admin_api.post(f"/api/public/{setup.token_for(PETROV)}/answers",
-                       json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token_for(PETROV)}/answers",
+                                json={"answers": setup.answers()})
         body = surveys.client.get(f"/api/surveys/{setup.survey_id}/Results").json()
         names = [e["evaluatorName"] for e in evaluators_of(body, SEED_EMPLOYEES["ivanov"]["fullName"])]
         assert names == [SEED_EMPLOYEES["petrov"]["fullName"]]
 
-    def test_all_questions_are_listed_even_without_answer(self, surveys, admin_api):
+    def test_all_questions_are_listed_even_without_answer(self, surveys, login_as):
         setup = surveys.ready_survey()
         choice = setup.choice_question
-        admin_api.post(f"/api/public/{setup.token}/answers",
-                       json={"answers": [{"questionId": choice["id"], "selectedOption": "Хорошо"}]})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": [{"questionId": choice["id"],
+                                                   "selectedOption": "Хорошо"}]})
         answers = evaluators_of(
             surveys.client.get(f"/api/surveys/{setup.survey_id}/Results").json(),
             SEED_EMPLOYEES["ivanov"]["fullName"])[0]["answers"]
@@ -80,7 +82,7 @@ class TestResultsContract:
         assert answers[1] == {"questionText": setup.text_question["text"],
                               "answerText": None, "selectedOption": None}
 
-    def test_results_are_grouped_by_evaluated_employee(self, surveys, admin_api):
+    def test_results_are_grouped_by_evaluated_employee(self, surveys, login_as):
         survey = surveys.draft()
         surveys.add_question(survey["id"], text="Оцените качество работы", type="Text",
                              required=True, order=1)
@@ -89,8 +91,10 @@ class TestResultsContract:
         surveys.publish(survey["id"])
         answers = [{"questionId": surveys.questions(survey["id"])[0]["id"],
                     "textAnswer": "норм"}]
-        admin_api.post(f"/api/public/{first['token']}/answers", json={"answers": answers})
-        admin_api.post(f"/api/public/{second['token']}/answers", json={"answers": answers})
+        login_as("petrov").post(f"/api/public/{first['token']}/answers",
+                                json={"answers": answers})
+        login_as("ivanova").post(f"/api/public/{second['token']}/answers",
+                                 json={"answers": answers})
 
         body = surveys.client.get(f"/api/surveys/{survey['id']}/Results").json()
         grouped = {e["employeeName"]: [ev["evaluatorName"] for ev in e["evaluators"]]
@@ -100,14 +104,15 @@ class TestResultsContract:
             SEED_EMPLOYEES["aleksandrovna"]["fullName"]: [SEED_EMPLOYEES["ivanova"]["fullName"]],
         }
 
-    def test_self_assessment_appears_as_regular_evaluator(self, surveys, admin_api):
+    def test_self_assessment_appears_as_regular_evaluator(self, surveys, login_as):
         survey = surveys.draft()
         question = surveys.add_question(survey["id"], text="Самооценка", type="Text",
                                         required=True, order=1)
-        item = surveys.add_matrix_item(survey["id"], IVANOV, IVANOV)
+        item = surveys.add_matrix_item(survey["id"], IVANOV, IVANOV)   # IVANOV → IVANOV
         surveys.publish(survey["id"])
-        admin_api.post(f"/api/public/{item['token']}/answers",
-                       json={"answers": [{"questionId": question["id"], "textAnswer": "я хорош"}]})
+        login_as("ivanov").post(f"/api/public/{item['token']}/answers",
+                                json={"answers": [{"questionId": question["id"],
+                                                   "textAnswer": "я хорош"}]})
         evaluators = evaluators_of(
             surveys.client.get(f"/api/surveys/{survey['id']}/Results").json(),
             SEED_EMPLOYEES["ivanov"]["fullName"])
@@ -123,18 +128,20 @@ class TestResultsContract:
         survey = surveys.draft()
         assert surveys.client.get(f"/api/surveys/{survey['id']}/Results").status_code == 200
 
-    def test_results_are_available_after_completion(self, surveys, admin_api):
+    def test_results_are_available_after_completion(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         surveys.complete(setup.survey_id)
         body = admin_api.get(f"/api/surveys/{setup.survey_id}/Results").json()
         assert len(body["results"]) == 1
 
     @pytest.mark.xfail(reason="ДЕФЕКТ RES-1: результаты не содержат ни id ответа, ни id вопроса — "
                               "UI не может отфильтровать/подсветить конкретный ответ", strict=False)
-    def test_answers_should_carry_question_id(self, surveys, admin_api):
+    def test_answers_should_carry_question_id(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         answers = evaluators_of(
             admin_api.get(f"/api/surveys/{setup.survey_id}/Results").json(),
             SEED_EMPLOYEES["ivanov"]["fullName"])[0]["answers"]
@@ -143,9 +150,10 @@ class TestResultsContract:
 
 class TestDocxExport:
     @pytest.mark.smoke
-    def test_export_returns_valid_docx(self, surveys, admin_api):
+    def test_export_returns_valid_docx(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         response = admin_api.get(f"/api/surveys/{setup.survey_id}/Results/export/docx")
         assert response.status_code == 200
         assert response.headers["Content-Type"].startswith(DOCX_MIME)
@@ -161,9 +169,10 @@ class TestDocxExport:
         disposition = response.headers.get("Content-Disposition", "")
         assert "filename*" in disposition, f"нет кодированного имени файла: {disposition}"
 
-    def test_export_contains_survey_data(self, surveys, admin_api):
+    def test_export_contains_survey_data(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         text = docx_text(admin_api.get(
             f"/api/surveys/{setup.survey_id}/Results/export/docx").content)
         assert setup.title in text
@@ -179,11 +188,11 @@ class TestDocxExport:
         text = docx_text(admin_api.get(f"/api/surveys/{survey['id']}/Results/export/docx").content)
         assert "Нет данных для отображения" in text
 
-    def test_export_marks_missing_answers(self, surveys, admin_api):
+    def test_export_marks_missing_answers(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers",
-                       json={"answers": [{"questionId": setup.choice_question["id"],
-                                          "selectedOption": "Плохо"}]})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": [{"questionId": setup.choice_question["id"],
+                                                   "selectedOption": "Плохо"}]})
         text = docx_text(admin_api.get(
             f"/api/surveys/{setup.survey_id}/Results/export/docx").content)
         assert "Нет ответа" in text
@@ -198,9 +207,10 @@ class TestDocxExport:
     def test_export_of_unknown_survey_should_be_404(self, admin_api):
         assert admin_api.get("/api/surveys/999999/Results/export/docx").status_code == 404
 
-    def test_export_survives_long_and_special_answers(self, surveys, admin_api):
+    def test_export_survives_long_and_special_answers(self, surveys, admin_api, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": [
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": [
             {"questionId": setup.choice_question["id"], "selectedOption": "Отлично"},
             {"questionId": setup.text_question["id"],
              "textAnswer": "Символы <&>\n" + "Д" * 3000},

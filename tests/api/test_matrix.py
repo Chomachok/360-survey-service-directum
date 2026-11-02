@@ -122,23 +122,23 @@ class TestDeleteMatrixItem:
         assert response.status_code == 404
         assert "Assignment not found" in message_text(response)
 
-    def test_delete_answered_row_is_forbidden(self, surveys, admin_api):
-        """Удаление пройденного назначения запрещено, но отвечает 404 вместо 409/400
-        (ДЕФЕКТ MATRIX-4: контроллер перехватывает любое исключение в NotFound)."""
+    def test_delete_answered_row_is_forbidden(self, surveys, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
         assignment_id = setup.assignments[0]["id"]
-        response = admin_api.delete(f"/api/matrix/{assignment_id}")
+        response = surveys.client.delete(f"/api/matrix/{assignment_id}")
         assert response.status_code == 404
         assert "уже пройден опрос" in message_text(response)
         assert list_matrix(surveys.client, setup.survey_id), "назначение всё-таки удалилось"
 
-    @pytest.mark.xfail(reason="ДЕФЕКТ MATRIX-4: запрет удаления пройденного назначения — это конфликт "
-                              "состояния (409), а не «не найдено» (404)", strict=False)
-    def test_delete_answered_row_should_return_conflict(self, surveys, admin_api):
+
+    @pytest.mark.xfail(reason="ДЕФЕКТ MATRIX-4: …", strict=False)
+    def test_delete_answered_row_should_return_conflict(self, surveys, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
-        response = admin_api.delete(f"/api/matrix/{setup.assignments[0]['id']}")
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
+        response = surveys.client.delete(f"/api/matrix/{setup.assignments[0]['id']}")
         assert response.status_code == 409
 
 

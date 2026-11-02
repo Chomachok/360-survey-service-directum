@@ -224,24 +224,23 @@ class TestDeleteSurvey:
         assert admin_api.get(f"/api/surveys/{survey_id}").status_code == 404
         surveys.created_surveys.remove(survey_id)
 
-    def test_delete_survey_with_answers_is_impossible(self, surveys, admin_api):
-        """ДЕФЕКТ SURV-10: опрос, по есть ответы, не удаляется — FK Answer→Question
-        (Restrict) приводит к 409 с сырым текстом ошибки EF Core. В UI кнопка «Удалить»
-        при этом есть и обещает «действие нельзя отменить»."""
+    def test_delete_survey_with_answers_is_impossible(self, surveys, login_as):
+        """ДЕФЕКТ SURV-10: …"""
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
-        response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
+        response = surveys.client.delete(f"/api/surveys/{setup.survey_id}")
         assert response.status_code == 409
         assert "inner exception" in message_text(response).lower()
-        assert admin_api.get(f"/api/surveys/{setup.survey_id}").status_code == 200
+        assert surveys.client.get(f"/api/surveys/{setup.survey_id}").status_code == 200
         surveys.created_surveys.remove(setup.survey_id)
 
-    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-10: удаление опроса должно либо каскадно сметать "
-                              "ответы, либо отвечать 409 с человекочитаемым текстом", strict=False)
-    def test_delete_survey_with_answers_should_have_readable_error(self, surveys, admin_api):
+    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-10: …", strict=False)
+    def test_delete_survey_with_answers_should_have_readable_error(self, surveys, login_as):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
-        response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
+        login_as("petrov").post(f"/api/public/{setup.token}/answers",
+                                json={"answers": setup.answers()})
+        response = surveys.client.delete(f"/api/surveys/{setup.survey_id}")
         assert response.status_code in (204, 409)
         if response.status_code == 409:
             assert "ответ" in message_text(response).lower()
