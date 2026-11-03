@@ -60,7 +60,6 @@ public class SurveyService(
                     {
                         await scopedEmailService.SendSurveyInviteAsync(assignment, _baseUrl);
                         assignment.InviteSent = true;
-                        scopedAssignmentRepo.Update(assignment);
                         sentCount++;
                         await Task.Delay(1000);
                     }

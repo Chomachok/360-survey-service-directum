@@ -112,6 +112,22 @@ def respondent_api(api_base_url: str, respondent_token: str) -> ApiClient:
     client.close()
 
 
+@pytest.fixture(scope="session")
+def ivanova_api(api_base_url: str, login: Callable[[str], str]) -> ApiClient:
+    """Клиент Ивановой: персональная ссылка привязана к конкретному оценщику."""
+    client = ApiClient(api_base_url, token=login(SEED_EMPLOYEES["ivanova"]["email"]))
+    yield client
+    client.close()
+
+
+@pytest.fixture(scope="session")
+def ivanov_api(api_base_url: str, login: Callable[[str], str]) -> ApiClient:
+    """Клиент Иванова: нужен для сценариев самооценки."""
+    client = ApiClient(api_base_url, token=login(SEED_EMPLOYEES["ivanov"]["email"]))
+    yield client
+    client.close()
+
+
 @dataclass
 class SurveySetup:
     """Готовый к прохождению опрос: вопросы + матрица + токены доступа."""

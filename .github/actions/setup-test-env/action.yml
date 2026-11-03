@@ -1,0 +1,57 @@
+name: Setup test environment
+description: Python deps, Playwright, docker-compose stack, wait for readiness
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        cache-dependency-path: tests/requirements.txt
+
+    - name: Install Python dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r tests/requirements.txt
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('tests/requirements.txt') }}
+        restore-keys: |
+          playwright-${{ runner.os }}-
+
+    - name: Install Playwright (Chromium)
+      shell: bash
+      run: python -m playwright install --with-deps chromium
+
+    - name: Start environment
+      shell: bash
+      run: |
+        docker compose down -v --remove-orphans || true
+        docker compose up -d
+        docker compose ps
+
+    - name: Wait for backend / frontend / Mailpit
+      shell: bash
+      run: |
+        set -euo pipefail
+        wait_code() {
+          local name="$1" url="$2" expect="$3" attempts="${4:-120}"
+          local code=""
+          for i in $(seq 1 "$attempts"); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+            if [[ "$code" =~ $expect ]]; then
+              echo "✓ $name (HTTP $code)"; return 0
+            fi
+            sleep 2
+          done
+          echo "::error::$name not ready (last HTTP $code)"; return 1
+        }
+        wait_code backend  "http://localhost:5223/swagger/v1/swagger.json" '^200$' 150
+        wait_code frontend "http://[::1]:8080/"                            '^[23][0-9]{2}$' 60
+        wait_code mailpit  "http://localhost:8025/api/v1/messages"         '^200$' 30
