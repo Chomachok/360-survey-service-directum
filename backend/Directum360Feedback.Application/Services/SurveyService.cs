@@ -36,7 +36,7 @@ public class SurveyService(
 
         if (survey.Status == SurveyStatus.Draft && (survey.StartDate == null || survey.EndDate == null))
         {
-            throw new Exception("Date can't be empty for start survey");
+            throw new Exception("Даты начала и конца опроса не могут быть пустыми для начала опроса");
         }
 
         survey.Status = SurveyStatus.Active;
