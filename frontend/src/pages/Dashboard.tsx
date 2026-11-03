@@ -9,6 +9,29 @@ import { useDebounce } from '../hooks/useDebounce'
 import { Edit } from 'lucide-react'
 import LogoLoader from '../components/LogoLoader'
 
+/** Форматирует одну дату. Возвращает пустую строку для null/невалидных. */
+const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const d = date.toLocaleDateString('ru-RU')
+  const t = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return `${d} ${t}`
+}
+
+/** Собирает период: обе даты, только начало, только конец, или заглушка. */
+const formatPeriod = (
+  start: string | null | undefined,
+  end: string | null | undefined
+): string => {
+  const s = formatDateTime(start)
+  const e = formatDateTime(end)
+  if (!s && !e) return 'Даты не заданы'
+  if (s && !e) return `с ${s}`
+  if (!s && e) return `до ${e}`
+  return `${s} — ${e}`
+}
+
 export default function Dashboard() {
   const queryClient = useQueryClient()
 
@@ -262,7 +285,7 @@ export default function Dashboard() {
                   )}
                   <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                     <span className="whitespace-nowrap">
-                      📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} {new Date(survey.startDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(survey.endDate).toLocaleDateString('ru-RU')} {new Date(survey.endDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                      📅 {formatPeriod(survey.startDate, survey.endDate)}
                     </span>
                   </div>
                 </div>

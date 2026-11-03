@@ -9,6 +9,19 @@ import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
 import LogoLoader from '../components/LogoLoader'
 
+/** ISO из API → "YYYY-MM-DDTHH:mm" для <input type="datetime-local"> */
+const toLocalInput = (iso: string | null | undefined): string => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/** "YYYY-MM-DDTHH:mm" из инпута → ISO с секундами или null, если пусто */
+const toNullableIso = (value: string): string | null =>
+  value ? `${value}:00` : null
+
 export default function SurveyEdit() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -41,17 +54,17 @@ export default function SurveyEdit() {
     if (survey) {
       setTitle(survey.title)
       setDescription(survey.description || '')
-      setStartDate(survey.startDate.slice(0, 16))
-      setEndDate(survey.endDate.slice(0, 16))
+      setStartDate(toLocalInput(survey.startDate))
+      setEndDate(toLocalInput(survey.endDate))
     }
   }, [survey])
 
   const validate = (): boolean => {
     const newErrors: { title?: string; startDate?: string; endDate?: string } = {}
-    if (!title.trim()) newErrors.title = 'Введите название опроса'
-    if (!startDate) newErrors.startDate = 'Выберите дату начала'
-    if (!endDate) newErrors.endDate = 'Выберите дату окончания'
-    else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+    if (!title.trim()) {
+      newErrors.title = 'Введите название опроса'
+    }
+    if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
     setErrors(newErrors)
@@ -79,8 +92,8 @@ export default function SurveyEdit() {
     mutation.mutate({
       title,
       description,
-      startDate,
-      endDate,
+      startDate: toNullableIso(startDate),
+      endDate: toNullableIso(endDate),
     })
   }
 
@@ -100,9 +113,7 @@ export default function SurveyEdit() {
   }
 
   if (surveyLoading) {
-    return (
-      <LogoLoader />
-    )
+    return <LogoLoader />
   }
 
   if (!survey) {
@@ -166,7 +177,7 @@ export default function SurveyEdit() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="animate-fadeInUp-delay-3">
-              <label className="label-field">Дата начала *</label>
+              <label className="label-field">Дата начала</label>
               <input
                 type="datetime-local"
                 value={startDate}
@@ -177,7 +188,7 @@ export default function SurveyEdit() {
               {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>}
             </div>
             <div className="animate-fadeInUp-delay-3">
-              <label className="label-field">Дата окончания *</label>
+              <label className="label-field">Дата окончания</label>
               <input
                 type="datetime-local"
                 value={endDate}
