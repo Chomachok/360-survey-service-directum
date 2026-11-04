@@ -110,18 +110,28 @@ class TestCsvImport:
         surveys.created_employees.extend(e["id"] for e in imported)
         assert len(imported) == 1
 
-    def test_import_ignores_roles_column(self, admin_api, surveys):
-        """ДЕФЕКТ EMP-3: EmployeeService читает CSV через GetRecords<EmployeeImportDto>,
-        List<EmployeeRole> не конвертируется — колонка Roles теряется, все импортированные
-        сотрудники остаются без ролей (автора/администратора импортировать нельзя)."""
+    def test_import_preserves_roles_column(self, admin_api, surveys):
+        """EMP-3 (fixed): роли из колонки Roles сохраняются при CSV-импорте.
+        
+        Раньше дефект: CsvHelper не умел конвертировать строку в List<EmployeeRole>
+        — все импортированные сотрудники оставались без прав.
+        """
         email = f"roles.{unique_suffix()}@example.com"
-        assert csv_upload(admin_api,
-                          f"FullName,Email,Roles\nРоль Потеряна,{email},SurveyAuthor\n"
-                          ).status_code == 200
-        imported = [e for e in employees_of(admin_api) if e["email"] == email]
-        surveys.created_employees.extend(e["id"] for e in imported)
-        assert len(imported) >= 1, "сотрудник должен появиться в списке"
-        assert imported[0]["roles"] == []
+        before = {e["id"] for e in employees_of(admin_api)}
+        csv = (f"FullName,Email,Roles\n"
+            f"Импортированный С Ролью,{email},SurveyAuthor\n")
+        response = csv_upload(admin_api, csv)
+        assert response.status_code == 200, message_text(response)
+
+        created = [e for e in employees_of(admin_api) if e["id"] not in before]
+        surveys.created_employees.extend(e["id"] for e in created)
+        assert len(created) == 1, f"создан не один: {created}"
+
+        imported = created[0]
+        assert imported["email"].lower() == email.lower()
+        assert imported["roles"] == ["SurveyAuthor"], (
+            f"роль потеряна при импорте: {imported['roles']}"
+        )
 
     @pytest.mark.xfail(reason="ДЕФЕКТ EMP-3: роли из колонки Roles должны сохраняться", strict=False)
     def test_import_should_preserve_roles(self, admin_api, surveys):
