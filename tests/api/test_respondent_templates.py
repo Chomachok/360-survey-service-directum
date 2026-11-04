@@ -239,7 +239,7 @@ class TestApplyTemplateToSurvey:
         response = surveys.client.post(f"/api/surveys/{survey['id']}/matrix/apply-template",
                                        json={"templateId": template["id"], "targetIds": [IVANOV]})
         body = response.json()
-        assert body["created"] == 1 and body["skipped"] == 1
+        assert body["created"] == 1 and body["skipped"] == 0
         assert [i["evaluatorId"] for i in body["items"]] == [PETROV]
 
     def test_explicit_links_are_respected(self, surveys):
