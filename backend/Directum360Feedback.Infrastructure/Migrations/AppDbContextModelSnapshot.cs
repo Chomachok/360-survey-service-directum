@@ -58,7 +58,8 @@ namespace Directum360Feedback.Infrastructure.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -70,13 +71,16 @@ namespace Directum360Feedback.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique();
+
                     b.ToTable("Employees");
 
                     b.HasData(
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4095),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 738, DateTimeKind.Utc).AddTicks(8476),
                             Email = "ivanov@example.com",
                             FullName = "Иванов Иван Иванович",
                             Roles = "[\"Respondent\"]"
@@ -84,7 +88,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4113),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 738, DateTimeKind.Utc).AddTicks(8495),
                             Email = "petrov@example.com",
                             FullName = "Петров Пётр Петрович",
                             Roles = "[\"Respondent\"]"
@@ -92,7 +96,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4116),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 738, DateTimeKind.Utc).AddTicks(8498),
                             Email = "ivanova@example.com",
                             FullName = "Иванова Мария Ивановна",
                             Roles = "[\"Respondent\"]"
@@ -100,7 +104,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 821, DateTimeKind.Utc).AddTicks(4119),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 738, DateTimeKind.Utc).AddTicks(8502),
                             Email = "alexsandrovna@example.com",
                             FullName = "Александрова Александра Александровна",
                             Roles = "[\"Respondent\"]"
@@ -108,10 +112,18 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 823, DateTimeKind.Utc).AddTicks(9273),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 741, DateTimeKind.Utc).AddTicks(4414),
                             Email = "admin@directum360.ru",
                             FullName = "Администратор",
                             Roles = "[\"Administrator\",\"Respondent\",\"SurveyAuthor\"]"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 741, DateTimeKind.Utc).AddTicks(4440),
+                            Email = "sysadmin@directum360.ru",
+                            FullName = "Системный администратор",
+                            Roles = "[\"SystemAdministrator\",\"Administrator\",\"Respondent\",\"SurveyAuthor\"]"
                         });
                 });
 
@@ -180,7 +192,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 823, DateTimeKind.Utc).AddTicks(2097),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 740, DateTimeKind.Utc).AddTicks(7600),
                             Name = "Общая производительность команды",
                             Options = "[\"Отлично\",\"Хорошо\",\"Средне\",\"Плохо\",\"Ужасно\"]",
                             Text = "Как вы оцениваете общую производительность команды?",
@@ -189,7 +201,7 @@ namespace Directum360Feedback.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 10, 26, 12, 13, 14, 823, DateTimeKind.Utc).AddTicks(2103),
+                            CreatedAt = new DateTime(2026, 11, 1, 13, 9, 37, 740, DateTimeKind.Utc).AddTicks(7607),
                             Name = "Обратная связь",
                             Text = "Пожалуйста, оставьте дополнительные комментарии.",
                             Type = 0
