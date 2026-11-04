@@ -231,16 +231,16 @@ class TestApplyTemplateToSurvey:
                             json={"templateId": template["id"], "targetIds": [ALEKSANDROVNA]})
         assert matrix_of(surveys.client, survey["id"])[0]["targetId"] == ALEKSANDROVNA
 
-    def test_self_evaluation_pair_is_skipped(self, surveys):
+    def test_self_evaluation_pair_is_created(self, surveys):
         template = surveys.respondent_template(items=[{"employeeId": PETROV},
-                                                      {"employeeId": IVANOV}],
-                                               targetEmployeeIds=[])
+                                                    {"employeeId": IVANOV}],
+                                            targetEmployeeIds=[])
         survey = surveys.draft()
         response = surveys.client.post(f"/api/surveys/{survey['id']}/matrix/apply-template",
-                                       json={"templateId": template["id"], "targetIds": [IVANOV]})
+                                    json={"templateId": template["id"], "targetIds": [IVANOV]})
         body = response.json()
         assert body["created"] == 2 and body["skipped"] == 0
-        assert [i["evaluatorId"] for i in body["items"]] == [PETROV]
+        assert sorted(i["evaluatorId"] for i in body["items"]) == sorted([PETROV, IVANOV])
 
     def test_explicit_links_are_respected(self, surveys):
         template = surveys.respondent_template(
