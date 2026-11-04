@@ -41,12 +41,10 @@ export default function SurveyCreate() {
 
   const validate = (): boolean => {
     const newErrors: { title?: string; startDate?: string; endDate?: string } = {}
-    if (!title.trim()) newErrors.title = 'Введите название опроса'
-    if (!startDate) newErrors.startDate = 'Выберите дату начала'
-    if (!endDate) newErrors.endDate = 'Выберите дату окончания'
-    else if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+    if (startDate != null && endDate != null && new Date(endDate) <= new Date(startDate)) {
       newErrors.endDate = 'Дата окончания должна быть позже даты начала'
     }
+    if (!title.trim()) newErrors.title = 'Введите название опроса'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -70,8 +68,8 @@ export default function SurveyCreate() {
     mutation.mutate({
       title,
       description,
-      startDate,
-      endDate,
+      startDate: startDate == '' ? null : startDate,
+      endDate: endDate == '' ? null : endDate,
       authorId,
       templateId: templateId ? Number(templateId) : undefined,
     })
@@ -163,7 +161,7 @@ export default function SurveyCreate() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="animate-fadeInUp-delay-3">
-              <label className="label-field">Дата начала *</label>
+              <label className="label-field">Дата начала</label>
               <input
                 type="datetime-local"
                 value={startDate}
@@ -173,7 +171,7 @@ export default function SurveyCreate() {
               {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>}
             </div>
             <div className="animate-fadeInUp-delay-3">
-              <label className="label-field">Дата окончания *</label>
+              <label className="label-field">Дата окончания</label>
               <input
                 type="datetime-local"
                 value={endDate}
