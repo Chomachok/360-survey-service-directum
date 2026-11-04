@@ -7,5 +7,5 @@ public class EmployeeImportDto
     
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public List<EmployeeRole> Roles { get; set; } = [];
+    public string Roles { get; set; } = string.Empty;
 }

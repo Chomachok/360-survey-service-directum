@@ -73,31 +73,26 @@ class TestEmployeeDirectory:
             "roles": ["SuperUser"]})
         assert response.status_code == 400
 
-    def test_duplicate_email_is_allowed(self, admin_api, surveys):
-        """ДЕФЕКТ EMP-2: два сотрудника с одним email — вход по email вернёт первого,
-        приглашения уйдут обоим."""
+    def test_duplicate_email_is_rejected(self, admin_api):
+        """EMP-2 (fixed): второй сотрудник с тем же email отклоняется 400 —
+        вход по email больше неоднозначен, приглашения не уходят двоим."""
         email = f"dup.{unique_suffix()}@example.com"
         first = admin_api.post("/api/employees",
-                               json={"fullName": "Первый Двойник", "email": email,
-                                     "roles": ["Respondent"]})
+                            json={"fullName": "Первый Двойник", "email": email,
+                                    "roles": ["Respondent"]})
+        assert first.status_code == 201, first.text
+
         second = admin_api.post("/api/employees",
                                 json={"fullName": "Второй Двойник", "email": email,
-                                      "roles": ["Respondent"]})
-        for response in (first, second):
-            if response.status_code == 201:
-                surveys.created_employees.append(response.json()["id"])
-        assert first.status_code == 201 and second.status_code == 201
-        assert len([e for e in employees_of(admin_api) if e["email"] == email]) == 2
+                                    "roles": ["Respondent"]})
+        assert second.status_code == 400, (
+            f"дубликат email принят: {second.status_code} {second.text}"
+        )
+        # в справочнике ровно один сотрудник с этим email
+        assert len([e for e in employees_of(admin_api) if e["email"] == email]) == 1
 
-    @pytest.mark.xfail(reason="ДЕФЕКТ EMP-2: создание сотрудника с занятым email должно отклоняться 409",
-                       strict=False)
-    def test_duplicate_email_should_be_rejected(self, admin_api):
-        email = f"dup.{unique_suffix()}@example.com"
-        admin_api.post("/api/employees", json={"fullName": "Первый", "email": email,
-                                               "roles": ["Respondent"]})
-        response = admin_api.post("/api/employees", json={"fullName": "Второй", "email": email,
-                                                          "roles": ["Respondent"]})
-        assert response.status_code in (400, 409)
+        # cleanup: удаляем созданного
+        admin_api.delete(f"/admin-panel/employees/delete/{first.json()['id']}")
 
     def test_no_delete_endpoint_for_employees(self, admin_api):
         assert admin_api.delete("/api/employees/1").status_code == 404
@@ -115,18 +110,28 @@ class TestCsvImport:
         surveys.created_employees.extend(e["id"] for e in imported)
         assert len(imported) == 1
 
-    def test_import_ignores_roles_column(self, admin_api, surveys):
-        """ДЕФЕКТ EMP-3: EmployeeService читает CSV через GetRecords<EmployeeImportDto>,
-        List<EmployeeRole> не конвертируется — колонка Roles теряется, все импортированные
-        сотрудники остаются без ролей (автора/администратора импортировать нельзя)."""
+    def test_import_preserves_roles_column(self, admin_api, surveys):
+        """EMP-3 (fixed): роли из колонки Roles сохраняются при CSV-импорте.
+        
+        Раньше дефект: CsvHelper не умел конвертировать строку в List<EmployeeRole>
+        — все импортированные сотрудники оставались без прав.
+        """
         email = f"roles.{unique_suffix()}@example.com"
-        assert csv_upload(admin_api,
-                          f"FullName,Email,Roles\nРоль Потеряна,{email},SurveyAuthor\n"
-                          ).status_code == 200
-        imported = [e for e in employees_of(admin_api) if e["email"] == email]
-        surveys.created_employees.extend(e["id"] for e in imported)
-        assert len(imported) >= 1, "сотрудник должен появиться в списке"
-        assert imported[0]["roles"] == []
+        before = {e["id"] for e in employees_of(admin_api)}
+        csv = (f"FullName,Email,Roles\n"
+            f"Импортированный С Ролью,{email},SurveyAuthor\n")
+        response = csv_upload(admin_api, csv)
+        assert response.status_code == 200, message_text(response)
+
+        created = [e for e in employees_of(admin_api) if e["id"] not in before]
+        surveys.created_employees.extend(e["id"] for e in created)
+        assert len(created) == 1, f"создан не один: {created}"
+
+        imported = created[0]
+        assert imported["email"].lower() == email.lower()
+        assert imported["roles"] == ["SurveyAuthor"], (
+            f"роль потеряна при импорте: {imported['roles']}"
+        )
 
     @pytest.mark.xfail(reason="ДЕФЕКТ EMP-3: роли из колонки Roles должны сохраняться", strict=False)
     def test_import_should_preserve_roles(self, admin_api, surveys):
@@ -136,20 +141,86 @@ class TestCsvImport:
         surveys.created_employees.extend(e["id"] for e in imported)
         assert imported[0]["roles"] == ["SurveyAuthor"]
 
-    def test_import_does_not_validate_rows(self, admin_api, surveys):
-        """ДЕФЕКТ EMP-3 (часть 2): валидации строк нет — пустой FullName, пустой email,
-        неизвестная роль и дубликат email импортируются с 200."""
+    def test_import_rejects_all_invalid_rows(self, admin_api, surveys):
+        """EMP-3 (fixed): CSV с битыми строками отклоняется целиком — 400,
+        ни одного сотрудника не создано (атомарность импорта).
+
+        Раньше дефект: пустой FullName/email, неизвестная роль и дубликат email
+        импортировались с 200 (см. старый test_import_does_not_validate_rows).
+        """
         email = f"junk.{unique_suffix()}@example.com"
         before = {e["id"] for e in employees_of(admin_api)}
         csv = (f"FullName,Email,Roles\n"
-               f",,SuperUser\n"
-               f"Дубликат Первый,{email},Respondent\n"
-               f"Дубликат Второй,{email},Respondent\n")
+            f",,SuperUser\n"
+            f"Дубликат Первый,{email},Respondent\n"
+            f"Дубликат Второй,{email},Respondent\n")
         response = csv_upload(admin_api, csv)
-        assert response.status_code == 200, message_text(response)
-        created = [e for e in employees_of(admin_api) if e["id"] not in before]
-        surveys.created_employees.extend(e["id"] for e in created)
-        assert len(created) == 3, f"импорт должен был отклонить битые строки, а создал: {created}"
+        assert response.status_code == 400, (
+            f"битые строки приняты: {response.status_code} {message_text(response)}"
+        )
+        after = {e["id"] for e in employees_of(admin_api)}
+        assert after == before, (
+            f"импорт не атомарен: созданы {after - before}"
+        )
+
+
+    @pytest.mark.parametrize("row, description", [
+        (",,Respondent\n",                        "пустой FullName и email"),
+        ("Без Email,,Respondent\n",               "пустой email"),
+        (",noemail@example.com,Respondent\n",     "пустой FullName"),
+        ("Имя,invalid@example.com,SuperUser\n",   "неизвестная роль"),
+        ("Имя,invalid@example.com,\n",            "пустая колонка Roles"),
+    ])
+    def test_import_rejects_single_bad_row(self, admin_api, surveys, row, description):
+        """EMP-3 (fixed): каждая битая строка (в отдельности) отклоняется 400.
+        Параметризация позволяет видеть, какие именно правила уже валидируются,
+        а какие ещё нет — по мере доработки бэкенда тесты по одному станут зелёными.
+        """
+        before = {e["id"] for e in employees_of(admin_api)}
+        csv = f"FullName,Email,Roles\n{row}"
+        response = csv_upload(admin_api, csv)
+        assert response.status_code == 400, (
+            f"битая строка «{description}» принята: {response.status_code} {message_text(response)}"
+        )
+        after = {e["id"] for e in employees_of(admin_api)}
+        assert after == before, f"{description}: импорт создал {after - before}"
+
+
+    def test_import_rejects_duplicate_email_in_csv(self, admin_api, surveys):
+        """EMP-2 (fixed): две строки с одним email в одном CSV — импорт отклоняется."""
+        email = f"junk.{unique_suffix()}@example.com"
+        before = {e["id"] for e in employees_of(admin_api)}
+        csv = (f"FullName,Email,Roles\n"
+            f"Дубликат Первый,{email},Respondent\n"
+            f"Дубликат Второй,{email},Respondent\n")
+        response = csv_upload(admin_api, csv)
+        assert response.status_code == 400, (
+            f"дубликат email в CSV принят: {response.status_code} {message_text(response)}"
+        )
+        after = {e["id"] for e in employees_of(admin_api)}
+        assert after == before
+
+
+    def test_import_rejects_email_already_in_db(self, admin_api, surveys):
+        """EMP-2 (fixed): email, уже существующий в справочнике, — импорт отклоняется."""
+        existing = admin_api.post("/api/employees", json={
+            "fullName": "Уже Есть",
+            "email": f"exists.{unique_suffix()}@example.com",
+            "roles": ["Respondent"],
+        })
+        assert existing.status_code == 201
+        surveys.created_employees.append(existing.json()["id"])
+        email = existing.json()["email"]
+
+        before = {e["id"] for e in employees_of(admin_api)}
+        csv = f"FullName,Email,Roles\nНовый,{email},Respondent\n"
+        response = csv_upload(admin_api, csv)
+        assert response.status_code == 400, (
+            f"email уже в БД принят как новый: {response.status_code} {message_text(response)}"
+        )
+        after = {e["id"] for e in employees_of(admin_api)}
+        assert after == before
+
 
     def test_import_rejects_empty_file(self, admin_api):
         response = csv_upload(admin_api, "")
