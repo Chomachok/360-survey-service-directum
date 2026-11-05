@@ -238,13 +238,6 @@ public class RespondentTemplateService(
                     continue;
                 }
 
-                // Проверяем, что оценивающий не оценивает сам себя
-                if (evaluatorId == target.Id)
-                {
-                    result.Skipped++;
-                    continue;
-                }
-
                 var assignment = new SurveyAssignment
                 {
                     SurveyId = surveyId,
