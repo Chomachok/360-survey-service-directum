@@ -123,56 +123,62 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8 animate-fadeInUp">
+      <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end animate-fadeInUp">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Дашборд</h1>
-          <p className="text-gray-500 mt-1">Управляйте своими опросами 360 градусов</p>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-200/80 bg-orange-50/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-directum-orange dark:border-orange-900/50 dark:bg-orange-950/30">
+            <span className="h-1.5 w-1.5 rounded-full bg-directum-orange" /> Обзор
+          </div>
+          <h1 className="page-title">Дашборд</h1>
+          <p className="page-description">Управляйте опросами, участниками и результатами в одном месте</p>
         </div>
-        <Link to="/survey/new" className="btn-primary flex items-center space-x-2">
+        <Link to="/survey/new" className="btn-primary w-full sm:w-auto">
           <Plus size={20} />
           <span>Создать опрос</span>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="card animate-fadeInUp-delay">
+        <div className="card overflow-hidden animate-fadeInUp-delay">
+          <div className="absolute inset-y-0 left-0 w-1 bg-directum-orange" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Активные</p>
               <p className="text-2xl font-bold text-directum-orange">{activeSurveys}</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 dark:bg-orange-950/40">
               <Clock className="text-directum-orange" size={24} />
             </div>
           </div>
         </div>
-        <div className="card animate-fadeInUp-delay-2">
+        <div className="card overflow-hidden animate-fadeInUp-delay-2">
+          <div className="absolute inset-y-0 left-0 w-1 bg-green-500" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Завершённые</p>
               <p className="text-2xl font-bold text-green-600">{completedSurveys}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-950/40">
               <CheckCircle className="text-green-600" size={24} />
             </div>
           </div>
         </div>
-        <div className="card animate-fadeInUp-delay-3">
+        <div className="card overflow-hidden animate-fadeInUp-delay-3">
+          <div className="absolute inset-y-0 left-0 w-1 bg-gray-300 dark:bg-gray-600" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Черновики</p>
               <p className="text-2xl font-bold text-gray-600">{draftSurveys}</p>
             </div>
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-700">
               <FileText className="text-gray-600" size={24} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 animate-fadeInUp">
+      <div className="surface mb-6 flex flex-col items-stretch justify-between gap-3 p-3.5 sm:flex-row sm:items-center sm:p-4 animate-fadeInUp">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:min-w-[200px]">
+          <div className="relative flex-1 sm:min-w-[260px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
@@ -190,7 +196,7 @@ export default function Dashboard() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="input-field w-full sm:w-auto"
+            className="input-field w-full sm:w-auto sm:min-w-44"
           >
             <option value="all">Все опросы</option>
             <option value="Draft">Черновики</option>
@@ -210,13 +216,9 @@ export default function Dashboard() {
         )}
       </div>
 
-      <h2 className="text-xl font-semibold mb-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold tracking-tight text-directum-dark dark:text-gray-100 sm:text-xl">
         Мои опросы
-        {surveys && surveys.length > 0 && (
-          <span className="text-sm font-normal text-gray-500 ml-2">
-            (всего {surveys.length})
-          </span>
-        )}
         {isFetching && !isLoading && (
           <span className="text-sm text-gray-400 ml-2">
             <span className="inline-block w-3 h-3 border-2 border-directum-orange border-t-transparent rounded-full animate-spin align-middle mr-1"></span>
@@ -224,6 +226,8 @@ export default function Dashboard() {
           </span>
         )}
       </h2>
+      {surveys && surveys.length > 0 && <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">{surveys.length} {surveys.length === 1 ? 'опрос' : 'опросов'}</span>}
+      </div>
 
       {surveys?.length === 0 ? (
         <div className="card text-center py-12 animate-fadeInUp">
@@ -240,13 +244,17 @@ export default function Dashboard() {
           {surveys?.map((survey, index) => (
             <div
               key={`${survey.id}-${statusParam || 'all'}-${searchParam || ''}`}
-              className="card hover:shadow-md transition-shadow animate-fadeInUp"
+              className="card animate-fadeInUp"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-directum-dark break-words min-w-0">{survey.title}</h3>
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-3 overflow-hidden">
+                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-directum-orange dark:bg-orange-950/40">
+                    <FileText size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h3 className="min-w-0 break-words text-base font-semibold text-directum-dark dark:text-white sm:text-lg">{survey.title}</h3>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       survey.status === 'Active'
                         ? 'bg-green-100 text-green-700'
@@ -260,28 +268,30 @@ export default function Dashboard() {
                   {survey.description && (
                     <p className="text-sm text-gray-500 mt-1">{survey.description}</p>
                   )}
-                  <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                    <span className="whitespace-nowrap">
-                      📅 {new Date(survey.startDate).toLocaleDateString('ru-RU')} {new Date(survey.startDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(survey.endDate).toLocaleDateString('ru-RU')} {new Date(survey.endDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-gray-500 sm:text-sm">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock size={14} className="shrink-0 text-gray-400" />
+                      {new Date(survey.startDate).toLocaleDateString('ru-RU')} {new Date(survey.startDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(survey.endDate).toLocaleDateString('ru-RU')} {new Date(survey.endDate).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 mt-3 md:mt-0">
+                <div className="flex flex-wrap items-center gap-1.5 border-t border-gray-100 pt-3 dark:border-gray-700 xl:border-0 xl:pt-0">
                   <Link
                     to={`/survey/${survey.id}/questions`}
-                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                    className="rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-directum-orange dark:text-gray-300 dark:hover:bg-gray-700 sm:text-sm"
                   >
                     Вопросы
                   </Link>
                   <Link
                     to={`/survey/${survey.id}/matrix`}
-                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                    className="rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-directum-orange dark:text-gray-300 dark:hover:bg-gray-700 sm:text-sm"
                   >
                     Матрица
                   </Link>
                   <Link
                     to={`/survey/${survey.id}/results`}
-                    className="text-sm text-directum-orange hover:underline transition-all duration-200 hover:scale-105"
+                    className="rounded-lg px-2.5 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-directum-orange dark:text-gray-300 dark:hover:bg-gray-700 sm:text-sm"
                   >
                     Результаты
                   </Link>
@@ -289,8 +299,9 @@ export default function Dashboard() {
                   {survey.status === 'Draft' && (
                     <button
                       onClick={() => handlePublish(survey.id, survey.title)}
-                      className="text-green-600 hover:text-green-700 transition-colors p-1 hover:scale-110 transform"
+                      className="rounded-lg p-2 text-green-600 transition-colors hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950/30"
                       title="Опубликовать опрос"
+                      aria-label={`Опубликовать опрос «${survey.title}»`}
                       disabled={publishMutation.isPending}
                     >
                       <Rocket size={18} />
@@ -300,8 +311,9 @@ export default function Dashboard() {
                   {survey.status === 'Active' && (
                     <button
                       onClick={() => handleComplete(survey.id, survey.title)}
-                      className="text-blue-600 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
+                      className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/30"
                       title="Досрочно завершить опрос"
+                      aria-label={`Завершить опрос «${survey.title}»`}
                       disabled={completeMutation.isPending}
                     >
                       <CheckCircle size={18} />
@@ -311,8 +323,9 @@ export default function Dashboard() {
                   {survey.status === 'Draft' && (
                     <Link
                       to={`/survey/${survey.id}/edit`}
-                      className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:scale-110 transform"
+                      className="rounded-lg p-2 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/30"
                       title="Редактировать опрос"
+                      aria-label={`Редактировать опрос «${survey.title}»`}
                     >
                       <Edit size={18} />
                     </Link>
@@ -320,8 +333,9 @@ export default function Dashboard() {
 
                   <button
                     onClick={() => handleDelete(survey.id, survey.title)}
-                    className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
                     title="Удалить опрос"
+                    aria-label={`Удалить опрос «${survey.title}»`}
                     disabled={deleteMutation.isPending}
                   >
                     <Trash2 size={18} />

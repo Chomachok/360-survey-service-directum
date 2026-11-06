@@ -232,10 +232,10 @@ export default function Templates() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6 animate-fadeInUp">
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end animate-fadeInUp">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Шаблоны вопросов</h1>
-          <p className="text-gray-500 mt-1">Создавайте и управляйте шаблонами для быстрого добавления вопросов</p>
+          <h1 className="page-title">Шаблоны вопросов</h1>
+          <p className="page-description">Создавайте и управляйте шаблонами для быстрого добавления вопросов</p>
         </div>
         <button
           onClick={() => {
@@ -248,7 +248,7 @@ export default function Templates() {
               setType(QuestionType.Text)
             }
           }}
-          className="btn-primary flex items-center space-x-2"
+          className="btn-primary w-full sm:w-auto"
         >
           <Plus size={20} />
           <span>{showForm ? 'Отменить' : 'Создать шаблон'}</span>

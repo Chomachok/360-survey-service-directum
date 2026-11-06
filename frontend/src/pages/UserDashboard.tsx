@@ -78,10 +78,10 @@ export default function UserDashboard() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8 animate-fadeInUp">
+      <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end animate-fadeInUp">
         <div>
-          <h1 className="text-3xl font-bold text-directum-dark">Мои опросы</h1>
-          <p className="text-gray-500 mt-1">Опросы, назначенные вам для прохождения</p>
+          <h1 className="page-title">Мои опросы</h1>
+          <p className="page-description">Опросы, назначенные вам для прохождения</p>
         </div>
       </div>
 
@@ -123,9 +123,9 @@ export default function UserDashboard() {
       </div>
 
       {/* Фильтры */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 animate-fadeInUp">
+      <div className="surface mb-6 flex flex-col items-stretch justify-between gap-3 p-3.5 sm:flex-row sm:items-center sm:p-4 animate-fadeInUp">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:min-w-[200px]">
+          <div className="relative flex-1 sm:min-w-[260px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
@@ -138,7 +138,7 @@ export default function UserDashboard() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-            className="input-field w-full sm:w-auto"
+            className="input-field w-full sm:w-auto sm:min-w-44"
           >
             <option value="all">Все опросы</option>
             <option value="pending">Ожидают</option>
@@ -172,13 +172,17 @@ export default function UserDashboard() {
           {filteredSurveys.map((survey, index) => (
             <div
               key={survey.token}
-              className="card hover:shadow-md transition-shadow animate-fadeInUp"
+              className="card animate-fadeInUp"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-directum-dark break-words min-w-0">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-3 overflow-hidden">
+                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-directum-orange dark:bg-orange-950/40">
+                    <ClipboardList size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h3 className="min-w-0 break-words text-base font-semibold text-directum-dark dark:text-white sm:text-lg">
                       {survey.surveyTitle}
                     </h3>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${
@@ -191,11 +195,12 @@ export default function UserDashboard() {
                   </div>
                   <p className="text-sm text-gray-500 mt-1">Оцениваемый: {survey.targetName}</p>
                 </div>
-                <div className="flex items-center space-x-2 mt-3 md:mt-0">
+                </div>
+                <div className="flex items-center border-t border-gray-100 pt-3 dark:border-gray-700 md:border-0 md:pt-0">
                   {!survey.completed && (
                     <Link
                       to={`/survey/${survey.token}`}
-                      className="btn-primary text-sm px-4 py-2 transition-all duration-200 hover:scale-105"
+                      className="btn-primary w-full text-sm md:w-auto"
                     >
                       Пройти опрос
                     </Link>

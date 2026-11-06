@@ -7,9 +7,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://localhost:5224',
+        target: 'http://localhost:5223',
         changeOrigin: true,
-        secure: false,
+      },
+      '/admin-panel': {
+        target: 'http://localhost:5223',
+        changeOrigin: true,
       },
     },
   },
