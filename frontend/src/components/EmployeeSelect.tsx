@@ -33,7 +33,6 @@ function EmployeeOptionRow(props: OptionProps<EmployeeOption, false>) {
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
-            aria-label={`Показать карточку сотрудника ${data.label}`}
             aria-expanded={cardOpen}
             className={`text-left underline decoration-dotted underline-offset-2 ${isSelected ? 'text-white' : 'text-directum-orange'}`}
             onMouseDown={(event) => event.preventDefault()}
