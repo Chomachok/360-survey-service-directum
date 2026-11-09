@@ -13,6 +13,7 @@ import type { RespondentTemplate, CreateRespondentTemplateItemDto } from '../typ
 import { ConfirmModal } from '../components/ConfirmModal'
 import LogoLoader from '../components/LogoLoader'
 import { SurveyMatrix } from '../components/MatrixGrid'
+import EmployeeSelect, { toEmployeeOptions } from '../components/EmployeeSelect'
 
 /** пустая строка состава по умолчанию */
 const emptyItem = (): CreateRespondentTemplateItemDto => ({
@@ -44,6 +45,7 @@ export default function RespondentTemplates() {
     employees?.forEach((e) => map.set(e.id, e.fullName))
     return map
   }, [employees])
+  const employeeOptions = toEmployeeOptions(employees)
 
   // ---------- отображение страницы: список групп / общая матрица ----------
   const [pageView, setPageView] = useState<ViewMode>('list')
@@ -632,18 +634,15 @@ export default function RespondentTemplates() {
                               className="rounded-lg border border-gray-200 p-2.5 dark:border-gray-700"
                             >
                               <div className="flex items-center gap-2">
-                                <select
-                                  value={row.employeeId ?? ''}
-                                  onChange={(e) => updateTargetRow(index, Number(e.target.value))}
-                                  className="input-field flex-1"
-                                >
-                                  <option value="">Выберите сотрудника</option>
-                                  {employees?.map((e) => (
-                                    <option key={e.id} value={e.id}>
-                                      {e.fullName}
-                                    </option>
-                                  ))}
-                                </select>
+                                <div className="flex-1">
+                                  <EmployeeSelect
+                                    options={employeeOptions}
+                                    value={employeeOptions.find((option) => option.value === row.employeeId) ?? null}
+                                    onChange={(option) => updateTargetRow(index, option?.value ?? -1)}
+                                    placeholder="Выберите сотрудника"
+                                    isClearable
+                                  />
+                                </div>
                                 <button
                                   onClick={() => removeTargetRow(index)}
                                   className="p-1 text-gray-400 transition-colors hover:text-red-500"
@@ -717,22 +716,15 @@ export default function RespondentTemplates() {
                     <div className="space-y-2">
                       {items.map((item, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <select
-                            value={item.employeeId ?? ''}
-                            onChange={(e) =>
-                              updateItem(index, {
-                                employeeId: e.target.value === '' ? -1 : Number(e.target.value),
-                              })
-                            }
-                            className="input-field flex-1"
-                          >
-                            <option value="">Выберите сотрудника</option>
-                            {employees?.map((e) => (
-                              <option key={e.id} value={e.id}>
-                                {e.fullName}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex-1">
+                            <EmployeeSelect
+                              options={employeeOptions}
+                              value={employeeOptions.find((option) => option.value === item.employeeId) ?? null}
+                              onChange={(option) => updateItem(index, { employeeId: option?.value ?? -1 })}
+                              placeholder="Выберите сотрудника"
+                              isClearable
+                            />
+                          </div>
 
                           <button
                             onClick={() => removeItemRow(index)}
