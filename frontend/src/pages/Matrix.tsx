@@ -12,6 +12,7 @@ import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
 import { SurveyMatrix } from '../components/MatrixGrid'
 import LogoLoader from '../components/LogoLoader'
+import EmployeeSelect, { toEmployeeOptions } from '../components/EmployeeSelect'
 
 export default function Matrix() {
   const { id } = useParams<{ id: string }>()
@@ -61,25 +62,20 @@ export default function Matrix() {
   }, [survey])
 
   // Опции для react-select
-  const evaluatorOptions = (employees || []).map(e => ({
-    value: e.id,
-    label: e.fullName,
-  }))
-  const targetOptions = (employees || []).map(e => ({
-    value: e.id,
-    label: e.fullName,
-  }))
+  const employeeOptions = toEmployeeOptions(employees)
+  const evaluatorOptions = employeeOptions
+  const targetOptions = employeeOptions
   const templateOptions = (templates || []).map(t => ({
     value: t.id,
     label: t.name,
   }))
 
   const selectedEvaluator = evaluatorId
-    ? evaluatorOptions.find(opt => opt.value === evaluatorId)
+    ? evaluatorOptions.find(opt => opt.value === evaluatorId) ?? null
     : null
 
   const selectedTarget = targetId
-    ? targetOptions.find(opt => opt.value === targetId)
+    ? targetOptions.find(opt => opt.value === targetId) ?? null
     : null
 
   const selectedTemplate = selectedTemplateId
@@ -295,16 +291,13 @@ export default function Matrix() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                       Кого оценивают
                     </label>
-                    <Select
+                    <EmployeeSelect
                       options={targetOptions}
                       value={selectedTarget}
                       onChange={handleTargetChange}
                       placeholder="Выберите сотрудника"
                       isClearable
                       isSearchable
-                      styles={reactSelectStyles}
-                      menuPortalTarget={document.body}
-                      menuPosition="fixed"
                       isDisabled={!isDraft}
                     />
                   </div>
@@ -313,16 +306,13 @@ export default function Matrix() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                       Кто оценивает
                     </label>
-                    <Select
+                    <EmployeeSelect
                       options={evaluatorOptions}
                       value={selectedEvaluator}
                       onChange={handleEvaluatorChange}
                       placeholder="Выберите сотрудника"
                       isClearable
                       isSearchable
-                      styles={reactSelectStyles}
-                      menuPortalTarget={document.body}
-                      menuPosition="fixed"
                       isDisabled={!isDraft || !targetId}
                     />
                   </div>

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, X, Check, Link as LinkIcon, Trash2, Users2, Boxes } from 'lucide-react';
-import Select from 'react-select';
-import { reactSelectStyles } from '../styles/reactSelectStyles';
+import { Plus, X, Check, Link as LinkIcon, Trash2, Boxes } from 'lucide-react';
+import EmployeeSelect from './EmployeeSelect';
+import type { EmployeeOption } from './EmployeeSelect';
 import toast from 'react-hot-toast';
 
 // Типы данных
@@ -19,11 +19,6 @@ interface MatrixItem {
    * присутствие элемента в data всегда означает реальное назначение).
    */
   linked?: boolean;
-}
-
-interface EmployeeOption {
-  value: number;
-  label: string;
 }
 
 interface SurveyMatrixProps {
@@ -187,19 +182,14 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
 
   const renderAddForm = (options: EmployeeOption[]) => (
     <div className="animate-fadeIn z-50 flex min-w-[180px] flex-col gap-2 rounded-lg border border-dashed border-directum-orange/50 bg-white p-2 shadow-lg dark:bg-gray-800">
-      <Select
+      <EmployeeSelect
         options={options}
         value={selectedEmployee}
         onChange={(opt) => setSelectedEmployee(opt)}
         placeholder="Выберите..."
-        styles={{
-          ...reactSelectStyles,
-          control: (base) => ({ ...base, minHeight: '32px', fontSize: '13px' }),
-          menuPortalTarget: document.body,
-        }}
-        menuPortalTarget={document.body}
         autoFocus
         openMenuOnFocus
+        compact
       />
       <div className="mt-0.5 flex gap-1.5">
         <button
