@@ -34,7 +34,7 @@ function EmployeeOptionRow(props: OptionProps<EmployeeOption, false>) {
           <button
             type="button"
             aria-expanded={cardOpen}
-            className={`text-left underline decoration-dotted underline-offset-2 ${isSelected ? 'text-white' : 'text-directum-orange'}`}
+            className={`text-left ${isSelected ? 'text-white' : 'text-[var(--rs-text)]'}`}
             onMouseDown={(event) => event.preventDefault()}
             onClick={(event) => {
               event.stopPropagation()
@@ -50,8 +50,7 @@ function EmployeeOptionRow(props: OptionProps<EmployeeOption, false>) {
               ? 'border-white/20 bg-black/10 text-white'
               : 'border-gray-200 bg-white text-gray-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
           } ${cardOpen ? '!block' : ''}`}>
-            <div className="font-medium">{data.label}</div>
-            <a className="mt-0.5 block text-directum-orange hover:underline" href={`mailto:${data.email}`} onClick={(event) => event.stopPropagation()}>
+            <a className="block text-white hover:underline" href={`mailto:${data.email}`} onClick={(event) => event.stopPropagation()}>
               {data.email}
             </a>
           </div>
