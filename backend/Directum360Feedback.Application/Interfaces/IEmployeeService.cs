@@ -9,4 +9,5 @@ public interface IEmployeeService
     Task<EmployeeDto> GetEmployeeByIdAsync(int id);
     Task ImportEmployeesFromCsvAsync(Stream fileStream);
     Task<EmployeeDto> CreateEmployeeAsync(CreateEmployeeDto dto);
+    Task<EmployeeDto> GetInfoAboutEmployeeAsync(int id);
 }

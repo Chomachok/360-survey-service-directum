@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Directum360Feedback.Application.DTOs.EmployeeDTOs;
 using Directum360Feedback.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Directum360Feedback.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EmployeesController(IEmployeeService employeeService) : ControllerBase
 {
     /// <summary>
@@ -57,5 +59,13 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         {
             return BadRequest(new { message = $"Ошибка импорта: {ex.Message}" });
         }
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetInfoAboutEmployeeAsync(int id)
+    {
+        var employeeInfo = await employeeService.GetInfoAboutEmployeeAsync(id);
+        
+        return Ok(employeeInfo);
     }
 }
