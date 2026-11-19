@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import Select, { components } from 'react-select'
 import type { OptionProps, SingleValue } from 'react-select'
 import type { Employee } from '../types'
@@ -24,37 +23,31 @@ interface EmployeeSelectProps {
 }
 
 function EmployeeOptionRow(props: OptionProps<EmployeeOption, false>) {
-  const [cardOpen, setCardOpen] = useState(false)
   const { data, isFocused, isSelected } = props
+  const initial = data.label.trim().charAt(0).toUpperCase()
 
   return (
-    <components.Option {...props}>
-      <div className="group/employee-option">
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            aria-expanded={cardOpen}
-            className={`text-left ${isSelected ? 'text-white' : 'text-[var(--rs-text)]'}`}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={(event) => {
-              event.stopPropagation()
-              setCardOpen((open) => !open)
-            }}
-          >
-            {data.label}
-          </button>
+    <components.Option {...props} innerProps={{ ...props.innerProps, 'aria-label': data.label }}>
+      <div className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+        isFocused || isSelected
+          ? 'border-gray-300 bg-white'
+          : 'border-gray-200 bg-white'
+      }`}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-400 text-sm font-semibold text-gray-800">
+          {initial}
         </div>
-        {data.email && (
-          <div className={`mt-1 hidden rounded-md border px-2.5 py-2 text-xs shadow-sm group-hover/employee-option:block group-focus-within/employee-option:block ${
-            isFocused || isSelected
-              ? 'border-white/20 bg-black/10 text-white'
-              : 'border-gray-200 bg-white text-gray-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
-          } ${cardOpen ? '!block' : ''}`}>
-            <a className="block text-white hover:underline" href={`mailto:${data.email}`} onClick={(event) => event.stopPropagation()}>
+        <div className="min-w-0 leading-tight">
+          <div className="text-gray-800">{data.label}</div>
+          {data.email && (
+            <a
+              className="mt-1 block truncate text-sm text-gray-800 hover:underline"
+              href={`mailto:${data.email}`}
+              onClick={(event) => event.stopPropagation()}
+            >
               {data.email}
             </a>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </components.Option>
   )
