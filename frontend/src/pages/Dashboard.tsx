@@ -52,7 +52,10 @@ export default function Dashboard() {
       setDeleteModal({ isOpen: false })
     },
     onError: (error: any) => {
-      const message = error.response?.data || error.message || 'Не удалось удалить опрос'
+      const responseData = error.response?.data
+      const message = typeof responseData === 'string'
+        ? responseData
+        : responseData?.detail || responseData?.message || error.message || 'Не удалось удалить опрос'
       toast.error(message)
       setDeleteModal({ isOpen: false })
     },
