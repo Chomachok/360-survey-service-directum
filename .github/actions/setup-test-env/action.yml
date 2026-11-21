@@ -53,5 +53,5 @@ runs:
           echo "::error::$name not ready (last HTTP $code)"; return 1
         }
         wait_code backend  "http://localhost:5223/swagger/v1/swagger.json" '^200$' 150
-        wait_code frontend "http://[::1]:8080/"                            '^[23][0-9]{2}$' 60
+        wait_code frontend "http://localhost:8080/"                            '^[23][0-9]{2}$' 60
         wait_code mailpit  "http://localhost:8025/api/v1/messages"         '^200$' 30

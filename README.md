@@ -9,3 +9,9 @@
 3. Выполните команду:
    ```bash
    docker-compose up -d
+
+При локальном запуске:
+```bash
+cp .env.example .env
+docker compose up -d --build
+```

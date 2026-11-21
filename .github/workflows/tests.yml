@@ -14,7 +14,7 @@ concurrency:
 
 env:
   API_BASE_URL: http://localhost:5223
-  WEB_BASE_URL: "http://[::1]:8080"
+  WEB_BASE_URL: "http://localhost:8080"
   MAILPIT_URL: http://localhost:8025
   HTTP_TIMEOUT: "20"
 
