@@ -146,9 +146,9 @@ class TestDeleteQuestion:
         """ДЕФЕКТ QUEST-5: удаление несуществующего вопроса даёт 204 вместо 404."""
         assert admin_api.delete("/api/questions/999999").status_code == 204
 
-    def test_delete_question_with_answers_is_conflict(self, surveys, admin_api):
+    def test_delete_question_with_answers_is_conflict(self, surveys, admin_api, respondent_api):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         response = admin_api.delete(f"/api/questions/{setup.choice_question['id']}")
         assert response.status_code == 409, "вопрос с ответами нельзя удалить — FK должен сработать явно"
 

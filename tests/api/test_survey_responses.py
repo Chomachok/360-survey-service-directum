@@ -36,8 +36,8 @@ def evaluator_answers(client, survey_id: int, evaluator_name: str) -> dict[str, 
 
 class TestOpenSurveyByToken:
     @pytest.mark.smoke
-    def test_respondent_sees_questions(self, ready_survey, admin_api):
-        response = open_survey(admin_api, ready_survey.token)
+    def test_respondent_sees_questions(self, ready_survey, respondent_api):
+        response = open_survey(respondent_api, ready_survey.token)
         assert response.status_code == 200
         body = response.json()
         assert body["surveyId"] == ready_survey.survey_id
@@ -45,123 +45,123 @@ class TestOpenSurveyByToken:
         assert body["targetName"] == SEED_EMPLOYEES["ivanov"]["fullName"]
         assert [q["id"] for q in body["questions"]] == [q["id"] for q in ready_survey.questions]
 
-    def test_options_and_required_flag_are_exposed(self, ready_survey, admin_api):
-        body = open_survey(admin_api, ready_survey.token).json()
+    def test_options_and_required_flag_are_exposed(self, ready_survey, respondent_api):
+        body = open_survey(respondent_api, ready_survey.token).json()
         choice = body["questions"][0]
         assert choice["type"] == "SingleChoice"
         assert choice["required"] is True
         assert choice["options"] == ["Отлично", "Хорошо", "Плохо"]
         assert body["questions"][1]["options"] == []
 
-    def test_draft_survey_is_not_accessible(self, surveys):
+    def test_draft_survey_is_not_accessible(self, surveys, respondent_api):
         survey = surveys.draft()
         item = surveys.add_matrix_item(survey["id"], PETROV, IVANOV)
-        response = open_survey(surveys.client, item["token"])
+        response = open_survey(respondent_api, item["token"])
         assert response.status_code == 400
         assert "не активен" in message_text(response)
 
-    def test_completed_assignment_is_not_accessible_again(self, ready_survey, admin_api):
-        submit(admin_api, ready_survey.token, ready_survey.answers())
-        response = open_survey(admin_api, ready_survey.token)
+    def test_completed_assignment_is_not_accessible_again(self, ready_survey, respondent_api):
+        submit(respondent_api, ready_survey.token, ready_survey.answers())
+        response = open_survey(respondent_api, ready_survey.token)
         assert response.status_code == 400
         assert "уже пройден" in message_text(response)
 
-    def test_unknown_token_returns_204_instead_of_404(self, admin_api):
+    def test_unknown_token_returns_204_instead_of_404(self, respondent_api):
         """ДЕФЕКТ RESP-1: несуществующая ссылка даёт 204 No Content без тела —
         фронтенд не может показать внятную ошибку «ссылка недействительна»."""
-        response = open_survey(admin_api, BAD_TOKEN)
+        response = open_survey(respondent_api, BAD_TOKEN)
         assert response.status_code == 204
         assert response.text == ""
 
     @pytest.mark.xfail(reason="ДЕФЕКТ RESP-1: невалидный токен должен отвечать 404 с текстом ошибки",
                        strict=False)
-    def test_unknown_token_should_be_404(self, admin_api):
-        assert open_survey(admin_api, BAD_TOKEN).status_code == 404
+    def test_unknown_token_should_be_404(self, respondent_api):
+        assert open_survey(respondent_api, BAD_TOKEN).status_code == 404
 
 
 class TestSubmitAnswers:
     @pytest.mark.smoke
-    def test_valid_answers_are_saved_and_mark_assignment_done(self, ready_survey, admin_api):
-        response = submit(admin_api, ready_survey.token, ready_survey.answers())
+    def test_valid_answers_are_saved_and_mark_assignment_done(self, ready_survey, respondent_api):
+        response = submit(respondent_api, ready_survey.token, ready_survey.answers())
         assert response.status_code == 200
-        rows = admin_api.get(f"/api/surveys/{ready_survey.survey_id}/matrix").json()
+        rows = respondent_api.get(f"/api/surveys/{ready_survey.survey_id}/matrix").json()
         assert rows[0]["completed"] is True
         assert rows[0]["token"] == ready_survey.token
 
-    def test_answers_are_read_back_from_results(self, ready_survey, admin_api):
-        submit(admin_api, ready_survey.token, ready_survey.answers())
-        answers = evaluator_answers(admin_api, ready_survey.survey_id,
+    def test_answers_are_read_back_from_results(self, ready_survey, respondent_api):
+        submit(respondent_api, ready_survey.token, ready_survey.answers())
+        answers = evaluator_answers(respondent_api, ready_survey.survey_id,
                                    SEED_EMPLOYEES["petrov"]["fullName"])
         assert answers[ready_survey.choice_question["text"]]["selectedOption"] == "Отлично"
         assert answers[ready_survey.text_question["text"]]["answerText"] == "Автоматический комментарий"
 
-    def test_only_required_answer_is_enough_to_submit(self, ready_survey, admin_api):
+    def test_only_required_answer_is_enough_to_submit(self, ready_survey, respondent_api):
         choice = ready_survey.choice_question
-        response = submit(admin_api, ready_survey.token,
+        response = submit(respondent_api, ready_survey.token,
                           [{"questionId": choice["id"], "selectedOption": "Хорошо"}])
         assert response.status_code == 200
 
-    def test_optional_question_stays_unanswered_in_results(self, ready_survey, admin_api):
+    def test_optional_question_stays_unanswered_in_results(self, ready_survey, respondent_api):
         choice = ready_survey.choice_question
-        submit(admin_api, ready_survey.token,
+        submit(respondent_api, ready_survey.token,
                [{"questionId": choice["id"], "selectedOption": "Хорошо"}])
-        answers = evaluator_answers(admin_api, ready_survey.survey_id,
+        answers = evaluator_answers(respondent_api, ready_survey.survey_id,
                                    SEED_EMPLOYEES["petrov"]["fullName"])
         assert answers[ready_survey.text_question["text"]] == {
             "questionText": ready_survey.text_question["text"],
             "answerText": None, "selectedOption": None}
 
-    def test_missing_required_answer_is_rejected(self, ready_survey, admin_api):
+    def test_missing_required_answer_is_rejected(self, ready_survey, respondent_api):
         choice = ready_survey.choice_question
         text = ready_survey.text_question
-        response = submit(admin_api, ready_survey.token,
+        response = submit(respondent_api, ready_survey.token,
                           [{"questionId": choice["id"], "selectedOption": ""},
                            {"questionId": text["id"], "textAnswer": "только текст"}])
         assert response.status_code == 400
         assert f"Question {choice['id']} is required" in message_text(response)
 
-    def test_repeated_submit_is_rejected(self, ready_survey, admin_api):
-        submit(admin_api, ready_survey.token, ready_survey.answers())
-        again = submit(admin_api, ready_survey.token, ready_survey.answers())
+    def test_repeated_submit_is_rejected(self, ready_survey, respondent_api):
+        submit(respondent_api, ready_survey.token, ready_survey.answers())
+        again = submit(respondent_api, ready_survey.token, ready_survey.answers())
         assert again.status_code == 400
         assert "Already submitted" in message_text(again)
 
-    def test_unknown_question_is_rejected(self, ready_survey, admin_api):
-        response = submit(admin_api, ready_survey.token,
+    def test_unknown_question_is_rejected(self, ready_survey, respondent_api):
+        response = submit(respondent_api, ready_survey.token,
                           [{"questionId": 999_999, "selectedOption": "x"}])
         assert response.status_code == 400
         assert "Question not found" in message_text(response)
 
-    def test_question_of_another_survey_is_accepted(self, surveys, ready_survey):
+    def test_question_of_another_survey_is_accepted(self, surveys, ready_survey, respondent_api):
         """ДЕФЕКТ RESP-2: принадлежность вопроса опросу не проверяется — ответ можно
         «прицепить» к вопросу другого опроса."""
         other = surveys.draft(title="Другой опрос")
         foreign = surveys.add_question(other["id"], text="Чужой вопрос", type="Text", required=True)
-        response = submit(surveys.client, ready_survey.token,
+        response = submit(respondent_api, ready_survey.token,
                           [{"questionId": foreign["id"], "textAnswer": "не мой ответ"}])
         assert response.status_code == 200
         assert foreign["text"] not in evaluator_answers(
-            surveys.client, ready_survey.survey_id, SEED_EMPLOYEES["petrov"]["fullName"])
+            respondent_api, ready_survey.survey_id, SEED_EMPLOYEES["petrov"]["fullName"])
 
-    def test_empty_answer_list_still_completes_assignment(self, ready_survey, admin_api):
+    def test_empty_answer_list_still_completes_assignment(self, ready_survey, respondent_api):
         """ДЕФЕКТ RESP-3: опрос засчитывается пройденным без единого ответа."""
-        assert submit(admin_api, ready_survey.token, []).status_code == 200
-        rows = admin_api.get(f"/api/surveys/{ready_survey.survey_id}/matrix").json()
+        assert submit(respondent_api, ready_survey.token, []).status_code == 200
+        rows = respondent_api.get(f"/api/surveys/{ready_survey.survey_id}/matrix").json()
         assert rows[0]["completed"] is True
 
     @pytest.mark.xfail(reason="ДЕФЕКТ RESP-3: сервер обязан требовать ответы на обязательные вопросы",
                        strict=False)
-    def test_empty_answer_list_should_be_rejected(self, ready_survey, admin_api):
-        assert submit(admin_api, ready_survey.token, []).status_code == 400
+    def test_empty_answer_list_should_be_rejected(self, ready_survey, respondent_api):
+        assert submit(respondent_api, ready_survey.token, []).status_code == 400
 
-    def test_duplicate_answers_for_one_question_are_saved(self, ready_survey, admin_api):
+    def test_duplicate_answers_for_one_question_are_saved(self, ready_survey, respondent_api):
         """ДЕФЕКТ RESP-4: дубли по одному вопросу не отсекаются, в результатах виден только первый."""
         choice = ready_survey.choice_question
-        assert submit(admin_api, ready_survey.token, [
+        assert submit(respondent_api, ready_survey.token, [
             {"questionId": choice["id"], "selectedOption": "Отлично"},
             {"questionId": choice["id"], "selectedOption": "Плохо"},
         ]).status_code == 200
-        answers = evaluator_answers(admin_api, ready_survey.survey_id,
+        answers = evaluator_answers(respondent_api, ready_survey.survey_id,
                                    SEED_EMPLOYEES["petrov"]["fullName"])
         assert answers[choice["text"]]["selectedOption"] == "Отлично"
 
@@ -170,30 +170,30 @@ class TestSubmitAnswers:
         "Спецсимволы <>&\"' и перевод\nстроки",
         "Д" * 4000,
     ])
-    def test_free_text_is_stored_verbatim(self, ready_survey, admin_api, text):
+    def test_free_text_is_stored_verbatim(self, ready_survey, respondent_api, text):
         choice, free = ready_survey.questions
-        submit(admin_api, ready_survey.token, [
+        submit(respondent_api, ready_survey.token, [
             {"questionId": choice["id"], "selectedOption": "Отлично"},
             {"questionId": free["id"], "textAnswer": text},
         ])
-        answers = evaluator_answers(admin_api, ready_survey.survey_id,
+        answers = evaluator_answers(respondent_api, ready_survey.survey_id,
                                    SEED_EMPLOYEES["petrov"]["fullName"])
         assert answers[free["text"]]["answerText"] == text
 
 
 class TestAnswersIsolation:
-    def test_each_evaluator_has_own_assignment(self, surveys, admin_api):
+    def test_each_evaluator_has_own_assignment(self, surveys, respondent_api, ivanova_api):
         setup = surveys.ready_survey(evaluator_ids=(PETROV, IVANOVA))
-        submit(admin_api, setup.token_for(PETROV), setup.answers())
-        rows = admin_api.get(f"/api/surveys/{setup.survey_id}/matrix").json()
+        submit(respondent_api, setup.token_for(PETROV), setup.answers())
+        rows = surveys.client.get(f"/api/surveys/{setup.survey_id}/matrix").json()
         assert {r["evaluatorId"]: r["completed"] for r in rows} == {PETROV: True, IVANOVA: False}
-        assert open_survey(admin_api, setup.token_for(IVANOVA)).status_code == 200
+        assert open_survey(ivanova_api, setup.token_for(IVANOVA)).status_code == 200
 
-    def test_answers_of_two_evaluators_both_reach_results(self, surveys, admin_api):
+    def test_answers_of_two_evaluators_both_reach_results(self, surveys, respondent_api, ivanova_api):
         setup = surveys.ready_survey(evaluator_ids=(PETROV, IVANOVA))
-        submit(admin_api, setup.token_for(PETROV), setup.answers(selectedOption="Отлично"))
-        submit(admin_api, setup.token_for(IVANOVA), setup.answers(selectedOption="Плохо"))
-        employee = results_of(admin_api, setup.survey_id)["results"][0]
+        submit(respondent_api, setup.token_for(PETROV), setup.answers(selectedOption="Отлично"))
+        submit(ivanova_api, setup.token_for(IVANOVA), setup.answers(selectedOption="Плохо"))
+        employee = results_of(surveys.client, setup.survey_id)["results"][0]
         assert employee["employeeName"] == SEED_EMPLOYEES["ivanov"]["fullName"]
         collected = {e["evaluatorName"]: e["answers"] for e in employee["evaluators"]}
         assert set(collected) == {SEED_EMPLOYEES["petrov"]["fullName"],
@@ -218,31 +218,33 @@ class TestPublicAccessWithoutLogin:
         assert open_survey(api, ready_survey.token).status_code == 200
         assert submit(api, ready_survey.token, ready_survey.answers()).status_code == 200
 
-    def test_any_logged_in_user_can_use_someone_elses_token(self, surveys, respondent_api):
-        """ДЕФЕКТ RESP-6: токен — единственное удостоверение, личность оценивающего не сверяется."""
+    def test_foreign_token_is_rejected(self, surveys, respondent_api):
+        """Персональная ссылка проверяет, что оценивающий — текущий сотрудник."""
         setup = surveys.ready_survey(evaluator_ids=(IVANOVA,))
         response = submit(respondent_api, setup.token_for(IVANOVA), setup.answers())
-        assert response.status_code == 200
+        assert response.status_code == 400
+        assert "назначен другому сотруднику" in message_text(response)
         rows = surveys.client.get(f"/api/surveys/{setup.survey_id}/matrix").json()
-        assert rows[0]["completed"] is True, "чужой токен позволил пройти опрос за Иванову"
+        assert rows[0]["completed"] is False, "чужой токен не должен закрывать назначение"
 
-    @pytest.mark.xfail(reason="ДЕФЕКТ RESP-6: ответ по чужому токену должен отклоняться 403", strict=False)
+    @pytest.mark.xfail(reason="ДЕФЕКТ RESP-6: ответ по чужому токену отклоняется 400 BadRequest, "
+                              "а не 403 Forbidden", strict=False)
     def test_answering_with_foreign_token_should_be_forbidden(self, surveys, respondent_api):
         setup = surveys.ready_survey(evaluator_ids=(IVANOVA,))
         assert submit(respondent_api, setup.token_for(IVANOVA), setup.answers()).status_code == 403
 
 
 class TestAnswersAfterSurveyCompleted:
-    def test_answers_are_still_accepted_after_completion(self, surveys, admin_api):
+    def test_answers_are_still_accepted_after_completion(self, surveys, respondent_api):
         """ДЕФЕКТ RESP-7: текст подтверждения в UI обещает, что после завершения
         респонденты не смогут оставлять ответы, но API принимает их."""
         setup = surveys.ready_survey()
         surveys.complete(setup.survey_id)
-        assert submit(admin_api, setup.token, setup.answers()).status_code == 200
+        assert submit(respondent_api, setup.token, setup.answers()).status_code == 200
 
     @pytest.mark.xfail(reason="ДЕФЕКТ RESP-7: после перевода опроса в «Завершён» приём ответов должен быть закрыт",
                        strict=False)
-    def test_answers_after_completion_should_be_rejected(self, surveys, admin_api):
+    def test_answers_after_completion_should_be_rejected(self, surveys, respondent_api):
         setup = surveys.ready_survey()
         surveys.complete(setup.survey_id)
-        assert submit(admin_api, setup.token, setup.answers()).status_code == 400
+        assert submit(respondent_api, setup.token, setup.answers()).status_code == 400

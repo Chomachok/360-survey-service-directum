@@ -1,86 +1,67 @@
-  services:
-    # Backend: ASP.NET Core API
-    backend:
-      build:
-        context: .
-        dockerfile: backend/Dockerfile
 
-      container_name: directum-backend
+name: directum360
 
-      environment:
-        ASPNETCORE_URLS: "http://+:8080"
-        ASPNETCORE_ENVIRONMENT: "Development"
-        ConnectionStrings__DefaultConnection: "Data Source=/app/data/directum360.db"
-        BaseUrl: "http://localhost:8080"
-        SmtpSettings__Host: "mailpit"
-        SmtpSettings__Port: "1025"
-        SmtpSettings__EnableSsl: "false"
-        SmtpSettings__Username: ""
-        SmtpSettings__Password: ""
-        SmtpSettings__FromEmail: "noreply@directum360.ru"
-        SmtpSettings__FromName: "Directum360 Feedback"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: directum-backend
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      ConnectionStrings__DefaultConnection: "Data Source=/app/data/directum360.db"
+      BaseUrl: "${BASE_URL:-http://localhost:8080}"
+      JwtSettings__Secret: "${JWT_SECRET:-development-only-secret-change-this-123456}"
+      SmtpSettings__Host: "mailpit"
+      SmtpSettings__Port: "1025"
+      SmtpSettings__EnableSsl: "false"
+      SmtpSettings__Username: ""
+      SmtpSettings__Password: ""
+      SmtpSettings__FromEmail: "noreply@directum360.ru"
+      SmtpSettings__FromName: "Directum360 Feedback"
+    ports:
+      - "${BIND_IP:-0.0.0.0}:5223:8080"
+    volumes:
+      - backend-data:/app/data
+    depends_on:
+      - mailpit
+    restart: unless-stopped
+    networks:
+      - directum-network
+    mem_limit: 768m
 
-      ports:
-        - "5223:8080"
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: directum-frontend
+    ports:
+      - "${BIND_IP:-0.0.0.0}:8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - directum-network
+    mem_limit: 256m
 
-      volumes:
-        - backend-data:/app/data
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: directum-mailpit
+    ports:
+      - "${BIND_IP:-0.0.0.0}:1025:1025"
+      - "${BIND_IP:-0.0.0.0}:8025:8025"
+    volumes:
+      - mailpit-data:/data
+    restart: unless-stopped
+    networks:
+      - directum-network
+    mem_limit: 128m
 
-      depends_on:
-        - mailpit
+volumes:
+  backend-data:
+  mailpit-data:
 
-      restart: unless-stopped
-
-      networks:
-        - directum-network
-    
-    
-    # Frontend: React + Nginx
-    frontend:
-      build:
-        context: ./frontend
-        dockerfile: Dockerfile
-      
-      container_name: directum-frontend
-      
-      ports:
-        - "8080:80"
-      
-      depends_on:
-        - backend
-      
-      restart: unless-stopped
-      
-      networks:
-        - directum-network
-    
-    
-    # Mailpit: тестирование отправки электронной почты
-    mailpit:
-      image: axllent/mailpit:latest
-      
-      container_name: directum-mailpit
-      
-      ports:
-        - "1025:1025"
-        - "8025:8025"
-      
-      volumes:
-        - mailpit-data:/data
-      
-      restart: unless-stopped
-      
-      networks:
-        - directum-network
-  
-  
-  # Постоянное хранение данных
-  volumes:
-    backend-data:
-    mailpit-data:
-  
-  
-  # Общая сеть контейнеров
-  networks:
-    directum-network:
-      driver: bridge
+networks:
+  directum-network:
+    driver: bridge

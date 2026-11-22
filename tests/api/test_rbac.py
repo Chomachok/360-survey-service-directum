@@ -112,19 +112,21 @@ class TestBusinessEndpointsHaveNoRoleChecks:
         survey = surveys.draft(title="Чужой черновик 2")
         assert respondent_only_api.post(f"/api/surveys/{survey['id']}/publish").status_code == 403
 
-    def test_respondent_can_read_results_of_any_survey(self, respondent_only_api, surveys, admin_api):
+    def test_respondent_can_read_results_of_any_survey(self, respondent_only_api, surveys,
+                                                       respondent_api):
         """ДЕФЕКТ RBAC-4: персональные ответы 360-оценки читаются любым вошедшим сотрудником."""
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         response = respondent_only_api.get(f"/api/surveys/{setup.survey_id}/Results")
         assert response.status_code == 200
         assert response.json()["results"], "результаты должны быть, иначе проверка бессмысленна"
 
     @pytest.mark.xfail(reason="ДЕФЕКТ RBAC-4: результаты должны быть доступны только автору опроса "
                               "и администраторам", strict=False)
-    def test_results_should_be_restricted_to_author(self, respondent_only_api, surveys, admin_api):
+    def test_results_should_be_restricted_to_author(self, respondent_only_api, surveys,
+                                                     respondent_api):
         setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         assert respondent_only_api.get(
             f"/api/surveys/{setup.survey_id}/Results").status_code == 403
 
