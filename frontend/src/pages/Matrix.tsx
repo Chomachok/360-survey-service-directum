@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+﻿import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getMatrix, addMatrixItem, deleteMatrixItem } from '../api/matrix'
 import { getEmployees } from '../api/employees'
@@ -37,7 +37,7 @@ export default function Matrix() {
     queryFn: getRespondentTemplates,
   })
 
-  // Состояния
+  // РЎРѕСЃС‚РѕСЏРЅРёСЏ
   const [evaluatorId, setEvaluatorId] = useState<number | ''>('')
   const [targetId, setTargetId] = useState<number | ''>('')
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
@@ -47,20 +47,19 @@ export default function Matrix() {
     evaluatorName?: string
     targetName?: string
   }>({ isOpen: false })
-  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
   type FillMode = 'list' | 'matrix'
   const [fillMode, setFillMode] = useState<FillMode>('matrix')
 
   const isDraft = survey?.status === 'Draft'
 
-  // При загрузке опроса, если у него уже есть целевой сотрудник, устанавливаем его в поле "Кого оценивают"
+  // РџСЂРё Р·Р°РіСЂСѓР·РєРµ РѕРїСЂРѕСЃР°, РµСЃР»Рё Сѓ РЅРµРіРѕ СѓР¶Рµ РµСЃС‚СЊ С†РµР»РµРІРѕР№ СЃРѕС‚СЂСѓРґРЅРёРє, СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РµРіРѕ РІ РїРѕР»Рµ "РљРѕРіРѕ РѕС†РµРЅРёРІР°СЋС‚"
   useEffect(() => {
     if (survey?.targetId) {
       setTargetId(survey.targetId)
     }
   }, [survey])
 
-  // Опции для react-select
+  // РћРїС†РёРё РґР»СЏ react-select
   const evaluatorOptions = (employees || []).map(e => ({
     value: e.id,
     label: e.fullName,
@@ -90,21 +89,19 @@ export default function Matrix() {
     ? templates?.find(t => t.id === selectedTemplateId)
     : null
 
-  // шаблон с зашитыми оцениваемыми применяется сразу ко всем им, без ручного выбора
+  // С€Р°Р±Р»РѕРЅ СЃ Р·Р°С€РёС‚С‹РјРё РѕС†РµРЅРёРІР°РµРјС‹РјРё РїСЂРёРјРµРЅСЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ РєРѕ РІСЃРµРј РёРј, Р±РµР· СЂСѓС‡РЅРѕРіРѕ РІС‹Р±РѕСЂР°
   const templateHasOwnTargets = (selectedTemplateObj?.targets.length ?? 0) > 0
 
-  // Находим имя целевого сотрудника для отображения
-  const targetEmployee = employees?.find(e => e.id === targetId)
-
+  // РќР°С…РѕРґРёРј РёРјСЏ С†РµР»РµРІРѕРіРѕ СЃРѕС‚СЂСѓРґРЅРёРєР° РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ
   const addMutation = useMutation({
     mutationFn: (data: any) => addMatrixItem(surveyId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setEvaluatorId('')
-      toast.success('Связь добавлена в матрицу')
+      toast.success('РЎРІСЏР·СЊ РґРѕР±Р°РІР»РµРЅР° РІ РјР°С‚СЂРёС†Сѓ')
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || error.message || 'Не удалось добавить связь'
+      const message = error.response?.data?.message || error.message || 'РќРµ СѓРґР°Р»РѕСЃСЊ РґРѕР±Р°РІРёС‚СЊ СЃРІСЏР·СЊ'
       toast.error(message)
     },
   })
@@ -114,10 +111,10 @@ export default function Matrix() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
       setDeleteModal({ isOpen: false })
-      toast.success('Связь удалена')
+      toast.success('РЎРІСЏР·СЊ СѓРґР°Р»РµРЅР°')
     },
-    onError: (error: any) => {
-      toast.error('Не удалось удалить связь')
+    onError: () => {
+      toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ СЃРІСЏР·СЊ')
       setDeleteModal({ isOpen: false })
     },
   })
@@ -127,31 +124,29 @@ export default function Matrix() {
       applyRespondentTemplate(surveyId, data),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['matrix', surveyId] })
-      setIsApplyingTemplate(false)
       setSelectedTemplateId(null)
       const message = 
         result.created === 0 && result.skipped > 0
-          ? `Все связи уже существуют (пропущено ${result.skipped})`
+          ? `Р’СЃРµ СЃРІСЏР·Рё СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‚ (РїСЂРѕРїСѓС‰РµРЅРѕ ${result.skipped})`
           : result.skipped > 0
-          ? `Шаблон применён: добавлено ${result.created}, пропущено (уже было) ${result.skipped}`
-          : `Шаблон матрицы успешно применён! Добавлено ${result.created} связей`
+          ? `РЁР°Р±Р»РѕРЅ РїСЂРёРјРµРЅС‘РЅ: РґРѕР±Р°РІР»РµРЅРѕ ${result.created}, РїСЂРѕРїСѓС‰РµРЅРѕ (СѓР¶Рµ Р±С‹Р»Рѕ) ${result.skipped}`
+          : `РЁР°Р±Р»РѕРЅ РјР°С‚СЂРёС†С‹ СѓСЃРїРµС€РЅРѕ РїСЂРёРјРµРЅС‘РЅ! Р”РѕР±Р°РІР»РµРЅРѕ ${result.created} СЃРІСЏР·РµР№`
       toast.success(message)
     },
     onError: (error: any) => {
-      console.error('Ошибка применения шаблона:', error)
-      const message = error.response?.data?.message || error.message || 'Не удалось применить шаблон'
+      console.error('РћС€РёР±РєР° РїСЂРёРјРµРЅРµРЅРёСЏ С€Р°Р±Р»РѕРЅР°:', error)
+      const message = error.response?.data?.message || error.message || 'РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРёРјРµРЅРёС‚СЊ С€Р°Р±Р»РѕРЅ'
       toast.error(message)
-      setIsApplyingTemplate(false)
     },
   })
 
   const handleAdd = () => {
     if (!evaluatorId) {
-      toast.error('Выберите оценивающего сотрудника')
+      toast.error('Р’С‹Р±РµСЂРёС‚Рµ РѕС†РµРЅРёРІР°СЋС‰РµРіРѕ СЃРѕС‚СЂСѓРґРЅРёРєР°')
       return
     }
     if (!targetId) {
-      toast.error('Выберите сотрудника, которого оценивают')
+      toast.error('Р’С‹Р±РµСЂРёС‚Рµ СЃРѕС‚СЂСѓРґРЅРёРєР°, РєРѕС‚РѕСЂРѕРіРѕ РѕС†РµРЅРёРІР°СЋС‚')
       return
     }
     addMutation.mutate({
@@ -162,16 +157,15 @@ export default function Matrix() {
 
   const handleApplyTemplate = () => {
     if (!selectedTemplateId) {
-      toast.error('Выберите шаблон матрицы')
+      toast.error('Р’С‹Р±РµСЂРёС‚Рµ С€Р°Р±Р»РѕРЅ РјР°С‚СЂРёС†С‹')
       return
     }
     if (!templateHasOwnTargets && !targetId) {
-      toast.error('Сначала выберите сотрудника, которого оценивают')
+      toast.error('РЎРЅР°С‡Р°Р»Р° РІС‹Р±РµСЂРёС‚Рµ СЃРѕС‚СЂСѓРґРЅРёРєР°, РєРѕС‚РѕСЂРѕРіРѕ РѕС†РµРЅРёРІР°СЋС‚')
       return
     }
-    setIsApplyingTemplate(true)
-    // Если шаблон имеет собственных оцениваемых, не передаём targetIds
-    // Если шаблон универсальный, передаём выбранного оцениваемого
+    // Р•СЃР»Рё С€Р°Р±Р»РѕРЅ РёРјРµРµС‚ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… РѕС†РµРЅРёРІР°РµРјС‹С…, РЅРµ РїРµСЂРµРґР°С‘Рј targetIds
+    // Р•СЃР»Рё С€Р°Р±Р»РѕРЅ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№, РїРµСЂРµРґР°С‘Рј РІС‹Р±СЂР°РЅРЅРѕРіРѕ РѕС†РµРЅРёРІР°РµРјРѕРіРѕ
     applyTemplateMutation.mutate({
       templateId: selectedTemplateId,
       targetIds: templateHasOwnTargets ? [] : [Number(targetId)],
@@ -197,8 +191,8 @@ export default function Matrix() {
   const handleCopyLink = (token: string) => {
     const url = `${window.location.origin}/survey/${token}`
     navigator.clipboard.writeText(url)
-      .then(() => toast.success('Ссылка скопирована в буфер обмена!', { icon: '📋' }))
-      .catch(() => toast.error('Не удалось скопировать ссылку'))
+      .then(() => toast.success('РЎСЃС‹Р»РєР° СЃРєРѕРїРёСЂРѕРІР°РЅР° РІ Р±СѓС„РµСЂ РѕР±РјРµРЅР°!', { icon: 'рџ“‹' }))
+      .catch(() => toast.error('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРєРѕРїРёСЂРѕРІР°С‚СЊ СЃСЃС‹Р»РєСѓ'))
   }
 
   if (surveyLoading || mLoading || templatesLoading) {
@@ -214,25 +208,25 @@ export default function Matrix() {
         className="flex items-center text-gray-500 hover:text-directum-dark mb-6 transition-colors animate-fadeInUp"
       >
         <ArrowLeft size={20} className="mr-2" />
-        Назад к дашборду
+        РќР°Р·Р°Рґ Рє РґР°С€Р±РѕСЂРґСѓ
       </button>
 
       <div className="card animate-fadeInUp">
-        <h1 className="text-2xl font-bold text-directum-dark mb-2">Матрица опроса</h1>
+        <h1 className="page-title mb-2">Матрица опроса</h1>
         <p className="text-gray-500 mb-6">
-          Назначьте, кто кого оценивает в рамках опроса 360 градусов
+          РќР°Р·РЅР°С‡СЊС‚Рµ, РєС‚Рѕ РєРѕРіРѕ РѕС†РµРЅРёРІР°РµС‚ РІ СЂР°РјРєР°С… РѕРїСЂРѕСЃР° 360 РіСЂР°РґСѓСЃРѕРІ
         </p>
 
         <div className="flex flex-wrap gap-4 items-end p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-              Шаблон матрицы
+              РЁР°Р±Р»РѕРЅ РјР°С‚СЂРёС†С‹
             </label>
             <Select
               options={templateOptions}
               value={selectedTemplate}
               onChange={handleTemplateChange}
-              placeholder="Выберите шаблон"
+              placeholder="Р’С‹Р±РµСЂРёС‚Рµ С€Р°Р±Р»РѕРЅ"
               isClearable
               isSearchable
               styles={reactSelectStyles}
@@ -242,8 +236,8 @@ export default function Matrix() {
             />
             {selectedTemplateObj && templateHasOwnTargets && (
               <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                💡 Шаблон содержит {selectedTemplateObj.targets.length} оцениваемых. 
-                Применится ко всем им.
+                рџ’Ў РЁР°Р±Р»РѕРЅ СЃРѕРґРµСЂР¶РёС‚ {selectedTemplateObj.targets.length} РѕС†РµРЅРёРІР°РµРјС‹С…. 
+                РџСЂРёРјРµРЅРёС‚СЃСЏ РєРѕ РІСЃРµРј РёРј.
               </p>
             )}
           </div>
@@ -253,18 +247,18 @@ export default function Matrix() {
             className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw size={18} className={applyTemplateMutation.isPending ? 'animate-spin' : ''} />
-            <span>{applyTemplateMutation.isPending ? 'Применение...' : 'Применить'}</span>
+            <span>{applyTemplateMutation.isPending ? 'РџСЂРёРјРµРЅРµРЅРёРµ...' : 'РџСЂРёРјРµРЅРёС‚СЊ'}</span>
           </button>
         </div>
 
         {isDraft ? (
           <div className="space-y-4">
-            {/* Переключатель */}
+            {/* РџРµСЂРµРєР»СЋС‡Р°С‚РµР»СЊ */}
             <div className="flex flex-wrap items-center gap-4 py-2 border-b border-gray-200 pb-3">
-              <span className="text-sm text-gray-500">Отображение:</span>
+              <span className="text-sm text-gray-500">РћС‚РѕР±СЂР°Р¶РµРЅРёРµ:</span>
               <div className="flex items-center gap-2">
                 <span className={`text-sm font-medium ${fillMode === 'list' ? 'text-gray-800' : 'text-gray-400'}`}>
-                  Список
+                  РЎРїРёСЃРѕРє
                 </span>
                 <button
                   onClick={() => setFillMode(fillMode === 'matrix' ? 'list' : 'matrix')}
@@ -281,25 +275,25 @@ export default function Matrix() {
                   />
                 </button>
                 <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
-                  Матрица
+                  РњР°С‚СЂРёС†Р°
                 </span>
               </div>
             </div>
 
-            {/* Режим списка */}
+            {/* Р РµР¶РёРј СЃРїРёСЃРєР° */}
             {fillMode === 'list' && (
               <>
-                {/* Форма добавления */}
+                {/* Р¤РѕСЂРјР° РґРѕР±Р°РІР»РµРЅРёСЏ */}
                 <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg animate-fadeInUp-delay">
                   <div className="flex-1 min-w-[150px]">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                      Кого оценивают
+                      РљРѕРіРѕ РѕС†РµРЅРёРІР°СЋС‚
                     </label>
                     <Select
                       options={targetOptions}
                       value={selectedTarget}
                       onChange={handleTargetChange}
-                      placeholder="Выберите сотрудника"
+                      placeholder="Р’С‹Р±РµСЂРёС‚Рµ СЃРѕС‚СЂСѓРґРЅРёРєР°"
                       isClearable
                       isSearchable
                       styles={reactSelectStyles}
@@ -311,13 +305,13 @@ export default function Matrix() {
                   
                   <div className="flex-1 min-w-[150px]">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                      Кто оценивает
+                      РљС‚Рѕ РѕС†РµРЅРёРІР°РµС‚
                     </label>
                     <Select
                       options={evaluatorOptions}
                       value={selectedEvaluator}
                       onChange={handleEvaluatorChange}
-                      placeholder="Выберите сотрудника"
+                      placeholder="Р’С‹Р±РµСЂРёС‚Рµ СЃРѕС‚СЂСѓРґРЅРёРєР°"
                       isClearable
                       isSearchable
                       styles={reactSelectStyles}
@@ -334,27 +328,27 @@ export default function Matrix() {
                       disabled={addMutation.isPending || !evaluatorId || !targetId}
                     >
                       <Plus size={18} />
-                      <span>Добавить</span>
+                      <span>Р”РѕР±Р°РІРёС‚СЊ</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Таблица (список) */}
+                {/* РўР°Р±Р»РёС†Р° (СЃРїРёСЃРѕРє) */}
                 {matrix?.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    <p>Матрица пуста</p>
-                    <p className="text-sm">Добавьте связи с помощью формы выше или примените шаблон</p>
+                    <p>РњР°С‚СЂРёС†Р° РїСѓСЃС‚Р°</p>
+                    <p className="text-sm">Р”РѕР±Р°РІСЊС‚Рµ СЃРІСЏР·Рё СЃ РїРѕРјРѕС‰СЊСЋ С„РѕСЂРјС‹ РІС‹С€Рµ РёР»Рё РїСЂРёРјРµРЅРёС‚Рµ С€Р°Р±Р»РѕРЅ</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto animate-fadeInUp">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
-                          <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РћС†РµРЅРёРІР°РµРјС‹Р№</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РћС†РµРЅРёРІР°РµС‚</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РЎСЃС‹Р»РєР°</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РЎС‚Р°С‚СѓСЃ</th>
+                          <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Р”РµР№СЃС‚РІРёРµ</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -372,7 +366,7 @@ export default function Matrix() {
                                 className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
                               >
                                 <Link size={14} className="group-hover:animate-pulse" />
-                                <span>Копировать ссылку</span>
+                                <span>РљРѕРїРёСЂРѕРІР°С‚СЊ СЃСЃС‹Р»РєСѓ</span>
                               </button>
                             </td>
                             <td className="py-3 px-4">
@@ -381,14 +375,14 @@ export default function Matrix() {
                                   ? 'bg-green-100 text-green-700'
                                   : 'bg-yellow-100 text-yellow-700'
                               }`}>
-                                {item.completed ? 'Завершено' : 'Ожидает'}
+                                {item.completed ? 'Р—Р°РІРµСЂС€РµРЅРѕ' : 'РћР¶РёРґР°РµС‚'}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-right">
                               <button
                                 onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
                                 className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                                title="Удалить связь"
+                                title="РЈРґР°Р»РёС‚СЊ СЃРІСЏР·СЊ"
                                 disabled={deleteMutation.isPending || !isDraft || item.completed}
                               >
                                 <Trash2 size={18} />
@@ -403,11 +397,11 @@ export default function Matrix() {
               </>
             )}
 
-            {/* Режим матрицы */}
+            {/* Р РµР¶РёРј РјР°С‚СЂРёС†С‹ */}
             {fillMode === 'matrix' && (
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Матрица оценок
+                  РњР°С‚СЂРёС†Р° РѕС†РµРЅРѕРє
                 </h3>
                <SurveyMatrix
                  data={matrix || []}
@@ -425,17 +419,17 @@ export default function Matrix() {
         ) : (
           <div>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-700">
-              ⚠️ Добавление участников доступно только для опросов в статусе «Черновик».
+              вљ пёЏ Р”РѕР±Р°РІР»РµРЅРёРµ СѓС‡Р°СЃС‚РЅРёРєРѕРІ РґРѕСЃС‚СѓРїРЅРѕ С‚РѕР»СЊРєРѕ РґР»СЏ РѕРїСЂРѕСЃРѕРІ РІ СЃС‚Р°С‚СѓСЃРµ В«Р§РµСЂРЅРѕРІРёРєВ».
               <br />
-              Текущий статус: <strong>{survey?.status === 'Active' ? 'Активен' : 'Завершён'}</strong>
+              РўРµРєСѓС‰РёР№ СЃС‚Р°С‚СѓСЃ: <strong>{survey?.status === 'Active' ? 'РђРєС‚РёРІРµРЅ' : 'Р—Р°РІРµСЂС€С‘РЅ'}</strong>
             </div>
             <div className="space-y-4">
-                {/* Переключатель */}
+                {/* РџРµСЂРµРєР»СЋС‡Р°С‚РµР»СЊ */}
                 <div className="flex flex-wrap items-center gap-4 py-2 border-b border-gray-200 pb-3">
-                  <span className="text-sm text-gray-500">Отображение:</span>
+                  <span className="text-sm text-gray-500">РћС‚РѕР±СЂР°Р¶РµРЅРёРµ:</span>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-medium ${fillMode === 'list' ? 'text-gray-800' : 'text-gray-400'}`}>
-                      Список
+                      РЎРїРёСЃРѕРє
                     </span>
                     <button
                       onClick={() => setFillMode(fillMode === 'matrix' ? 'list' : 'matrix')}
@@ -452,30 +446,30 @@ export default function Matrix() {
                       />
                     </button>
                     <span className={`text-sm font-medium ${fillMode === 'matrix' ? 'text-gray-800' : 'text-gray-400'}`}>
-                      Матрица
+                      РњР°С‚СЂРёС†Р°
                     </span>
                   </div>
                 </div>
 
-                {/* Режим списка */}
+                {/* Р РµР¶РёРј СЃРїРёСЃРєР° */}
                 {fillMode === 'list' && (
                   <>
-                    {/* Таблица (список) */}
+                    {/* РўР°Р±Р»РёС†Р° (СЃРїРёСЃРѕРє) */}
                     {matrix?.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
-                        <p>Матрица пуста</p>
-                        <p className="text-sm">Добавьте связи с помощью формы выше</p>
+                        <p>РњР°С‚СЂРёС†Р° РїСѓСЃС‚Р°</p>
+                        <p className="text-sm">Р”РѕР±Р°РІСЊС‚Рµ СЃРІСЏР·Рё СЃ РїРѕРјРѕС‰СЊСЋ С„РѕСЂРјС‹ РІС‹С€Рµ</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto animate-fadeInUp">
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оцениваемый</th>
-                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Оценивает</th>
-                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Ссылка</th>
-                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Статус</th>
-                              <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Действие</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РћС†РµРЅРёРІР°РµРјС‹Р№</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РћС†РµРЅРёРІР°РµС‚</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РЎСЃС‹Р»РєР°</th>
+                              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">РЎС‚Р°С‚СѓСЃ</th>
+                              <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Р”РµР№СЃС‚РІРёРµ</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -493,7 +487,7 @@ export default function Matrix() {
                                     className="text-directum-orange hover:underline text-sm flex items-center space-x-1 transition-all duration-200 hover:scale-105 group"
                                   >
                                     <Link size={14} className="group-hover:animate-pulse" />
-                                    <span>Копировать ссылку</span>
+                                    <span>РљРѕРїРёСЂРѕРІР°С‚СЊ СЃСЃС‹Р»РєСѓ</span>
                                   </button>
                                 </td>
                                 <td className="py-3 px-4">
@@ -502,14 +496,14 @@ export default function Matrix() {
                                       ? 'bg-green-100 text-green-700'
                                       : 'bg-yellow-100 text-yellow-700'
                                   }`}>
-                                    {item.completed ? 'Завершено' : 'Ожидает'}
+                                    {item.completed ? 'Р—Р°РІРµСЂС€РµРЅРѕ' : 'РћР¶РёРґР°РµС‚'}
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   <button
                                     onClick={() => handleDeleteClick(item.id, item.evaluatorName, item.targetName)}
                                     className="text-gray-400 hover:text-red-500 transition-colors p-1 hover:scale-110 transform"
-                                    title="Удалить связь"
+                                    title="РЈРґР°Р»РёС‚СЊ СЃРІСЏР·СЊ"
                                     disabled={deleteMutation.isPending || !isDraft || item.completed}
                                   >
                                     <Trash2 size={18} />
@@ -524,11 +518,11 @@ export default function Matrix() {
                   </>
                 )}
 
-                {/* Режим матрицы */}
+                {/* Р РµР¶РёРј РјР°С‚СЂРёС†С‹ */}
                 {fillMode === 'matrix' && (
                   <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Матрица оценок
+                      РњР°С‚СЂРёС†Р° РѕС†РµРЅРѕРє
                     </h3>
                   <SurveyMatrix
                     data={matrix || []}
@@ -551,12 +545,13 @@ export default function Matrix() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false })}
         onConfirm={() => deleteModal.id && deleteMutation.mutate(deleteModal.id)}
-        title="Удаление связи"
-        message={`Вы уверены, что хотите удалить связь "${deleteModal.evaluatorName} → ${deleteModal.targetName}"?`}
-        confirmText="Удалить"
+        title="РЈРґР°Р»РµРЅРёРµ СЃРІСЏР·Рё"
+        message={`Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ СЃРІСЏР·СЊ "${deleteModal.evaluatorName} в†’ ${deleteModal.targetName}"?`}
+        confirmText="РЈРґР°Р»РёС‚СЊ"
         type="danger"
         isLoading={deleteMutation.isPending}
       />
     </div>
   )
 }
+

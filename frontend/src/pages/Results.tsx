@@ -70,12 +70,12 @@ export default function Results() {
         Назад к дашборду
       </button>
 
-      <div className="flex justify-between items-center mb-6 animate-fadeInUp">
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center animate-fadeInUp">
         <div className="min-w-0 overflow-hidden">
-          <h1 className="text-2xl font-bold text-directum-dark">Результаты опроса</h1>
+          <h1 className="page-title">Результаты опроса</h1>
           <p className="text-gray-500 break-words overflow-hidden">{data.surveyTitle}</p>
         </div>
-        <button onClick={handleExportDocx} className="btn-primary flex items-center space-x-2">
+        <button onClick={handleExportDocx} className="btn-primary w-full shrink-0 sm:w-auto">
           <Download size={18} />
           <span>Экспорт DOCX</span>
         </button>

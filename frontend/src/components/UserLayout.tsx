@@ -20,73 +20,63 @@ const UserLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <AnimatedBackground />
-      <header className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 flex-shrink-0 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/user" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <Directum360Logo size={42} />
-              <span className="text-sm text-gray-400 hidden sm:inline-block ml-1">| Личный кабинет</span>
-            </Link>
+      <header className="surface sticky top-0 z-50 flex-shrink-0 rounded-none border-x-0 border-t-0 bg-white/85 dark:bg-gray-800/85">
+        <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link to="/user" aria-label="Личный кабинет" className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80">
+            <Directum360Logo size={44} />
+            <span className="hidden border-l border-gray-200 pl-3 text-sm font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400 sm:block">Личный кабинет</span>
+          </Link>
 
-            <div className="flex items-center space-x-3">
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-sm font-medium text-directum-dark dark:text-white">
-                  {userName}
-                </span>
-                <span className="text-xs text-gray-400">{userEmail}</span>
-              </div>
-
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
-                aria-label="Переключить тему"
-              >
-                {theme === 'light' ? <Moon size={20} className="text-gray-600" /> : <Sun size={20} className="text-yellow-400" />}
-              </button>
-
-              <div className="w-9 h-9 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm shadow-md">
-                {userName.charAt(0).toUpperCase()}
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 text-gray-600 dark:text-gray-300"
-                title="Выйти"
-              >
-                <LogOut size={20} />
-              </button>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden flex-col items-end md:flex">
+              <span className="max-w-56 truncate text-sm font-semibold text-directum-dark dark:text-white">{userName}</span>
+              <span className="max-w-56 truncate text-xs text-gray-400">{userEmail}</span>
             </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-directum-orange text-sm font-semibold text-white shadow-sm" aria-hidden="true">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="rounded-xl p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+              aria-label={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}
+              title={theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}
+            >
+              {theme === 'light' ? <Moon size={19} /> : <Sun size={19} className="text-amber-300" />}
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+              aria-label="Выйти"
+              title="Выйти"
+            >
+              <LogOut size={19} />
+            </button>
+          </div>
+        </div>
+        <div className="border-t border-gray-100/80 bg-white/40 px-4 py-2 dark:border-gray-700/80 dark:bg-gray-900/20 md:hidden">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-directum-dark dark:text-white">{userName}</p>
+              <p className="truncate text-xs text-gray-400">{userEmail}</p>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-directum-orange dark:bg-orange-950/40 dark:text-orange-300">
+              <ClipboardList size={14} /> Участник
+            </span>
           </div>
         </div>
       </header>
 
-      <div className="md:hidden bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-directum-orange flex items-center justify-center text-white font-semibold text-sm">
-            {userName.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-directum-dark dark:text-white">{userName}</p>
-            <p className="text-xs text-gray-400">{userEmail}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <ClipboardList size={16} className="text-directum-orange" />
-          <span className="text-xs text-gray-500">Участник</span>
-        </div>
-      </div>
-
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <Outlet />
       </main>
 
-      <footer className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 flex-shrink-0 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            © {new Date().getFullYear()} Directum360 Feedback Service. Все права защищены.
-          </p>
+      <footer className="border-t border-gray-200/70 bg-white/65 py-4 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/60">
+        <div className="mx-auto max-w-[1440px] px-4 text-center text-xs text-gray-400 sm:px-6 sm:text-sm lg:px-8">
+          © {new Date().getFullYear()} Directum360 Feedback Service
         </div>
       </footer>
     </div>

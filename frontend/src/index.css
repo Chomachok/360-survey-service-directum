@@ -5,255 +5,211 @@
 @tailwind utilities;
 
 @layer base {
-  /* Палитра для react-select: он рисуется инлайновыми стилями и не видит
-     классы Tailwind, поэтому цвета отдаём ему через переменные. */
   :root {
+    color-scheme: light;
     --rs-bg: #ffffff;
     --rs-bg-disabled: #f3f4f6;
-    --rs-border: #d1d5db;
-    --rs-border-hover: #9ca3af;
+    --rs-border: #e5e7eb;
+    --rs-border-hover: #cbd5e1;
     --rs-text: #1e2128;
     --rs-placeholder: #9ca3af;
     --rs-menu-bg: #ffffff;
-    --rs-option-hover: #fce3a0;
+    --rs-option-hover: #fff3df;
     --rs-indicator: #6b7280;
-    --rs-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    --rs-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
   }
 
   html.dark {
-    /* нативные контролы (date-инпуты, скроллбары, выпадашки) в тёмной схеме */
     color-scheme: dark;
-
-    --rs-bg: #111827;
-    --rs-bg-disabled: #1f2937;
-    --rs-border: #4b5563;
-    --rs-border-hover: #6b7280;
+    --rs-bg: #171a20;
+    --rs-bg-disabled: #252a33;
+    --rs-border: #3b424d;
+    --rs-border-hover: #596170;
     --rs-text: #f3f4f6;
-    --rs-placeholder: #6b7280;
-    --rs-menu-bg: #1f2937;
-    --rs-option-hover: #374151;
-    --rs-indicator: #9ca3af;
-    --rs-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
+    --rs-placeholder: #8b93a1;
+    --rs-menu-bg: #20242c;
+    --rs-option-hover: #343943;
+    --rs-indicator: #a5adba;
+    --rs-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-width: 320px;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
     @apply bg-gray-50 text-directum-dark dark:bg-gray-900 dark:text-gray-100;
+    min-height: 100vh;
     font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'ss01' on;
+    -webkit-font-smoothing: antialiased;
     transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid rgba(255, 134, 0, 0.34);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    color: #1e2128;
+    background: #ffe0b2;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-directum-orange text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-directum-orange px-4 py-2.5 font-semibold text-white shadow-sm transition-all duration-200;
+    box-shadow: 0 5px 14px rgba(255, 134, 0, 0.2);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-orange-600;
+    box-shadow: 0 8px 20px rgba(255, 134, 0, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled,
+  .btn-secondary:disabled {
+    @apply cursor-not-allowed opacity-50;
+    transform: none;
   }
 
   .btn-secondary {
-    @apply bg-directum-dark text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-300 transform hover:scale-105
-           dark:bg-gray-700 dark:hover:bg-gray-600;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-700 transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-700;
   }
 
-  /*
-   * КАРТОЧКА.
-   * Было: transition-all + hover:-translate-y-1.
-   * Карточка уезжала вверх на 4px, курсор оказывался ЗА её нижней границей,
-   * :hover сбрасывался, карточка падала обратно под курсор — и так по кругу.
-   * Отсюда «тряска» заголовка при малейшем движении мыши у края.
-   *
-   * Лечим двумя способами сразу:
-   * 1) transition только по transform/shadow/border, а не по всему подряд;
-   * 2) ::after расширяет зону наведения на 8px вокруг карточки — после подъёма
-   *    курсор всё ещё внутри hover-зоны, цикл не запускается.
-   */
   .card {
-    @apply relative bg-white dark:bg-gray-800
-           rounded-xl shadow-sm
-           border border-gray-100 dark:border-gray-700
-           text-directum-dark dark:text-gray-100
-           p-6
-           hover:shadow-md hover:-translate-y-1;
-    transition-property: transform, box-shadow, border-color, background-color;
-    transition-duration: 300ms;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-    backface-visibility: hidden;
+    @apply relative rounded-2xl border border-gray-200/80 bg-white p-6 text-directum-dark shadow-sm dark:border-gray-700/80 dark:bg-gray-800 dark:text-gray-100;
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
   }
 
-  /* невидимый «запас» hover-зоны — убирает мерцание при подъёме карточки */
-  .card::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: -8px;
-    bottom: -16px;
-    z-index: -1;
+  .card:hover {
+    @apply border-gray-300 dark:border-gray-600;
+    box-shadow: 0 12px 28px rgba(30, 33, 40, 0.07);
   }
 
   .input-field {
-    @apply w-full rounded-lg px-4 py-2
-           border border-gray-300 dark:border-gray-600
-           bg-white dark:bg-gray-900
-           text-directum-dark dark:text-gray-100
-           placeholder-gray-400 dark:placeholder-gray-500
-           focus:outline-none focus:ring-2 focus:ring-directum-orange focus:border-transparent
-           transition-colors duration-200;
+    @apply w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-directum-dark shadow-sm transition-all duration-200 placeholder:text-gray-400 hover:border-gray-300 focus:border-directum-orange focus:outline-none focus:ring-4 focus:ring-orange-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:hover:border-gray-600 dark:focus:border-directum-orange dark:focus:ring-orange-950/50;
   }
 
   .label-field {
-    @apply block text-sm font-medium text-directum-dark dark:text-gray-200 mb-1;
+    @apply mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200;
   }
 
-  .page-enter {
-    @apply animate-fadeInUp;
-  }
-
+  .page-enter,
   .card-enter {
     @apply animate-fadeInUp;
   }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-directum-dark dark:text-white sm:text-3xl;
+    font-family: 'Golos Text', 'Inter', system-ui, sans-serif;
+  }
+
+  .page-description {
+    @apply mt-1.5 text-sm leading-6 text-gray-500 dark:text-gray-400 sm:text-base;
+  }
+
+  .surface {
+    @apply rounded-2xl border border-gray-200/80 bg-white/90 shadow-sm backdrop-blur-xl dark:border-gray-700/80 dark:bg-gray-800/90;
+  }
 }
 
-/* ============================================================
-   ТЁМНАЯ ТЕМА — глобальные переопределения утилит.
-   Блок намеренно ВНЕ @layer, чтобы идти последним и перебивать
-   светлые утилиты (bg-white / text-gray-500 / text-directum-dark и т.д.)
-   там, где в разметке не проставлены dark:-варианты.
-   ============================================================ */
-
-/* Поверхности */
-.dark .bg-white       { background-color: #1f2937; }
-.dark .bg-gray-50     { background-color: #111827; }
-.dark .bg-gray-100    { background-color: #374151; }
-.dark .bg-gray-200    { background-color: #4b5563; }
-
-/* Текст: главное — тёмно-синий text-directum-dark становится светлым */
-.dark .text-directum-dark { color: #f9fafb; }
-.dark .text-gray-900      { color: #f9fafb; }
-.dark .text-gray-800      { color: #f3f4f6; }
-.dark .text-gray-700      { color: #e5e7eb; }
-.dark .text-gray-600      { color: #d1d5db; }
-.dark .text-gray-500      { color: #9ca3af; }
-
-/* Границы */
+.dark .bg-white { background-color: #20242c; }
+.dark .bg-gray-50 { background-color: #171a20; }
+.dark .bg-gray-100 { background-color: #292e37; }
+.dark .bg-gray-200 { background-color: #3b424d; }
+.dark .text-directum-dark { color: #f3f4f6; }
+.dark .text-gray-900 { color: #f9fafb; }
+.dark .text-gray-800 { color: #f3f4f6; }
+.dark .text-gray-700 { color: #e5e7eb; }
+.dark .text-gray-600 { color: #cbd0d8; }
+.dark .text-gray-500 { color: #a0a8b5; }
 .dark .border-gray-100,
 .dark .border-gray-200,
-.dark .border-gray-300 { border-color: #374151; }
-.dark .divide-gray-200 > * + * { border-color: #374151; }
-
-/* Hover-состояния, которые в тёмной теме «съедали» текст */
+.dark .border-gray-300 { border-color: #343a45; }
+.dark .divide-gray-200 > * + * { border-color: #343a45; }
 .dark .hover\:text-directum-dark:hover { color: #ffffff; }
-.dark .hover\:bg-gray-50:hover         { background-color: #374151; }
-.dark .hover\:bg-gray-100:hover        { background-color: #374151; }
-.dark .hover\:text-gray-600:hover      { color: #e5e7eb; }
-
-/* Статусные плашки и алерты */
-.dark .bg-orange-100 { background-color: rgba(255, 134, 0, 0.18); }
-.dark .bg-green-100  { background-color: rgba(34, 197, 94, 0.18); }
-.dark .bg-blue-100   { background-color: rgba(59, 130, 246, 0.18); }
-
-.dark .bg-red-50     { background-color: rgba(239, 68, 68, 0.12); }
-.dark .bg-yellow-50  { background-color: rgba(234, 179, 8, 0.12); }
-.dark .bg-blue-50    { background-color: rgba(59, 130, 246, 0.12); }
-
-.dark .border-red-200    { border-color: rgba(239, 68, 68, 0.35); }
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover { background-color: #303640; }
+.dark .hover\:text-gray-600:hover { color: #e5e7eb; }
+.dark .bg-orange-100 { background-color: rgba(255, 134, 0, 0.16); }
+.dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.16); }
+.dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.16); }
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1); }
+.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.1); }
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1); }
+.dark .border-red-200 { border-color: rgba(239, 68, 68, 0.35); }
 .dark .border-yellow-200 { border-color: rgba(234, 179, 8, 0.35); }
-.dark .border-blue-200   { border-color: rgba(59, 130, 246, 0.35); }
-
-.dark .text-green-700  { color: #86efac; }
-.dark .text-green-600  { color: #4ade80; }
-.dark .text-blue-700   { color: #93c5fd; }
-.dark .text-blue-600   { color: #93c5fd; }
-.dark .text-yellow-700 { color: #fde68a; }
-.dark .text-red-600    { color: #fca5a5; }
-.dark .text-red-700    { color: #fca5a5; }
-.dark .text-yellow-600 { color: #fcd34d; }
-.dark .bg-yellow-100   { background-color: rgba(234, 179, 8, 0.20); }
-.dark .bg-red-100      { background-color: rgba(239, 68, 68, 0.18); }
-.dark .text-green-800  { color: #86efac; }
+.dark .border-blue-200 { border-color: rgba(59, 130, 246, 0.35); }
+.dark .text-green-700,
+.dark .text-green-800 { color: #86efac; }
+.dark .text-green-600 { color: #4ade80; }
+.dark .text-blue-700,
+.dark .text-blue-600 { color: #93c5fd; }
+.dark .text-yellow-700,
 .dark .text-yellow-800 { color: #fde68a; }
-.dark .text-red-800    { color: #fca5a5; }
-
-.dark .hover\:bg-red-50:hover     { background-color: rgba(239, 68, 68, 0.18); }
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800 { color: #fca5a5; }
+.dark .text-yellow-600 { color: #fcd34d; }
+.dark .bg-yellow-100 { background-color: rgba(234, 179, 8, 0.18); }
+.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.16); }
+.dark .hover\:bg-red-50:hover { background-color: rgba(239, 68, 68, 0.16); }
 .dark .hover\:text-blue-700:hover { color: #bfdbfe; }
-
-/* Нативные select/option и placeholder */
 .dark select option,
-.dark optgroup { background-color: #1f2937; color: #f3f4f6; }
+.dark optgroup { background-color: #20242c; color: #f3f4f6; }
 .dark input::placeholder,
-.dark textarea::placeholder { color: #6b7280; }
+.dark textarea::placeholder { color: #737c8a; }
 
-/* ============================================================
-   АНИМИРОВАННЫЙ ФОН (компонент AnimatedBackground)
-   ============================================================ */
 .bg-grid {
-  background-image:
-    linear-gradient(to right, rgba(30, 33, 40, 0.055) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 33, 40, 0.055) 1px, transparent 1px);
+  background-image: linear-gradient(to right, rgba(30, 33, 40, 0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 33, 40, 0.045) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 .dark .bg-grid {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
 }
 
-@keyframes gridDrift {
-  from { background-position: 0 0; }
-  to   { background-position: 48px 48px; }
-}
-.animate-grid-drift { animation: gridDrift 20s linear infinite; }
-
-@keyframes blobA {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  33%      { transform: translate3d(6vw, 4vh, 0) scale(1.12); }
-  66%      { transform: translate3d(-3vw, 8vh, 0) scale(0.94); }
-}
-@keyframes blobB {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  33%      { transform: translate3d(-7vw, 6vh, 0) scale(0.92); }
-  66%      { transform: translate3d(-2vw, -6vh, 0) scale(1.1); }
-}
-@keyframes blobC {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%      { transform: translate3d(8vw, -7vh, 0) scale(1.08); }
-}
+@keyframes gridDrift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+.animate-grid-drift { animation: gridDrift 24s linear infinite; }
+@keyframes blobA { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 33% { transform: translate3d(6vw, 4vh, 0) scale(1.12); } 66% { transform: translate3d(-3vw, 8vh, 0) scale(0.94); } }
+@keyframes blobB { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 33% { transform: translate3d(-7vw, 6vh, 0) scale(0.92); } 66% { transform: translate3d(-2vw, -6vh, 0) scale(1.1); } }
+@keyframes blobC { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(8vw, -7vh, 0) scale(1.08); } }
 .animate-blob-a { animation: blobA 26s ease-in-out infinite; will-change: transform; }
 .animate-blob-b { animation: blobB 32s ease-in-out infinite; will-change: transform; }
 .animate-blob-c { animation: blobC 38s ease-in-out infinite; will-change: transform; }
-
-/* летающие двойные галочки */
-@keyframes flyA {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(3vw, -5vh, 0) rotate(180deg); }
-}
-@keyframes flyB {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(-4vw, 4vh, 0) rotate(-180deg); }
-}
-@keyframes flyC {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  33%      { transform: translate3d(-2.5vw, -3vh, 0) rotate(120deg); }
-  66%      { transform: translate3d(2vw, 3.5vh, 0) rotate(240deg); }
-}
-@keyframes flyD {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(2vw, 6vh, 0) rotate(200deg); }
-}
+@keyframes flyA { 0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); } 50% { transform: translate3d(3vw, -5vh, 0) rotate(180deg); } }
+@keyframes flyB { 0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); } 50% { transform: translate3d(-4vw, 4vh, 0) rotate(-180deg); } }
+@keyframes flyC { 0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); } 33% { transform: translate3d(-2.5vw, -3vh, 0) rotate(120deg); } 66% { transform: translate3d(2vw, 3.5vh, 0) rotate(240deg); } }
+@keyframes flyD { 0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); } 50% { transform: translate3d(2vw, 6vh, 0) rotate(200deg); } }
 .animate-fly-a { animation: flyA 34s ease-in-out infinite; will-change: transform; }
 .animate-fly-b { animation: flyB 42s ease-in-out infinite; will-change: transform; }
 .animate-fly-c { animation: flyC 50s ease-in-out infinite; will-change: transform; }
 .animate-fly-d { animation: flyD 38s ease-in-out infinite; will-change: transform; }
 
-/* ============================================================
-   Уважаем системную настройку «уменьшить движение»
-   ============================================================ */
+@media (max-width: 640px) {
+  .card { @apply rounded-xl p-4; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .card:hover { transform: none; }
 }
