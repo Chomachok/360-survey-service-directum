@@ -12,6 +12,7 @@ import { getEmployees } from '../api/employees'
 import type { RespondentTemplate, CreateRespondentTemplateItemDto } from '../types'
 import { ConfirmModal } from '../components/ConfirmModal'
 import LogoLoader from '../components/LogoLoader'
+import EmployeeSearchSelect from '../components/EmployeeSearchSelect'
 import { SurveyMatrix } from '../components/MatrixGrid'
 
 /** пустая строка состава по умолчанию */
@@ -348,7 +349,6 @@ export default function RespondentTemplates() {
 
       {templates && templates.length > 0 && (
         <div className="animate-fadeInUp mb-6 flex items-center gap-2 border-b border-gray-200 pb-3 dark:border-gray-700">
-          <span className="text-sm text-gray-500">Отображение:</span>
           <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setPageView('list')}
@@ -557,7 +557,7 @@ export default function RespondentTemplates() {
               </div>
 
               <div>
-                <label className="label-field">Описание (необязательно)</label>
+                <label className="label-field">Описание</label>
                 <input
                   className="input-field"
                   value={description}
@@ -632,18 +632,11 @@ export default function RespondentTemplates() {
                               className="rounded-lg border border-gray-200 p-2.5 dark:border-gray-700"
                             >
                               <div className="flex items-center gap-2">
-                                <select
-                                  value={row.employeeId ?? ''}
-                                  onChange={(e) => updateTargetRow(index, Number(e.target.value))}
-                                  className="input-field flex-1"
-                                >
-                                  <option value="">Выберите сотрудника</option>
-                                  {employees?.map((e) => (
-                                    <option key={e.id} value={e.id}>
-                                      {e.fullName}
-                                    </option>
-                                  ))}
-                                </select>
+                                <EmployeeSearchSelect
+                                  options={(employees ?? []).map(e => ({ value: e.id, label: `${e.fullName} · ${e.email}` }))}
+                                  value={row.employeeId}
+                                  onChange={id => updateTargetRow(index, id)}
+                                />
                                 <button
                                   onClick={() => removeTargetRow(index)}
                                   className="p-1 text-gray-400 transition-colors hover:text-red-500"
@@ -717,22 +710,11 @@ export default function RespondentTemplates() {
                     <div className="space-y-2">
                       {items.map((item, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <select
-                            value={item.employeeId ?? ''}
-                            onChange={(e) =>
-                              updateItem(index, {
-                                employeeId: e.target.value === '' ? -1 : Number(e.target.value),
-                              })
-                            }
-                            className="input-field flex-1"
-                          >
-                            <option value="">Выберите сотрудника</option>
-                            {employees?.map((e) => (
-                              <option key={e.id} value={e.id}>
-                                {e.fullName}
-                              </option>
-                            ))}
-                          </select>
+                          <EmployeeSearchSelect
+                            options={(employees ?? []).map(e => ({ value: e.id, label: `${e.fullName} · ${e.email}` }))}
+                            value={item.employeeId ?? -1}
+                            onChange={id => updateItem(index, { employeeId: id })}
+                          />
 
                           <button
                             onClick={() => removeItemRow(index)}
@@ -763,7 +745,7 @@ export default function RespondentTemplates() {
                   {editorPreviewData.length > 0 ? (
                     <SurveyMatrix
                       data={editorPreviewData}
-                      employees={employees?.map(e => ({ value: e.id, label: e.fullName })) || []}
+                      employees={employees?.map(e => ({ value: e.id, label: `${e.fullName} · ${e.email}` })) || []}
                       isDraft={true}
                       onAdd={handleMatrixAdd}
                       onDelete={handleMatrixDeleteCell}

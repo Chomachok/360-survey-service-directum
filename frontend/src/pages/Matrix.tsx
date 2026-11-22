@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { ConfirmModal } from '../components/ConfirmModal'
 import Select from 'react-select'
 import { reactSelectStyles } from '../styles/reactSelectStyles'
+import { employeeFilter, employeeNoOptions } from '../components/EmployeeSearchSelect'
 import { SurveyMatrix } from '../components/MatrixGrid'
 import LogoLoader from '../components/LogoLoader'
 
@@ -63,11 +64,11 @@ export default function Matrix() {
   // Опции для react-select
   const evaluatorOptions = (employees || []).map(e => ({
     value: e.id,
-    label: e.fullName,
+    label: `${e.fullName} · ${e.email}`,
   }))
   const targetOptions = (employees || []).map(e => ({
     value: e.id,
-    label: e.fullName,
+    label: `${e.fullName} · ${e.email}`,
   }))
   const templateOptions = (templates || []).map(t => ({
     value: t.id,
@@ -297,6 +298,8 @@ export default function Matrix() {
                     </label>
                     <Select
                       options={targetOptions}
+                      filterOption={employeeFilter}
+                      noOptionsMessage={({ inputValue }) => employeeNoOptions(inputValue)}
                       value={selectedTarget}
                       onChange={handleTargetChange}
                       placeholder="Выберите сотрудника"
@@ -315,6 +318,8 @@ export default function Matrix() {
                     </label>
                     <Select
                       options={evaluatorOptions}
+                      filterOption={employeeFilter}
+                      noOptionsMessage={({ inputValue }) => employeeNoOptions(inputValue)}
                       value={selectedEvaluator}
                       onChange={handleEvaluatorChange}
                       placeholder="Выберите сотрудника"

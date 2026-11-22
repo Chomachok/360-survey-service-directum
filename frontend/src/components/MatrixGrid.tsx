@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, X, Check, Link as LinkIcon, Trash2, Users2, Boxes } from 'lucide-react';
 import Select from 'react-select';
 import { reactSelectStyles } from '../styles/reactSelectStyles';
+import { employeeFilter, employeeNoOptions } from './EmployeeSearchSelect';
 import toast from 'react-hot-toast';
 
 // Типы данных
@@ -189,6 +190,8 @@ export const SurveyMatrix: React.FC<SurveyMatrixProps> = ({
     <div className="animate-fadeIn z-50 flex min-w-[180px] flex-col gap-2 rounded-lg border border-dashed border-directum-orange/50 bg-white p-2 shadow-lg dark:bg-gray-800">
       <Select
         options={options}
+        filterOption={employeeFilter}
+        noOptionsMessage={({ inputValue }) => employeeNoOptions(inputValue)}
         value={selectedEmployee}
         onChange={(opt) => setSelectedEmployee(opt)}
         placeholder="Выберите..."

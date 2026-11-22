@@ -10,10 +10,29 @@ const generateTempId = () => Math.random().toString(36).substring(2) + Date.now(
 
 export default function SurveyTemplates() {
   const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [scope, setScope] = useState<'shared' | 'personal'>('shared')
+  const [personalIds, setPersonalIds] = useState<number[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`personalSurveyTemplates:${localStorage.getItem('userEmail')}`) || '[]')
+    } catch {
+      return []
+    }
+  })
+  const setPersonal = (id: number, personal: boolean) => {
+    const next = personal ? [...new Set([...personalIds, id])] : personalIds.filter(value => value !== id)
+    setPersonalIds(next)
+    localStorage.setItem(`personalSurveyTemplates:${localStorage.getItem('userEmail')}`, JSON.stringify(next))
+  }
   const { data: templates, isLoading } = useQuery({
     queryKey: ['surveyTemplates'],
     queryFn: getSurveyTemplates,
   })
+  const query = search.trim().toLocaleLowerCase()
+  const visibleTemplates = (templates ?? []).filter(template =>
+    (scope === 'personal') === personalIds.includes(template.id) &&
+    (query.length < 3 || `${template.name} ${template.description ?? ''}`.toLocaleLowerCase().includes(query)),
+  )
 
   // Состояния для формы создания
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false)
@@ -428,6 +447,12 @@ export default function SurveyTemplates() {
       )}
 
       {/* Список шаблонов */}
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => setScope('shared')} className={scope === 'shared' ? 'btn-primary' : 'btn-secondary'}>Общие шаблоны опросов</button>
+        <button type="button" onClick={() => setScope('personal')} className={scope === 'personal' ? 'btn-primary' : 'btn-secondary'}>Личные шаблоны опросов</button>
+        <input type="search" value={search} onChange={event => setSearch(event.target.value)} className="input-field max-w-xs" placeholder="Поиск от 3 символов" aria-label="Поиск шаблонов опросов" />
+        {query.length > 0 && query.length < 3 && <span className="text-sm text-gray-500">Введите минимум 3 символа</span>}
+      </div>
       {templates?.length === 0 ? (
         <div className="card text-center py-12">
           <Copy size={48} className="text-gray-300 mx-auto mb-4" />
@@ -438,7 +463,7 @@ export default function SurveyTemplates() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {templates?.map((t, index) => (
+          {visibleTemplates.map((t, index) => (
             <div
               key={t.id}
               className="card animate-fadeInUp"
@@ -449,6 +474,9 @@ export default function SurveyTemplates() {
                   <h3 className="text-lg font-semibold text-directum-dark">{t.name}</h3>
                   {t.description && <p className="mt-1 text-sm text-gray-500">{t.description}</p>}
                   <p className="text-xs text-gray-400 mt-1">{t.questions.length} вопросов</p>
+                  <button type="button" onClick={() => setPersonal(t.id, !personalIds.includes(t.id))} className="mt-2 text-sm text-directum-orange hover:underline">
+                    {personalIds.includes(t.id) ? 'Перенести в общие' : 'Перенести в личные'}
+                  </button>
                 </div>
                 <div className="ml-3 flex shrink-0 items-center space-x-1">
                   <button onClick={() => handleViewClick(t)} className="p-1 text-gray-400 transition-colors hover:text-blue-500" title="Просмотр">

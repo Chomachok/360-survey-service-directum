@@ -147,12 +147,12 @@ export default function SurveyCreate() {
           </div>
 
           <div className="animate-fadeInUp-delay-2">
-            <label className="label-field">Шаблон опроса (опционально)</label>
+            <label className="label-field">Шаблон опроса</label>
             <Select
               options={templateOptions}
               value={selectedTemplate}
               onChange={handleTemplateIdChange}
-              placeholder="Выберите шаблон (необязательно)"
+              placeholder="Выберите шаблон"
               isClearable
               isSearchable
               styles={reactSelectStyles}
