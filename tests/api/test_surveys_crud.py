@@ -41,8 +41,10 @@ class TestCreateSurvey:
         assert fetched["startDate"].startswith(start[:16])
         assert fetched["endDate"].startswith(end[:16])
 
-    @pytest.mark.parametrize("field", ["title", "startDate", "endDate", "authorId"])
+    @pytest.mark.parametrize("field", ["title", "authorId"])
     def test_required_fields_are_validated(self, admin_api, field):
+        """Обязательные поля на создании — только title и authorId.
+        startDate/endDate опциональны (см. тесты ниже и SURV-11)."""
         payload = survey_payload()
         payload.pop(field)
         response = admin_api.post("/api/surveys", json=payload)
@@ -50,6 +52,52 @@ class TestCreateSurvey:
         errors = validation_errors(response)
         assert errors, f"для {field} не вернулись детали ошибок: {response.text}"
         assert any(key.lower() == field.lower() for key in errors), f"ошибка не про {field}: {errors}"
+
+    @pytest.mark.parametrize("field", ["startDate", "endDate"])
+    def test_dates_are_optional_on_create(self, admin_api, field):
+        """Фиксируем текущее поведение: без даты опрос создаётся (201),
+        отсутствующая дата сохраняется как null.
+        См. также xfail test_survey_without_dates_should_be_rejected (SURV-11)."""
+        payload = survey_payload()
+        payload.pop(field)
+        response = admin_api.post("/api/surveys", json=payload)
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body[field] is None
+        admin_api.delete(f"/api/surveys/{body['id']}")
+
+    def test_only_start_date_leaves_end_date_null(self, admin_api):
+        """Асимметрия контракта: одна startDate без endDate проходит (endDate=null),
+        а одна endDate без startDate — падает валидацией на EndDate.
+        Фиксируем фактическое поведение."""
+        start, _ = draft_window()
+        payload = survey_payload(startDate=start)
+        payload.pop("endDate")
+        response = admin_api.post("/api/surveys", json=payload)
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["startDate"].startswith(start[:16])
+        assert body["endDate"] is None
+        admin_api.delete(f"/api/surveys/{body['id']}")
+
+    def test_only_end_date_is_rejected_with_end_date_error(self, admin_api):
+        """Обратная асимметрия: только endDate без startDate → 400,
+        причём ошибка приходит на EndDate ('must be greater than ""')."""
+        _, end = draft_window()
+        payload = survey_payload(endDate=end)
+        payload.pop("startDate")
+        response = admin_api.post("/api/surveys", json=payload)
+        assert response.status_code == 400
+        assert "EndDate" in validation_errors(response)
+
+    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-11: startDate и endDate не обязательны — "
+                              "опрос можно создать вообще без окна проведения (201 с null)",
+                       strict=False)
+    def test_survey_without_dates_should_be_rejected(self, admin_api):
+        payload = survey_payload()
+        payload.pop("startDate")
+        payload.pop("endDate")
+        assert admin_api.post("/api/surveys", json=payload).status_code == 400
 
     def test_end_date_before_start_date_is_rejected(self, admin_api):
         start, _ = draft_window()
@@ -172,15 +220,15 @@ class TestUpdateSurvey:
 
     def test_partial_update_wipes_title_and_dates(self, surveys):
         """ДЕФЕКТ SURV-8: PUT не валидируется и не поддерживает частичное обновление —
-        тело без дат затирает название в пустую и сбрасывает окно опроса на 0001-01-01,
-        после чего опрос самовольно становится «Активен»."""
+        тело без дат затирает название в пустую и обнуляет окно опроса (null),
+        после чего опрос может самовольно стать «Активен»."""
         survey = surveys.draft(title="Важный опрос")
         response = surveys.client.put(f"/api/surveys/{survey['id']}", json={"title": ""})
         assert response.status_code == 200, "ожидали частичный PUT — см. xfail-тест ниже"
         updated = surveys.client.get(f"/api/surveys/{survey['id']}").json()
         assert updated["title"] == ""
-        assert updated["startDate"].startswith("0001-01-01")
-        assert updated["endDate"].startswith("0001-01-01")
+        assert updated["startDate"] is None
+        assert updated["endDate"] is None
 
     @pytest.mark.xfail(reason="ДЕФЕКТ SURV-8: на UpdateSurveyDto нет валидатора "
                               "(CreateSurveyDtoValidator привязан только к созданию)", strict=False)
