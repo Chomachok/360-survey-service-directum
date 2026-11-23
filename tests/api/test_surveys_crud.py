@@ -43,8 +43,8 @@ class TestCreateSurvey:
 
     @pytest.mark.parametrize("field", ["title", "authorId"])
     def test_required_fields_are_validated(self, admin_api, field):
-        """Обязательные поля на создании — только title и authorId.
-        startDate/endDate опциональны (см. тесты ниже и SURV-11)."""
+        """Обязательные поля на создании — title и authorId.
+        startDate/endDate — отдельные тесты ниже (см. SURV-11)."""
         payload = survey_payload()
         payload.pop(field)
         response = admin_api.post("/api/surveys", json=payload)
@@ -53,45 +53,34 @@ class TestCreateSurvey:
         assert errors, f"для {field} не вернулись детали ошибок: {response.text}"
         assert any(key.lower() == field.lower() for key in errors), f"ошибка не про {field}: {errors}"
 
-    @pytest.mark.parametrize("field", ["startDate", "endDate"])
-    def test_dates_are_optional_on_create(self, admin_api, field):
-        """Фиксируем текущее поведение: без даты опрос создаётся (201),
-        отсутствующая дата сохраняется как null.
-        См. также xfail test_survey_without_dates_should_be_rejected (SURV-11)."""
+    def test_end_date_is_optional_on_create(self, admin_api):
+        """endDate опционален: без него опрос создаётся (201), endDate = null.
+        Правило EndDate > StartDate пропускается, т.к. EndDate = null —
+        стандартное поведение FluentValidation для null-полей."""
         payload = survey_payload()
-        payload.pop(field)
-        response = admin_api.post("/api/surveys", json=payload)
-        assert response.status_code == 201, response.text
-        body = response.json()
-        assert body[field] is None
-        admin_api.delete(f"/api/surveys/{body['id']}")
-
-    def test_only_start_date_leaves_end_date_null(self, admin_api):
-        """Асимметрия контракта: одна startDate без endDate проходит (endDate=null),
-        а одна endDate без startDate — падает валидацией на EndDate.
-        Фиксируем фактическое поведение."""
-        start, _ = draft_window()
-        payload = survey_payload(startDate=start)
         payload.pop("endDate")
         response = admin_api.post("/api/surveys", json=payload)
         assert response.status_code == 201, response.text
         body = response.json()
-        assert body["startDate"].startswith(start[:16])
         assert body["endDate"] is None
         admin_api.delete(f"/api/surveys/{body['id']}")
 
-    def test_only_end_date_is_rejected_with_end_date_error(self, admin_api):
-        """Обратная асимметрия: только endDate без startDate → 400,
-        причём ошибка приходит на EndDate ('must be greater than ""')."""
-        _, end = draft_window()
-        payload = survey_payload(endDate=end)
+    def test_start_date_missing_is_rejected_via_end_date_rule(self, admin_api):
+        """startDate фактически обязателен, но не через NotNull, а через правило
+        сравнения: при StartDate = null валидатор EndDate падает с
+        `'End Date' must be greater than ''.` — сообщение указывает не на то поле.
+        ДЕФЕКТ SURV-11: ошибка должна быть про StartDate (Required)."""
+        payload = survey_payload()
         payload.pop("startDate")
         response = admin_api.post("/api/surveys", json=payload)
         assert response.status_code == 400
-        assert "EndDate" in validation_errors(response)
+        errors = validation_errors(response)
+        assert "EndDate" in errors
+        assert "StartDate" not in errors, "startDate ошибочно репортится как отсутствующий"
 
-    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-11: startDate и endDate не обязательны — "
-                              "опрос можно создать вообще без окна проведения (201 с null)",
+    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-11: обе даты сразу не обязательны — при "
+                              "startDate = endDate = null правило сравнения пропускается, "
+                              "опрос создаётся (201) без окна проведения",
                        strict=False)
     def test_survey_without_dates_should_be_rejected(self, admin_api):
         payload = survey_payload()
@@ -272,12 +261,12 @@ class TestDeleteSurvey:
         assert admin_api.get(f"/api/surveys/{survey_id}").status_code == 404
         surveys.created_surveys.remove(survey_id)
 
-    def test_delete_survey_with_answers_is_impossible(self, surveys, admin_api, respondent_api):
+    def test_delete_survey_with_answers_is_impossible(self, surveys, admin_api):
         """ДЕФЕКТ SURV-10: опрос, по есть ответы, не удаляется — FK Answer→Question
         (Restrict) приводит к 409 с сырым текстом ошибки EF Core. В UI кнопка «Удалить»
         при этом есть и обещает «действие нельзя отменить»."""
         setup = surveys.ready_survey()
-        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
         assert response.status_code == 409
         assert "inner exception" in message_text(response).lower()
@@ -286,10 +275,9 @@ class TestDeleteSurvey:
 
     @pytest.mark.xfail(reason="ДЕФЕКТ SURV-10: удаление опроса должно либо каскадно сметать "
                               "ответы, либо отвечать 409 с человекочитаемым текстом", strict=False)
-    def test_delete_survey_with_answers_should_have_readable_error(self, surveys, admin_api,
-                                                                   respondent_api):
+    def test_delete_survey_with_answers_should_have_readable_error(self, surveys, admin_api):
         setup = surveys.ready_survey()
-        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
         assert response.status_code in (204, 409)
         if response.status_code == 409:
