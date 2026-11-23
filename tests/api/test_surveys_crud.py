@@ -41,8 +41,10 @@ class TestCreateSurvey:
         assert fetched["startDate"].startswith(start[:16])
         assert fetched["endDate"].startswith(end[:16])
 
-    @pytest.mark.parametrize("field", ["title", "startDate", "endDate", "authorId"])
+    @pytest.mark.parametrize("field", ["title", "authorId"])
     def test_required_fields_are_validated(self, admin_api, field):
+        """Обязательные поля на создании — title и authorId.
+        startDate/endDate — отдельные тесты ниже (см. SURV-11)."""
         payload = survey_payload()
         payload.pop(field)
         response = admin_api.post("/api/surveys", json=payload)
@@ -50,6 +52,41 @@ class TestCreateSurvey:
         errors = validation_errors(response)
         assert errors, f"для {field} не вернулись детали ошибок: {response.text}"
         assert any(key.lower() == field.lower() for key in errors), f"ошибка не про {field}: {errors}"
+
+    def test_end_date_is_optional_on_create(self, admin_api):
+        """endDate опционален: без него опрос создаётся (201), endDate = null.
+        Правило EndDate > StartDate пропускается, т.к. EndDate = null —
+        стандартное поведение FluentValidation для null-полей."""
+        payload = survey_payload()
+        payload.pop("endDate")
+        response = admin_api.post("/api/surveys", json=payload)
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["endDate"] is None
+        admin_api.delete(f"/api/surveys/{body['id']}")
+
+    def test_start_date_missing_is_rejected_via_end_date_rule(self, admin_api):
+        """startDate фактически обязателен, но не через NotNull, а через правило
+        сравнения: при StartDate = null валидатор EndDate падает с
+        `'End Date' must be greater than ''.` — сообщение указывает не на то поле.
+        ДЕФЕКТ SURV-11: ошибка должна быть про StartDate (Required)."""
+        payload = survey_payload()
+        payload.pop("startDate")
+        response = admin_api.post("/api/surveys", json=payload)
+        assert response.status_code == 400
+        errors = validation_errors(response)
+        assert "EndDate" in errors
+        assert "StartDate" not in errors, "startDate ошибочно репортится как отсутствующий"
+
+    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-11: обе даты сразу не обязательны — при "
+                              "startDate = endDate = null правило сравнения пропускается, "
+                              "опрос создаётся (201) без окна проведения",
+                       strict=False)
+    def test_survey_without_dates_should_be_rejected(self, admin_api):
+        payload = survey_payload()
+        payload.pop("startDate")
+        payload.pop("endDate")
+        assert admin_api.post("/api/surveys", json=payload).status_code == 400
 
     def test_end_date_before_start_date_is_rejected(self, admin_api):
         start, _ = draft_window()
@@ -172,15 +209,15 @@ class TestUpdateSurvey:
 
     def test_partial_update_wipes_title_and_dates(self, surveys):
         """ДЕФЕКТ SURV-8: PUT не валидируется и не поддерживает частичное обновление —
-        тело без дат затирает название в пустую и сбрасывает окно опроса на 0001-01-01,
-        после чего опрос самовольно становится «Активен»."""
+        тело без дат затирает название в пустую и обнуляет окно опроса (null),
+        после чего опрос может самовольно стать «Активен»."""
         survey = surveys.draft(title="Важный опрос")
         response = surveys.client.put(f"/api/surveys/{survey['id']}", json={"title": ""})
         assert response.status_code == 200, "ожидали частичный PUT — см. xfail-тест ниже"
         updated = surveys.client.get(f"/api/surveys/{survey['id']}").json()
         assert updated["title"] == ""
-        assert updated["startDate"].startswith("0001-01-01")
-        assert updated["endDate"].startswith("0001-01-01")
+        assert updated["startDate"] is None
+        assert updated["endDate"] is None
 
     @pytest.mark.xfail(reason="ДЕФЕКТ SURV-8: на UpdateSurveyDto нет валидатора "
                               "(CreateSurveyDtoValidator привязан только к созданию)", strict=False)
@@ -224,28 +261,17 @@ class TestDeleteSurvey:
         assert admin_api.get(f"/api/surveys/{survey_id}").status_code == 404
         surveys.created_surveys.remove(survey_id)
 
-    def test_delete_survey_with_answers_is_impossible(self, surveys, admin_api, respondent_api):
-        """ДЕФЕКТ SURV-10: опрос, по есть ответы, не удаляется — FK Answer→Question
-        (Restrict) приводит к 409 с сырым текстом ошибки EF Core. В UI кнопка «Удалить»
-        при этом есть и обещает «действие нельзя отменить»."""
+    def test_delete_survey_with_answers_cascades(self, surveys, admin_api):
+        """БЫЛ ДЕФЕКТ SURV-10 (исправлен): раньше удаление опроса, по которому уже
+        собраны ответы, падало с 409 из-за FK Answer→Question (Restrict) и сырого
+        текста ошибки EF Core. Теперь API удаляет опрос (204) и, судя по GET → 404,
+        каскадно сносит связанные данные — контракт «действие нельзя отменить»
+        наконец согласован с поведением."""
         setup = surveys.ready_survey()
-        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
+        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
-        assert response.status_code == 409
-        assert "inner exception" in message_text(response).lower()
-        assert admin_api.get(f"/api/surveys/{setup.survey_id}").status_code == 200
-        surveys.created_surveys.remove(setup.survey_id)
-
-    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-10: удаление опроса должно либо каскадно сметать "
-                              "ответы, либо отвечать 409 с человекочитаемым текстом", strict=False)
-    def test_delete_survey_with_answers_should_have_readable_error(self, surveys, admin_api,
-                                                                   respondent_api):
-        setup = surveys.ready_survey()
-        respondent_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
-        response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
-        assert response.status_code in (204, 409)
-        if response.status_code == 409:
-            assert "ответ" in message_text(response).lower()
+        assert response.status_code == 204, response.text
+        assert admin_api.get(f"/api/surveys/{setup.survey_id}").status_code == 404
         surveys.created_surveys.remove(setup.survey_id)
 
     def test_delete_unknown_survey_currently_returns_204(self, admin_api):
@@ -265,3 +291,4 @@ class TestDeleteSurvey:
         surveys.created_surveys.remove(survey_id)
         assert admin_api.get(f"/api/questions/surveys/{survey_id}").json() == []
         assert admin_api.get(f"/api/surveys/{survey_id}/matrix").json() == []
+        

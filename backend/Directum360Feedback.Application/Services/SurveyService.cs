@@ -34,11 +34,15 @@ public class SurveyService(
         if (survey.Status != SurveyStatus.Draft)
             throw new Exception("Only drafts can be published");
 
+        if (survey.Status == SurveyStatus.Draft && (survey.StartDate == null || survey.EndDate == null))
+        {
+            throw new Exception("Даты начала и конца опроса не могут быть пустыми для начала опроса");
+        }
+
         survey.Status = SurveyStatus.Active;
         surveyRepo.Update(survey);
         await surveyRepo.SaveChangesAsync();
 
-        // --- Отправка писем всем назначениям, у которых ещё не отправлено ---
         _ = Task.Run(async () =>
         {
             try
@@ -188,14 +192,20 @@ public class SurveyService(
 
     private async Task<Survey> CheckAndUpdateAsync(Survey survey)
     {
-        if (survey.Status == SurveyStatus.Active && survey.EndDate.ToUniversalTime() <= DateTime.UtcNow)
+        if (survey.StartDate is null || survey.EndDate is null)
+            return survey;
+
+        var now = DateTime.UtcNow;
+        var startUtc = survey.StartDate.Value.ToUniversalTime();
+        var endUtc = survey.EndDate.Value.ToUniversalTime();
+
+        if (survey.Status == SurveyStatus.Active && endUtc <= now)
         {
             survey.Status = SurveyStatus.Completed;
             surveyRepo.Update(survey);
             await surveyRepo.SaveChangesAsync();
         }
-
-        if (survey.Status == SurveyStatus.Draft && survey.StartDate.ToUniversalTime() <= DateTime.UtcNow)
+        else if (survey.Status == SurveyStatus.Draft && startUtc <= now)
         {
             survey.Status = SurveyStatus.Active;
             surveyRepo.Update(survey);
@@ -215,13 +225,11 @@ public class SurveyService(
 
         var templateQuestions = await templateQuestionRepo.FindAsync(q => q.SurveyTemplateId == templateId);
 
-        // Удаляем существующие вопросы опроса
         var existingQuestions = await surveyQuestionRepo.FindAsync(q => q.SurveyId == surveyId);
         foreach (var q in existingQuestions)
             surveyQuestionRepo.Delete(q);
         await surveyQuestionRepo.SaveChangesAsync();
 
-        // Копируем вопросы из шаблона
         foreach (var tq in templateQuestions.OrderBy(q => q.Order))
         {
             var question = new SurveyQuestion
@@ -248,7 +256,6 @@ public class SurveyService(
         if (!questions.Any())
             throw new Exception("В опросе нет вопросов, нечего сохранять");
 
-        // Создаём шаблон
         var template = new SurveyTemplate
         {
             Name = templateName,
@@ -274,7 +281,6 @@ public class SurveyService(
         await surveyTemplateRepo.AddAsync(template);
         await surveyTemplateRepo.SaveChangesAsync();
 
-        // Загружаем созданный шаблон с вопросами для ответа
         var createdTemplate = await surveyTemplateRepo.GetByIdAsync(template.Id);
         var templateQuestions = await templateQuestionRepo.FindAsync(q => q.SurveyTemplateId == template.Id);
         var dto = mapper.Map<SurveyTemplateDto>(createdTemplate);

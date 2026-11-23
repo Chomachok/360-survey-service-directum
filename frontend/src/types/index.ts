@@ -18,8 +18,8 @@ export interface Survey {
   title: string
   description?: string
   status: SurveyStatus
-  startDate: string
-  endDate: string
+  startDate?: string
+  endDate?: string
   authorId: number
   authorName: string
   targetId?: number
@@ -28,8 +28,8 @@ export interface Survey {
 export interface CreateSurveyDto {
   title: string
   description?: string
-  startDate: string
-  endDate: string
+  startDate?: string  
+  endDate?: string
   authorId: number
   templateId?: number
 }
@@ -37,8 +37,8 @@ export interface CreateSurveyDto {
 export interface UpdateSurveyDto {
   title: string
   description?: string
-  startDate: string
-  endDate: string
+  startDate?: string
+  endDate?: string
   targetId?: number
 }
 
