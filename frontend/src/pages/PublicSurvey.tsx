@@ -39,23 +39,42 @@ export default function PublicSurvey() {
   }
 
   const handleSubmit = () => {
-    const missingRequired = survey?.questions
+    if (!survey) return
+
+    // 1. Проверка обязательных вопросов
+    const missingRequired = survey.questions
       .filter((q) => q.required)
       .filter((q) => !answers[q.id] || answers[q.id].trim() === '')
       .map((q) => q.text)
 
-    if (missingRequired && missingRequired.length > 0) {
+    if (missingRequired.length > 0) {
       const msg = `Пожалуйста, ответьте на обязательные вопросы: ${missingRequired.join(', ')}`
       setSubmitError(msg)
       toast.error(msg)
       return
     }
 
-    const answerList = Object.entries(answers).map(([qId, val]) => ({
-      questionId: Number(qId),
-      textAnswer: val,
-      selectedOption: val,
-    }))
+    // 2. Формирование payload:
+    //    - итерируемся по survey.questions (источник правды типа вопроса),
+    //      а не по state answers (иначе пропустим неотвеченные или тип не тот);
+    //    - textAnswer и selectedOption взаимоисключающие по типу вопроса:
+    //      для Text → только textAnswer, для SingleChoice → только selectedOption.
+    //      Старая версия шла оба поля, что нарушает контракт SubmitAnswersDto.
+    const answerList = survey.questions
+      .filter((q) => {
+        const v = answers[q.id]
+        return v !== undefined && v.trim() !== ''
+      })
+      .map((q) => {
+        const val = answers[q.id]
+        const isText = q.type === QuestionType.Text
+        return {
+          questionId: q.id,
+          textAnswer: isText ? val : null,
+          selectedOption: isText ? null : val,
+        }
+      })
+
     mutation.mutate(answerList)
   }
 
@@ -111,7 +130,6 @@ export default function PublicSurvey() {
 
   return (
     <div className="card animate-fadeInUp mt-4">
-      {/* Кнопка возврата */}
       <Link
         to="/user"
         className="inline-flex items-center text-directum-orange hover:underline mb-4 text-sm"

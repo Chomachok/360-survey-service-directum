@@ -70,6 +70,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasConversion<string>();
 
         modelBuilder.Entity<Employee>()
+            .Property(e => e.Email)
+            .UseCollation("NOCASE");
+
+        modelBuilder.Entity<Employee>()
+            .HasIndex(e => e.Email)
+            .IsUnique();
+
+        modelBuilder.Entity<Employee>()
             .PrimitiveCollection(e => e.Roles)
             .Metadata.SetValueComparer(new ValueComparer<List<EmployeeRole>>(
                 (a, b) => a.SequenceEqual(b),

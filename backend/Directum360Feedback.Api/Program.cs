@@ -20,7 +20,8 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     })
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CreateSurveyDtoValidator>());
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CreateSurveyDtoValidator>())
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<EmployeeImportDtoValidator>());
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 var key = Encoding.UTF8.GetBytes(jwtSettings.Secret);

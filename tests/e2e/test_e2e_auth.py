@@ -5,11 +5,27 @@
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 from helpers import ADMIN_EMAIL, RESPONDENT_EMAIL, now_utc
 from playwright.sync_api import Page, expect
 
 pytestmark = [pytest.mark.e2e, pytest.mark.auth]
+
+
+def expect_personal_office(page: Page) -> None:
+    """Личный кабинет респондента опознаём по адресу и шапке, а не по заголовку.
+
+    `UserDashboard` при пустом списке опросов делает ранний return с текстом
+    «У вас пока нет назначенных опросов» — заголовок «Мои опросы» в этом случае
+    не рендерится (frontend/src/pages/UserDashboard.tsx:69-86). Поэтому проверка
+    заголовка проходила только на «грязной» dev-базе, где у Петрова уже были
+    назначения от прошлых прогонов, и падала в CI на чистой базе.
+    """
+    expect(page).to_have_url(re.compile(r"/user$"), timeout=15000)
+    expect(page.get_by_text("Личный кабинет").first).to_be_visible(timeout=15000)
+    expect(page.get_by_role("heading", name="Дашборд")).to_have_count(0)
 
 
 @pytest.fixture
@@ -85,12 +101,12 @@ class TestRouteGuards:
     def test_respondent_lands_in_personal_office(self, sign_in, page: Page):
         """У респондента isAdmin=false, поэтому дашборд автора ему закрыт (AdminRoute)."""
         sign_in(RESPONDENT_EMAIL)
-        expect(page.get_by_role("heading", name="Мои опросы")).to_be_visible(timeout=15000)
+        expect_personal_office(page)
 
     def test_respondent_cannot_open_author_dashboard(self, sign_in, page: Page, web_base_url):
         sign_in(RESPONDENT_EMAIL, path="/user")
         page.goto(f"{web_base_url}/survey/new", wait_until="domcontentloaded")
-        expect(page.get_by_role("heading", name="Мои опросы")).to_be_visible(timeout=15000)
+        expect_personal_office(page)
 
     def test_admin_dashboard_has_author_navigation(self, admin_page: Page):
         for label in ("Дашборд", "Создать опрос", "Импорт сотрудников"):
