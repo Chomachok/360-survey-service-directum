@@ -261,27 +261,17 @@ class TestDeleteSurvey:
         assert admin_api.get(f"/api/surveys/{survey_id}").status_code == 404
         surveys.created_surveys.remove(survey_id)
 
-    def test_delete_survey_with_answers_is_impossible(self, surveys, admin_api):
-        """ДЕФЕКТ SURV-10: опрос, по есть ответы, не удаляется — FK Answer→Question
-        (Restrict) приводит к 409 с сырым текстом ошибки EF Core. В UI кнопка «Удалить»
-        при этом есть и обещает «действие нельзя отменить»."""
+    def test_delete_survey_with_answers_cascades(self, surveys, admin_api):
+        """БЫЛ ДЕФЕКТ SURV-10 (исправлен): раньше удаление опроса, по которому уже
+        собраны ответы, падало с 409 из-за FK Answer→Question (Restrict) и сырого
+        текста ошибки EF Core. Теперь API удаляет опрос (204) и, судя по GET → 404,
+        каскадно сносит связанные данные — контракт «действие нельзя отменить»
+        наконец согласован с поведением."""
         setup = surveys.ready_survey()
         admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
         response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
-        assert response.status_code == 409
-        assert "inner exception" in message_text(response).lower()
-        assert admin_api.get(f"/api/surveys/{setup.survey_id}").status_code == 200
-        surveys.created_surveys.remove(setup.survey_id)
-
-    @pytest.mark.xfail(reason="ДЕФЕКТ SURV-10: удаление опроса должно либо каскадно сметать "
-                              "ответы, либо отвечать 409 с человекочитаемым текстом", strict=False)
-    def test_delete_survey_with_answers_should_have_readable_error(self, surveys, admin_api):
-        setup = surveys.ready_survey()
-        admin_api.post(f"/api/public/{setup.token}/answers", json={"answers": setup.answers()})
-        response = admin_api.delete(f"/api/surveys/{setup.survey_id}")
-        assert response.status_code in (204, 409)
-        if response.status_code == 409:
-            assert "ответ" in message_text(response).lower()
+        assert response.status_code == 204, response.text
+        assert admin_api.get(f"/api/surveys/{setup.survey_id}").status_code == 404
         surveys.created_surveys.remove(setup.survey_id)
 
     def test_delete_unknown_survey_currently_returns_204(self, admin_api):
@@ -301,3 +291,4 @@ class TestDeleteSurvey:
         surveys.created_surveys.remove(survey_id)
         assert admin_api.get(f"/api/questions/surveys/{survey_id}").json() == []
         assert admin_api.get(f"/api/surveys/{survey_id}/matrix").json() == []
+        
